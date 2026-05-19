@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if record else 'Novo' }} Lançamento{% endblock %}
+{% block page_title %}
+  <a href="{{ url_for('financial.index') }}" class="text-slate-400 hover:text-blue-500 mr-2 text-sm"><i class="fa-solid fa-arrow-left"></i></a>
+  {{ 'Editar' if record else 'Novo' }} Lançamento
+{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto bg-white dark:bg-slate-800 rounded-xl shadow-sm p-6">
+  <form method="post" class="space-y-4">
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo *</label>
+      <select name="type" required
+              class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <option value="revenue" {% if record and record.type == 'revenue' %}selected{% endif %}>Receita</option>
+        <option value="cost"    {% if record and record.type == 'cost'    %}selected{% endif %}>Custo</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Descrição *</label>
+      <input type="text" name="description" required
+             value="{{ record.description if record else '' }}"
+             class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Valor *</label>
+      <input type="number" name="amount" step="0.01" min="0" required
+             value="{{ record.amount if record else '' }}"
+             class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Categoria</label>
+      <input type="text" name="category"
+             value="{{ record.category if record else '' }}"
+             class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Vencimento</label>
+        <input type="date" name="due_date"
+               value="{{ record.due_date|fdate if record and record.due_date else '' }}"
+               class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Pagamento</label>
+        <input type="date" name="paid_date"
+               value="{{ record.paid_date|fdate if record and record.paid_date else '' }}"
+               class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Status</label>
+      <select name="status"
+              class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        {% for s in ['pendente', 'pago', 'cancelado'] %}
+        <option value="{{ s }}" {% if record and record.status == s %}selected{% endif %}>{{ s|capitalize }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Forma de Pagamento</label>
+      <input type="text" name="payment_method"
+             value="{{ record.payment_method if record else '' }}"
+             class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Notas</label>
+      <textarea name="notes" rows="3"
+                class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">{{ record.notes if record else '' }}</textarea>
+    </div>
+
+    <div class="flex justify-end gap-3 pt-2">
+      <a href="{{ url_for('financial.index') }}"
+         class="px-4 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700">Cancelar</a>
+      <button class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-6 py-2 rounded-lg">Salvar</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

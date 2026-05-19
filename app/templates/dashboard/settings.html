@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Configurações{% endblock %}
+{% block page_title %}<i class="fa-solid fa-gear mr-2 text-slate-400"></i>Configurações da Empresa{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+
+  <!-- Empresa -->
+  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-6">
+    <h2 class="font-semibold text-slate-700 dark:text-slate-200 mb-4">Identidade da Empresa</h2>
+    <form method="post" action="{{ url_for('dashboard.settings') }}" enctype="multipart/form-data" class="space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div class="col-span-2">
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nome da Empresa</label>
+          <input name="name" value="{{ company.name if company else '' }}"
+                 class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">CNPJ</label>
+          <input name="document" value="{{ company.document if company else '' }}"
+                 placeholder="XX.XXX.XXX/XXXX-XX"
+                 class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email</label>
+          <input name="email" value="{{ company.email if company else '' }}"
+                 class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Telefone</label>
+          <input name="phone" value="{{ company.phone if company else '' }}"
+                 class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Endereço</label>
+          <input name="address" value="{{ company.address if company else '' }}"
+                 class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="col-span-2">
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Logo</label>
+          <!-- Option 1: Upload from computer -->
+          <div class="mb-2">
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Fazer upload do computador:</p>
+            <input type="file" name="logo_file" accept="image/*"
+                   class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm text-slate-600 dark:text-slate-300 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-slate-100 dark:file:bg-slate-600 file:text-slate-700 dark:file:text-slate-200">
+          </div>
+          <!-- Option 2: URL -->
+          <div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Ou informar URL da imagem:</p>
+            <input name="logo_url" value="{{ company.logo_url if company and company.logo_url and not company.logo_url.startswith('/static/') else '' }}"
+                   placeholder="https://exemplo.com/logo.png"
+                   class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          {% if company and company.logo_url %}
+          <div class="mt-2 flex items-center gap-3">
+            <img src="{{ company.logo_url }}" alt="Logo atual" class="h-12 object-contain rounded border border-slate-200 dark:border-slate-600 p-1">
+            <span class="text-xs text-slate-400">Logo atual</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      <div class="flex justify-end">
+        <button class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-6 py-2 rounded-lg">Salvar Empresa</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Taxas de cobrança -->
+  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-6">
+    <h2 class="font-semibold text-slate-700 dark:text-slate-200 mb-1">Taxas de Cobrança</h2>
+    <p class="text-xs text-slate-400 mb-4">Usadas para calcular automaticamente preços NF e Cartão a partir do preço base quando não cadastrados manualmente.</p>
+    <form method="post" action="{{ url_for('dashboard.save_rates') }}" class="space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            Taxa Nota Fiscal (NF)
+            <span class="text-xs text-slate-400">— decimal, ex: 0.10 = 10%</span>
+          </label>
+          <input name="nf_rate" value="{{ '%.4f'|format(nf_rate) }}" step="0.001" type="number" min="0" max="1"
+                 class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            Taxa Cartão de Crédito
+            <span class="text-xs text-slate-400">— decimal, ex: 0.065 = 6.5%</span>
+          </label>
+          <input name="card_rate" value="{{ '%.4f'|format(card_rate) }}" step="0.001" type="number" min="0" max="1"
+                 class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+      </div>
+      <div class="bg-slate-50 dark:bg-slate-700 rounded-lg p-3 text-xs text-slate-500 dark:text-slate-400">
+        <p><b>Recibo</b> = preço base (sem acréscimo)</p>
+        <p><b>Nota Fiscal</b> = base × (1 + taxa NF) quando preço NF não cadastrado</p>
+        <p><b>Cartão</b> = base × (1 + taxa cartão) quando preço cartão não cadastrado</p>
+        <p><b>NF + Cartão</b> = base × (1 + taxa NF + taxa cartão)</p>
+      </div>
+      <div class="flex justify-end">
+        <button class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-6 py-2 rounded-lg">Salvar Taxas</button>
+      </div>
+    </form>
+  </div>
+
+</div>
+{% endblock %}

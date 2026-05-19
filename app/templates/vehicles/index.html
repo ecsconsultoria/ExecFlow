@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Veículos{% endblock %}
+{% block page_title %}<i class="fa-solid fa-car-side mr-2 text-cyan-500"></i>Veículos{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-5">
+  <p class="text-sm text-slate-500">{{ vehicles|length }} veículo(s)</p>
+  <a href="{{ url_for('vehicles.new') }}"
+     class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg flex items-center gap-2">
+    <i class="fa-solid fa-plus"></i> Novo Veículo
+  </a>
+</div>
+<div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
+  <table class="w-full text-sm">
+    <thead class="bg-slate-50 dark:bg-slate-700">
+      <tr>
+        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Placa</th>
+        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Veículo</th>
+        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Categoria</th>
+        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Ano</th>
+        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Ativo</th>
+        <th class="px-4 py-3"></th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+      {% for v in vehicles %}
+      <tr class="hover:bg-slate-50 dark:hover:bg-slate-700">
+        <td class="px-4 py-3 font-mono font-semibold text-slate-700 dark:text-slate-200">{{ v.plate }}</td>
+        <td class="px-4 py-3 text-slate-700 dark:text-slate-200">{{ v.make }} {{ v.model }}</td>
+        <td class="px-4 py-3 text-slate-500">{{ v.category.name if v.category else '–' }}</td>
+        <td class="px-4 py-3 text-slate-500">{{ v.year or '–' }}</td>
+        <td class="px-4 py-3">
+          {% if v.is_active %}<span class="text-green-500 text-xs">Ativo</span>{% else %}<span class="text-red-400 text-xs">Inativo</span>{% endif %}
+        </td>
+        <td class="px-4 py-3 flex gap-3">
+          <a href="{{ url_for('vehicles.edit', vid=v.id) }}" class="text-blue-500 hover:underline text-xs">Editar</a>
+          <form method="post" action="{{ url_for('vehicles.delete', vid=v.id) }}" class="inline"
+                onsubmit="return confirm('Excluir?')">
+            <button class="text-red-500 hover:underline text-xs">Excluir</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="px-4 py-10 text-center text-slate-400">Nenhum veículo.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,585 @@
+﻿{% extends "base.html" %}
+{% block title %}{% if edit_quote %}Editar Orçamento {{ edit_quote.number }}{% else %}Novo Orçamento{% endif %}{% endblock %}
+{% block page_title %}
+  <a href="{{ url_for('quotes.index') }}" class="text-slate-400 hover:text-blue-500 mr-2 text-sm"><i class="fa-solid fa-arrow-left"></i></a>
+  {% if edit_quote %}
+    Editar Orçamento
+    <span class="ml-1 text-blue-600 dark:text-blue-400">#{{ edit_quote.number }}</span>
+  {% else %}
+    Novo Orçamento
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div x-data="quoteBuilder()" x-init="init()" class="space-y-5 max-w-6xl mx-auto">
+
+  <!-- Header: cliente + billing -->
+  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-5 grid sm:grid-cols-2 md:grid-cols-4 gap-4">
+    <div>
+      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cliente *</label>
+      <select x-model="clientId" required
+              class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <option value="">– Selecione –</option>
+        {% for c in clients %}
+        <option value="{{ c.id }}">{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Faturamento Fiscal *</label>
+      <select x-model="billing" @change="refreshPrices()"
+              class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase">
+        <option value="recibo">RECIBO</option>
+        <option value="nf">NOTA FISCAL</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Forma de Pagamento</label>
+      <select x-model="paymentMethod" @change="refreshPrices()"
+              class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <option value="">– Selecione –</option>
+        <option value="PIX">PIX</option>
+        <option value="DINHEIRO">DINHEIRO</option>
+        <option value="TRANSFERÊNCIA">TRANSFERÊNCIA</option>
+        <option value="BOLETO">BOLETO</option>
+        <option value="CARTÃO DE CRÉDITO">CARTÃO DE CRÉDITO</option>
+        <option value="PAYPAL">PAYPAL</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Prazo de Pagamento</label>
+      <select x-model="paymentTerms"
+              class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <option value="">– Selecione –</option>
+        <option value="À VISTA">À VISTA</option>
+        <option value="À VISTA + 1 PARCELA">À VISTA + 1 PARCELA</option>
+        <option value="5 DIAS">5 DIAS</option>
+        <option value="10 DIAS">10 DIAS</option>
+        <option value="15 DIAS">15 DIAS</option>
+        <option value="25 DIAS">25 DIAS</option>
+        <option value="30 DIAS">30 DIAS</option>
+      </select>
+    </div>
+
+  </div>
+
+  <!-- Layout: catálogo (esq) + carrinho/inclusos (dir) -->
+  <div class="grid lg:grid-cols-5 gap-5">
+
+    <!-- Catálogo (accordion) -->
+    <div class="lg:col-span-3">
+      <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
+
+        <!-- Header -->
+        <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-700">
+          <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <i class="fa-solid fa-list-check mr-2 text-blue-500"></i>Catálogo de Serviços
+          </span>
+          <a href="{{ url_for('services.index') }}"
+             class="text-xs text-slate-500 hover:text-blue-600 border border-slate-200 dark:border-slate-600 px-3 py-1.5 rounded-lg flex items-center gap-1 transition-colors">
+            <i class="fa-solid fa-gear"></i> Gerenciar
+          </a>
+        </div>
+
+        <!-- Filters -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/30">
+          <select x-model="filterService"
+                 class="border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
+            <option value="">Serviço</option>
+            <template x-for="name in uniqueServiceNames()" :key="name">
+              <option :value="name" x-text="name"></option>
+            </template>
+          </select>
+          <select x-model="filterVehicle"
+                  class="border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
+            <option value="">Veículo</option>
+            {% for cat in categories %}
+            <option value="{{ cat.id }}">{{ cat.name }}</option>
+            {% endfor %}
+          </select>
+          <select x-model="filterDriver"
+                  class="border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
+            <option value="">Motorista</option>
+            <template x-for="dt in uniqueDriverTypes()" :key="dt">
+              <option :value="dt" x-text="dt"></option>
+            </template>
+          </select>
+          <select x-model="filterState"
+                  class="border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
+            <option value="">Estado</option>
+            {% for st in states %}
+            <option value="{{ st.code }}">{{ st.code }} – {{ st.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Actions dropdown -->
+        <div class="flex items-center gap-2 px-4 py-2 border-b border-slate-100 dark:border-slate-700"
+             x-data="{menuOpen:false}" @click.outside="menuOpen=false">
+          <div class="relative flex-1">
+            <button @click="menuOpen=!menuOpen"
+                    class="w-full flex items-center justify-between gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow transition-all">
+              <span class="flex items-center gap-2">
+                <i class="fa-solid fa-layer-group"></i> Ações do Catálogo
+              </span>
+              <i class="fa-solid fa-chevron-down text-[10px] transition-transform" :class="menuOpen ? 'rotate-180' : ''"></i>
+            </button>
+            <div x-show="menuOpen" x-cloak x-transition
+                 class="absolute left-0 top-full mt-1.5 w-full bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-600 z-50 py-1 overflow-hidden">
+              <!-- Marcar todos -->
+              <button @click="markAll(); menuOpen=false"
+                      class="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-slate-700 dark:text-slate-200 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors">
+                <span class="w-6 h-6 rounded-md bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+                  <i class="fa-solid fa-check-double text-yellow-600 dark:text-yellow-400 text-[10px]"></i>
+                </span>
+                <div class="text-left">
+                  <p class="font-semibold">Marcar todos visíveis</p>
+                  <p class="text-slate-400 text-[10px]">Adiciona todos os serviços filtrados</p>
+                </div>
+              </button>
+              <!-- Desmarcar todos -->
+              <button @click="clearAll(); menuOpen=false"
+                      class="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-slate-700 dark:text-slate-200 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                <span class="w-6 h-6 rounded-md bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                  <i class="fa-solid fa-xmark text-red-500 text-[10px]"></i>
+                </span>
+                <div class="text-left">
+                  <p class="font-semibold">Desmarcar todos</p>
+                  <p class="text-slate-400 text-[10px]">Remove todos os itens do carrinho</p>
+                </div>
+              </button>
+              <!-- Separator -->
+              <div class="my-1 border-t border-slate-100 dark:border-slate-700"></div>
+              <!-- Importar Excel -->
+              <button @click="$refs.xlsxInput.click(); menuOpen=false"
+                      class="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-slate-700 dark:text-slate-200 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors">
+                <span class="w-6 h-6 rounded-md bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                  <i class="fa-solid fa-file-arrow-up text-green-600 dark:text-green-400 text-[10px]"></i>
+                </span>
+                <div class="text-left">
+                  <p class="font-semibold">Importar Excel</p>
+                  <p class="text-slate-400 text-[10px]">Carrega itens de planilha .xlsx</p>
+                </div>
+              </button>
+              <!-- Exportar Excel -->
+              <button @click="exportCartExcel(); menuOpen=false"
+                      class="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                <span class="w-6 h-6 rounded-md bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                  <i class="fa-solid fa-file-arrow-down text-blue-600 dark:text-blue-400 text-[10px]"></i>
+                </span>
+                <div class="text-left">
+                  <p class="font-semibold">Exportar Excel</p>
+                  <p class="text-slate-400 text-[10px]">Baixa os itens do carrinho como .xlsx</p>
+                </div>
+              </button>
+            </div>
+          </div>
+          <!-- Hidden file input for import -->
+          <input type="file" x-ref="xlsxInput" accept=".xlsx,.xls,.csv" class="hidden"
+                 @change="importCartExcel($event)">
+        </div>
+
+        <!-- Empty state -->
+        <template x-if="filteredCatalog().length === 0">
+          <p class="text-slate-400 text-sm text-center py-10">
+            Nenhum serviço encontrado.<br>
+            <a href="{{ url_for('services.index') }}" class="text-blue-500 hover:underline text-xs">Cadastrar em Serviços →</a>
+          </p>
+        </template>
+
+        <!-- Accordion list -->
+        <div class="divide-y divide-slate-100 dark:divide-slate-700 max-h-[520px] overflow-y-auto">
+          <template x-for="cat in filteredCatalog()" :key="cat.id">
+            <div>
+              <!-- Category row -->
+              <button @click="toggleCat(cat.id)"
+                      class="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/40 text-left transition-colors">
+                <i class="fa-solid fa-car text-blue-500 text-sm flex-shrink-0"></i>
+                <span class="flex-1 text-sm font-semibold text-slate-700 dark:text-slate-200" x-text="cat.name"></span>
+                <span class="text-xs text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full"
+                      x-text="cat.services.length"></span>
+                <i class="fa-solid text-slate-400 text-xs transition-transform"
+                   :class="isCatOpen(cat.id) ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
+              </button>
+
+              <!-- Expanded services -->
+              <div x-show="isCatOpen(cat.id)" x-transition
+                   class="bg-slate-50 dark:bg-slate-700/20 border-t border-slate-100 dark:border-slate-700">
+                <template x-for="svc in cat.services" :key="svc.id">
+                  <div class="flex items-center gap-3 px-5 py-2.5 border-b border-slate-100 dark:border-slate-700/50 last:border-0 hover:bg-white dark:hover:bg-slate-700/30 transition-colors">
+                    <div class="flex-1 min-w-0">
+                      <p class="text-xs font-semibold text-slate-700 dark:text-slate-200"
+                         x-text="svc.name + (svc.driver_type ? ' – ' + svc.driver_type : '')"></p>
+                      <p class="text-xs text-slate-400 mt-0.5" x-show="svc.km_included > 0"
+                         x-text="svc.km_included + ' km incl.'"></p>
+                      <input type="text"
+                             placeholder="Ref / Data (opcional)"
+                             :value="getRefNote(svc.id)"
+                             @input="setRefNote(svc.id, $event.target.value)"
+                             class="mt-1 w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 rounded px-2 py-0.5 text-xs text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-400">
+                    </div>
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                      <span class="text-sm font-bold text-blue-600 min-w-[64px] text-right"
+                            x-text="fmtBRL(priceFor(svc))"></span>
+                      <input type="number" min="1" step="1"
+                             :value="getQty(svc.id)"
+                             @input="setQty(svc.id, $event.target.value)"
+                             class="w-10 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded px-1 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-blue-400">
+                      <button @click="addToCart(cat, svc)"
+                              class="bg-yellow-500 hover:bg-yellow-600 text-black text-xs font-bold w-8 h-8 rounded-lg flex items-center justify-center transition-colors">
+                        <i class="fa-solid fa-plus"></i>
+                      </button>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Carrinho + Inclusos -->
+    <div class="lg:col-span-2 space-y-4">
+
+      <!-- Carrinho -->
+      <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-4">
+        <h3 class="font-semibold text-slate-700 dark:text-slate-200 text-sm mb-3 flex items-center gap-2">
+          <i class="fa-solid fa-cart-shopping text-blue-500"></i> Itens do Orçamento
+          <span class="ml-auto text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-2 py-0.5 rounded-full"
+                x-text="cart.length + ' item(s)'"></span>
+        </h3>
+        <template x-if="cart.length === 0">
+          <p class="text-center text-slate-400 text-sm py-6">Nenhum serviço adicionado.<br>Selecione no catálogo ao lado.</p>
+        </template>
+        <div class="space-y-2">
+          <template x-for="(item, idx) in cart" :key="idx">
+            <div class="flex items-center gap-2 border border-slate-100 dark:border-slate-700 rounded-lg p-2">
+              <div class="flex-1 min-w-0">
+                <p class="text-xs font-medium text-slate-700 dark:text-slate-200 truncate" x-text="item.name"></p>
+                <p class="text-xs text-slate-400 truncate"
+                   x-text="item.category_name + (item.driver_type ? ' – ' + item.driver_type : '')"></p>
+                <template x-if="item.hour_extra > 0">
+                  <p class="text-xs text-amber-500" x-text="'Hora Extra: ' + fmtBRL(item.hour_extra) + '/hr'"></p>
+                </template>
+              </div>
+              <div class="flex items-center gap-1 flex-shrink-0">
+                <input type="number" min="1" step="1" x-model.number="item.quantity"
+                       class="w-10 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded px-1 py-0.5 text-xs text-center">
+                <span class="text-xs font-bold text-blue-600 min-w-[70px] text-right"
+                      x-text="fmtBRL(item.unit_price * item.quantity)"></span>
+                <button @click="cart.splice(idx, 1)" class="text-red-400 hover:text-red-600 p-0.5 ml-1">
+                  <i class="fa-solid fa-trash text-xs"></i>
+                </button>
+              </div>
+            </div>
+          </template>
+        </div>
+        <div x-show="cart.length > 0"
+             class="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center">
+          <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">Total</span>
+          <span class="text-lg font-bold text-slate-800 dark:text-white" x-text="fmtBRL(cartTotal())"></span>
+        </div>
+      </div>
+
+      <!-- Observações -->
+      <div class="mb-3">
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Observações</label>
+        <textarea x-model="notes" rows="2"
+                  class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Notas internas ou instruções especiais..."></textarea>
+      </div>
+
+      <!-- Botões -->
+      <div class="flex gap-3">
+        <a href="{{ url_for('quotes.index') }}"
+           class="flex-1 text-center px-4 py-2.5 text-sm rounded-lg border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700">
+          Cancelar
+        </a>
+        <button @click="submit()"
+                :disabled="cart.length === 0 || !clientId || saving"
+                :class="(cart.length === 0 || !clientId || saving) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'"
+                class="flex-1 bg-blue-600 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors">
+          <span x-show="!saving"><i class="fa-solid fa-file-invoice mr-1"></i> <span x-text="(EDIT_DATA && EDIT_DATA.form) ? 'Atualizar Orçamento' : 'Criar Orçamento'"></span></span>
+          <span x-show="saving"><i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Salvando...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const CATALOG = {{ catalog_json|safe }};
+const DEFAULT_INCLUSIONS = {{ default_inclusions|tojson }};
+const EDIT_DATA = {{ edit_data|safe if edit_data else 'null' }};
+const BILLING_PRICE_KEY = {
+  recibo:    'price_base',
+  nf:        'price_nf',
+  cartao:    'price_cartao',
+  nf_cartao: 'price_nf_cartao',
+};
+
+function fmtBRL(v) {
+  return 'R$ ' + (v || 0).toFixed(2).replace('.', ',');
+}
+
+function quoteBuilder() {
+  return {
+    clientId:       '',
+    billing:        'recibo',
+    paymentMethod:  '',
+    paymentTerms:   '',
+    language:       'pt',
+    notes:          '',
+    saving:    false,
+    catalog:   CATALOG,
+    openCats:  {},
+    filterService: '',
+    filterVehicle: '',
+    filterDriver:  '',
+    filterState:   '',
+    cart:      [],
+    qtyMap:    {},
+    refNoteMap: {},
+    inclusions: DEFAULT_INCLUSIONS.map((inc, i) => ({...inc, included: true, sort_order: i})),
+
+    init() {
+      if (EDIT_DATA && EDIT_DATA.form) {
+        const f = EDIT_DATA.form;
+        this.clientId      = String(f.client_id     || '');
+        this.billing       = f.billing_type   || 'recibo';
+        this.paymentMethod = f.payment_method || '';
+        this.paymentTerms  = f.payment_terms  || '';
+        this.language      = f.language       || 'pt';
+        this.notes         = f.obs            || '';
+        if (f.items && f.items.length) {
+          this.cart = f.items.map((it, i) => ({
+            pricing_id:          it.service_id || ('edit-' + i),
+            service_id:          it.service_id,
+            category_id:         it.category_id,
+            category_name:       '',
+            vehicle_description: it.vehicle_description || '',
+            name:                it.description || '',
+            driver_type:         it.driver_name || '',
+            ref_note:            it.ref_note    || '',
+            quantity:            it.quantity    || 1,
+            unit_price:          it.unit_price  || 0,
+            hour_extra:          it.hour_extra  || 0,
+            price_base:          it.price_base     || 0,
+            price_nf:            it.price_nf       || 0,
+            price_cartao:        it.price_cartao   || 0,
+            price_nf_cartao:     it.price_nf_cartao|| 0,
+            km_extra_rate:       it.km_extra_rate  || 0,
+            _svc: {
+              price_base:      it.price_base      || 0,
+              price_nf:        it.price_nf        || 0,
+              price_cartao:    it.price_cartao    || 0,
+              price_nf_cartao: it.price_nf_cartao || 0,
+            },
+          }));
+        }
+      }
+    },
+
+    uniqueServiceNames() {
+      const names = new Set();
+      this.catalog.forEach(cat => cat.services.forEach(s => names.add(s.name)));
+      return [...names].sort();
+    },
+
+    uniqueDriverTypes() {
+      const types = new Set();
+      this.catalog.forEach(cat => cat.services.forEach(s => { if (s.driver_type) types.add(s.driver_type); }));
+      return [...types].sort();
+    },
+
+    filteredCatalog() {
+      return this.catalog.map(cat => {
+        let svcs = cat.services;
+        if (this.filterService) svcs = svcs.filter(s => s.name === this.filterService);
+        if (this.filterDriver)  svcs = svcs.filter(s => s.driver_type === this.filterDriver);
+        if (this.filterState)   svcs = svcs.filter(s => s.state_code === this.filterState);
+        if (this.filterVehicle && String(cat.id) !== String(this.filterVehicle)) return null;
+        return svcs.length ? {...cat, services: svcs} : null;
+      }).filter(Boolean);
+    },
+
+    toggleCat(id) {
+      this.openCats = {...this.openCats, [id]: !this.openCats[id]};
+    },
+    isCatOpen(id) { return !!this.openCats[id]; },
+
+    markAll() {
+      this.filteredCatalog().forEach(cat => cat.services.forEach(svc => this.addToCart(cat, svc)));
+    },
+    clearAll() { this.cart = []; },
+
+    exportCartExcel() { exportCartExcel(); },
+    importCartExcel(evt) {
+      const f = evt.target.files[0];
+      if (f) importCartExcelFile(f);
+      evt.target.value = '';
+    },
+
+    priceFor(svc) {
+      const useCard = ['PAYPAL', 'CARTÃO DE CRÉDITO'].includes(this.paymentMethod);
+      const useNF   = this.billing === 'nf';
+      let key;
+      if (useNF && useCard)  key = 'price_nf_cartao';
+      else if (useNF)        key = 'price_nf';
+      else if (useCard)      key = 'price_cartao';
+      else                   key = 'price_base';
+      return svc[key] || svc.price_base || 0;
+    },
+
+    refreshPrices() {
+      this.cart.forEach(item => {
+        if (item._svc) {
+          item.unit_price = this.priceFor(item._svc);
+          // Recompute hour_extra rate if we can look up Diária 10h in catalog
+          const cat = this.catalog.find(c => c.id === item.category_id);
+          if (cat) {
+            const d10h = cat.services.find(s =>
+              /10\s*h/i.test(s.name) && s.driver_type === (item._svc.driver_type || '')
+            );
+            if (d10h) item.hour_extra = Math.round(this.priceFor(d10h) * 0.10 * 100) / 100;
+          }
+        }
+      });
+    },
+
+    getQty(pricingId)     { return this.qtyMap[pricingId] || 1; },
+    setQty(pricingId, val){ this.qtyMap[pricingId] = Math.max(1, parseInt(val) || 1); },
+    getRefNote(pricingId) { return this.refNoteMap[pricingId] || ''; },
+    setRefNote(pricingId, val) { this.refNoteMap[pricingId] = val; },
+
+    addToCart(cat, svc) {
+      const qty     = this.getQty(svc.id);
+      const price   = this.priceFor(svc);
+      const refNote = this.getRefNote(svc.id);
+
+      // Compute hour_extra rate = 10 % of the Diária-10h price for same category + driver_type
+      const diaria10h = cat.services.find(s =>
+        /10\s*h/i.test(s.name) && s.driver_type === svc.driver_type
+      );
+      const d10hPrice     = diaria10h ? this.priceFor(diaria10h) : 0;
+      const hourExtraRate = d10hPrice > 0 ? Math.round(d10hPrice * 0.10 * 100) / 100 : 0;
+
+      const existing = this.cart.find(i => i.pricing_id === svc.id);
+      if (existing) { existing.quantity += qty; existing.unit_price = price; return; }
+      this.cart.push({
+        pricing_id:          svc.id,
+        service_id:          svc.service_id,
+        category_id:         cat.id,
+        category_name:       cat.name,
+        vehicle_description: cat.description || '',
+        name:                svc.name,
+        driver_type:         svc.driver_type || '',
+        ref_note:            refNote,
+        quantity:            qty,
+        unit_price:          price,
+        hour_extra:          hourExtraRate,
+        price_base:          svc.price_base,
+        price_nf:            svc.price_nf,
+        price_cartao:        svc.price_cartao,
+        price_nf_cartao:     svc.price_nf_cartao,
+        km_extra_rate:       svc.km_extra_rate,
+        _svc:                svc,
+      });
+    },
+
+    cartTotal() { return this.cart.reduce((s, i) => s + (i.unit_price * i.quantity), 0); },
+
+    async submit() {
+      if (!this.clientId || this.cart.length === 0) return;
+      this.saving = true;
+      const payload = {
+        client_id: this.clientId, billing_type: this.billing,
+        payment_method: this.paymentMethod,
+        payment_terms:  this.paymentTerms,
+        language: this.language, obs: this.notes,
+        items: this.cart.map((item, i) => ({
+          service_id:          item.service_id,
+          category_id:         item.category_id,
+          description:         item.name,
+          vehicle_description: item.vehicle_description,
+          driver_name:         item.driver_type || '',
+          ref_note:            item.ref_note,
+          quantity:            item.quantity,
+          unit_price:          item.unit_price,
+          hour_extra:          item.hour_extra || 0,
+          price_base:          item.price_base,
+          price_nf:            item.price_nf,
+          price_cartao:        item.price_cartao,
+          price_nf_cartao:     item.price_nf_cartao,
+          km_extra_rate:       item.km_extra_rate,
+          sort_order:          i,
+        })),
+        inclusions: this.inclusions.map((inc, i) => ({
+          text_pt: inc.text_pt, text_en: inc.text_en || '', included: true, sort_order: i,
+        })),
+      };
+      try {
+        const resp = await fetch(window.location.pathname, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload),
+        });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+        if (data.redirect) window.location.href = data.redirect;
+      } catch(e) {
+        alert('Erro ao salvar: ' + e.message);
+        this.saving = false;
+      }
+    },
+  };
+}
+</script>
+
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script>
+function exportCartExcel() {
+  const q = Alpine.$data(document.querySelector('[x-data]'));
+  if (!q || !q.cart || q.cart.length === 0) { alert('Carrinho vazio.'); return; }
+  const rows = q.cart.map((item, i) => ({
+    '#':           i + 1,
+    'Serviço':    item.name || '',
+    'Categoria':   item.category_name || '',
+    'Motorista':   item.driver_type || '',
+    'Qtd':         item.quantity || 1,
+    'Preço Unit.': item.unit_price || 0,
+    'Total':       (item.unit_price || 0) * (item.quantity || 1),
+    'Ref. Nota':   item.ref_note || '',
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Itens');
+  const num = document.querySelector('[x-data]').__x?.$data?.number || '';
+  XLSX.writeFile(wb, `cotacao_${num || 'itens'}.xlsx`);
+}
+
+async function importCartExcelFile(file) {
+  if (!file) return;
+  const q = Alpine.$data(document.querySelector('[x-data]'));
+  const data = await file.arrayBuffer();
+  const wb = XLSX.read(data);
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws);
+  let added = 0;
+  rows.forEach(row => {
+    const svcName = (row['Serviço'] || row['Service'] || row['service'] || '').toString().trim().toLowerCase();
+    const qty = parseInt(row['Qtd'] || row['Qty'] || row['qty'] || 1) || 1;
+    let found = null;
+    (q.catalog || []).forEach(cat => {
+      cat.services.forEach(svc => {
+        if (!found && svc.name.toLowerCase() === svcName) found = { cat, svc };
+      });
+    });
+    if (found) { found.svc._importQty = qty; q.addToCart(found.cat, found.svc, qty); added++; }
+  });
+  alert(added + ' serviço(s) importado(s) com sucesso.');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Relatórios{% endblock %}
+{% block page_title %}<i class="fa-solid fa-chart-pie mr-2 text-blue-500"></i>Relatórios{% endblock %}
+
+{% block content %}
+<div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm">
+    <p class="text-xs text-slate-500 mb-1">Total OS</p>
+    <p class="text-2xl font-bold text-blue-600">{{ os_stats.values()|sum }}</p>
+  </div>
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm">
+    <p class="text-xs text-slate-500 mb-1">OS Finalizadas</p>
+    <p class="text-2xl font-bold text-green-600">{{ os_stats.get('finalizado', 0) }}</p>
+  </div>
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm">
+    <p class="text-xs text-slate-500 mb-1">Orçamentos Aprovados</p>
+    <p class="text-2xl font-bold text-violet-600">{{ approved_quotes or 0 }}</p>
+  </div>
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm">
+    <p class="text-xs text-slate-500 mb-1">Receita (mês)</p>
+    <p class="text-2xl font-bold text-amber-600">{{ revenue|currency }}</p>
+  </div>
+</div>
+
+<div class="grid sm:grid-cols-3 gap-4 mb-6">
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm">
+    <p class="text-xs text-slate-500 mb-1">Custos (mês)</p>
+    <p class="text-2xl font-bold text-red-500">{{ costs|currency }}</p>
+  </div>
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm">
+    <p class="text-xs text-slate-500 mb-1">Margem (mês)</p>
+    <p class="text-2xl font-bold {% if profit >= 0 %}text-blue-600{% else %}text-red-600{% endif %}">{{ profit|currency }}</p>
+  </div>
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm">
+    <p class="text-xs text-slate-500 mb-1">Total Orçamentos</p>
+    <p class="text-2xl font-bold text-slate-600">{{ total_quotes or 0 }}</p>
+  </div>
+</div>
+
+<div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-5">
+  <p class="text-sm text-slate-400 text-center py-10">Gráficos e relatórios detalhados — em desenvolvimento.</p>
+</div>
+{% endblock %}

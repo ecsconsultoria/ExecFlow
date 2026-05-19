@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Centro de Despacho{% endblock %}
+{% block page_title %}
+  <i class="fa-solid fa-tower-broadcast mr-2 text-blue-500"></i>Centro de Despacho
+  <span class="ml-3 text-xs text-slate-400 font-normal">{{ ref_date }}</span>
+  {% if ref_date == today %}
+  <span class="ml-2 text-xs bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-full">
+    <span class="w-1.5 h-1.5 rounded-full bg-green-500 inline-block mr-1 align-middle" style="animation:pulse 2s infinite"></span>AO VIVO
+  </span>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<!-- ── Date Navigation ─────────────────────────────────────────────────── -->
+<div class="flex items-center gap-2 mb-5">
+  <a href="{{ url_for('dispatch.index', date=prev_date) }}"
+     class="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors text-sm">
+    <i class="fa-solid fa-chevron-left"></i>
+  </a>
+  <form method="get" class="flex items-center">
+    <input type="date" name="date" value="{{ ref_date }}"
+           onchange="this.form.submit()"
+           class="border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+  </form>
+  <a href="{{ url_for('dispatch.index', date=next_date) }}"
+     class="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors text-sm">
+    <i class="fa-solid fa-chevron-right"></i>
+  </a>
+  {% if ref_date != today %}
+  <a href="{{ url_for('dispatch.index') }}"
+     class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
+    Hoje
+  </a>
+  {% endif %}
+  <a href="{{ url_for('service_orders.new') }}"
+     class="ml-auto px-3 py-2 bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
+    <i class="fa-solid fa-plus text-xs"></i> Nova OS
+  </a>
+</div>
+
+<!-- ── Summary Bar ─────────────────────────────────────────────────────── -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 border-blue-500">
+    <p class="text-2xl font-bold text-blue-600">{{ summary.today_count }}</p>
+    <p class="text-xs text-slate-500 mt-0.5">OS Hoje</p>
+  </div>
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 border-amber-400">
+    <p class="text-2xl font-bold text-amber-500">{{ summary.pending_count }}</p>
+    <p class="text-xs text-slate-500 mt-0.5">Pend. Atribuição</p>
+  </div>
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 border-cyan-500">
+    <p class="text-2xl font-bold text-cyan-600">{{ summary.in_progress|length }}</p>
+    <p class="text-xs text-slate-500 mt-0.5">Em Execução</p>
+  </div>
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 {% if summary.overdue %}border-red-500{% else %}border-slate-200 dark:border-slate-600{% endif %}">
+    <p class="text-2xl font-bold {% if summary.overdue %}text-red-500{% else %}text-slate-400{% endif %}">{{ summary.overdue_count }}</p>
+    <p class="text-xs text-slate-500 mt-0.5">Atrasadas</p>
+  </div>
+</div>
+
+<!-- ── OS Boards ───────────────────────────────────────────────────────── -->
+<div class="grid lg:grid-cols-2 gap-5">
+
+  <!-- OS do Dia -->
+  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
+    <div class="flex items-center gap-2 px-5 py-3.5 border-b border-slate-100 dark:border-slate-700 bg-blue-50 dark:bg-blue-900/20">
+      <i class="fa-solid fa-calendar-day text-blue-500 text-sm"></i>
+      <h2 class="font-semibold text-slate-700 dark:text-slate-200 text-sm">OS do Dia</h2>
+      <span class="ml-auto text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">{{ summary.today_list|length }}</span>
+    </div>
+    {% if summary.today_list %}
+    <div class="divide-y divide-slate-50 dark:divide-slate-700/50">
+      {% for os in summary.today_list %}{% include "dispatch/_os_card.html" %}{% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm text-slate-400 text-center py-10">Nenhuma OS programada para hoje.</p>
+    {% endif %}
+  </div>
+
+  <!-- Pendente Atribuição -->
+  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
+    <div class="flex items-center gap-2 px-5 py-3.5 border-b border-slate-100 dark:border-slate-700 bg-amber-50 dark:bg-amber-900/20">
+      <i class="fa-solid fa-user-clock text-amber-500 text-sm"></i>
+      <h2 class="font-semibold text-slate-700 dark:text-slate-200 text-sm">Pendente Atribuição</h2>
+      <span class="ml-auto text-xs bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full">{{ summary.pending|length }}</span>
+    </div>
+    {% if summary.pending %}
+    <div class="divide-y divide-slate-50 dark:divide-slate-700/50">
+      {% for os in summary.pending %}{% include "dispatch/_os_card.html" %}{% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm text-slate-400 text-center py-10">Nenhuma OS aguardando atribuição.</p>
+    {% endif %}
+  </div>
+
+  <!-- Em Execução -->
+  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
+    <div class="flex items-center gap-2 px-5 py-3.5 border-b border-slate-100 dark:border-slate-700 bg-cyan-50 dark:bg-cyan-900/20">
+      <i class="fa-solid fa-car-on text-cyan-500 text-sm"></i>
+      <h2 class="font-semibold text-slate-700 dark:text-slate-200 text-sm">Em Execução</h2>
+      <span class="ml-auto text-xs bg-cyan-100 dark:bg-cyan-900/50 text-cyan-700 dark:text-cyan-300 px-2 py-0.5 rounded-full">{{ summary.in_progress|length }}</span>
+    </div>
+    {% if summary.in_progress %}
+    <div class="divide-y divide-slate-50 dark:divide-slate-700/50">
+      {% for os in summary.in_progress %}{% include "dispatch/_os_card.html" %}{% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm text-slate-400 text-center py-10">Nenhuma OS em execução.</p>
+    {% endif %}
+  </div>
+
+  <!-- Atrasadas -->
+  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden {% if summary.overdue %}ring-1 ring-red-200 dark:ring-red-800{% endif %}">
+    <div class="flex items-center gap-2 px-5 py-3.5 border-b border-slate-100 dark:border-slate-700 {% if summary.overdue %}bg-red-50 dark:bg-red-900/20{% endif %}">
+      <i class="fa-solid fa-triangle-exclamation {% if summary.overdue %}text-red-500{% else %}text-slate-400{% endif %} text-sm"></i>
+      <h2 class="font-semibold {% if summary.overdue %}text-red-600 dark:text-red-400{% else %}text-slate-500{% endif %} text-sm">Atrasadas</h2>
+      {% if summary.overdue %}
+      <span class="ml-auto text-xs bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 px-2 py-0.5 rounded-full">{{ summary.overdue|length }}</span>
+      {% endif %}
+    </div>
+    {% if summary.overdue %}
+    <div class="divide-y divide-red-50 dark:divide-red-900/20">
+      {% for os in summary.overdue %}{% include "dispatch/_os_card.html" %}{% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm text-slate-400 text-center py-10"><i class="fa-solid fa-circle-check text-green-400 mr-2"></i>Sem OS atrasadas.</p>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

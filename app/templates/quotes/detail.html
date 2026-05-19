@@ -1,0 +1,334 @@
+{% extends "base.html" %}
+{% block title %}Cotação {{ quote.number }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* Icon-only action buttons */
+  .aq-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color .15s, transform .1s;
+    border: none;
+    text-decoration: none;
+  }
+  .aq-btn.aq-pdf { width: 48px; font-size: 12px; }
+  .aq-btn span { font-weight: 700; font-size: 11px; }
+  .aq-btn:hover { transform: translateY(-1px); }
+  .aq-btn::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 7px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #0f172a;
+    color: #f1f5f9;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 9px;
+    border-radius: 6px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .15s;
+    z-index: 9999;
+    box-shadow: 0 4px 12px rgba(0,0,0,.3);
+  }
+  .aq-btn:hover::after { opacity: 1; }
+  [x-cloak] { display: none !important; }
+</style>
+{% endblock %}
+{% block page_title %}
+  <a href="{{ url_for('quotes.index') }}" class="text-slate-400 hover:text-blue-500 mr-2 text-sm"><i class="fa-solid fa-arrow-left"></i></a>
+  Cotação {{ quote.number }}
+  <span class="ml-2 text-xs px-2 py-0.5 rounded-full {{ quote.status|status_badge }}">{{ quote.status }}</span>
+{% endblock %}
+
+{% block content %}
+<div class="grid lg:grid-cols-3 gap-6">
+  <!-- Details -->
+  <div class="lg:col-span-2 space-y-4">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-5">
+      <dl class="grid grid-cols-3 gap-4 text-sm">
+        {# row 1: client contact #}
+        <div><dt class="text-slate-500">Cliente</dt><dd class="font-medium">{{ quote.client.name if quote.client else '–' }}</dd></div>
+        <div>
+          <dt class="text-slate-500">Email</dt>
+          {% set _em = (quote.client.email if quote.client and quote.client.email else quote.email) %}
+          <dd class="text-xs break-all">{% if _em %}<a href="mailto:{{ _em }}" class="text-blue-500 hover:underline">{{ _em }}</a>{% else %}–{% endif %}</dd>
+        </div>
+        <div>
+          <dt class="text-slate-500">Celular</dt>
+          <dd class="text-xs">{{ (quote.client.whatsapp if quote.client and quote.client.whatsapp else quote.phone) or '–' }}</dd>
+        </div>
+        {# row 2: billing #}
+        <div><dt class="text-slate-500">Faturamento Fiscal</dt><dd class="font-medium">{{ (quote.billing_type|billing_label)|lower|title }}</dd></div>
+        <div><dt class="text-slate-500">Forma de Pagamento</dt><dd class="font-medium">{{ (quote.payment_method or '–')|lower|title }}</dd></div>
+        <div><dt class="text-slate-500">Prazo de Pagamento</dt><dd class="font-medium">{{ (quote.payment_terms or '–')|lower|title }}</dd></div>
+      </dl>
+    </div>
+
+    <!-- Items -->
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 dark:bg-slate-700">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Serviço</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Categoria</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Motorista</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Qtd</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Unit.</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Hora Extra</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Total</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+          {% for item in quote.items %}
+          <tr>
+            <td class="px-4 py-3 text-slate-700 dark:text-slate-200">
+              {% if item.ref_note %}<span class="text-xs font-semibold text-slate-400">{{ item.ref_note }}</span><br>{% endif %}
+              {{ item.service.name if item.service else item.description }}
+            </td>
+            <td class="px-4 py-3 text-slate-500 text-xs">{{ item.category.name if item.category else '–' }}</td>
+            <td class="px-4 py-3 text-slate-500 text-xs">{% if item.driver_name %}Motorista {{ item.driver_name }}{% else %}–{% endif %}</td>
+            <td class="px-4 py-3 text-right text-slate-500">{{ item.quantity }}</td>
+            <td class="px-4 py-3 text-right text-slate-500 whitespace-nowrap">{{ item.unit_price|currency }}</td>
+            <td class="px-4 py-3 text-right text-slate-500 text-xs whitespace-nowrap">
+              {% if item.hour_extra %}{{ item.hour_extra|currency }}/hr{% else %}–{% endif %}
+            </td>
+            <td class="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">{{ item.total_price|currency }}</td>
+          </tr>
+          {% endfor %}
+          <tr class="bg-slate-50 dark:bg-slate-700">
+            <td colspan="6" class="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200">Total</td>
+            <td class="px-4 py-3 text-right font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">{{ quote.total_amount|currency }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="space-y-4">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-4" x-data="{showOsModal:false}">
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Ações</p>
+      <div class="flex flex-wrap gap-2">
+
+        {% if quote.status == 'pendente' %}
+        <form method="post" action="{{ url_for('quotes.approve', qid=quote.id) }}">
+          <button type="submit" class="aq-btn bg-green-600 hover:bg-green-700" data-tip="Aprovar">
+            <i class="fa-solid fa-check"></i>
+          </button>
+        </form>
+        <form method="post" action="{{ url_for('quotes.reject', qid=quote.id) }}">
+          <button type="submit" class="aq-btn bg-red-500 hover:bg-red-600" data-tip="Rejeitar">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </form>
+        {% endif %}
+
+        {% if quote.status in ('aprovado', 'pago') and not service_order %}
+        <button @click="showOsModal=true" class="aq-btn bg-blue-600 hover:bg-blue-700" data-tip="Criar Ordem de Serviço">
+          <i class="fa-solid fa-clipboard-list"></i>
+        </button>
+        {% endif %}
+
+        {% if service_order %}
+        <a href="{{ url_for('service_orders.detail', os_id=service_order.id) }}" class="aq-btn bg-violet-600 hover:bg-violet-700" data-tip="Ver Ordem de Serviço">
+          <i class="fa-solid fa-clipboard-list"></i>
+        </a>
+        {% endif %}
+
+        <!-- Modal Criar OS -->
+        <div x-show="showOsModal" x-cloak
+             class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+             @keydown.escape.window="showOsModal=false">
+          <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg" @click.stop>
+            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+              <h3 class="font-semibold text-slate-700 dark:text-slate-200 text-sm">
+                <i class="fa-solid fa-clipboard-list mr-2 text-blue-500"></i>Criar Ordem de Serviço
+              </h3>
+              <button @click="showOsModal=false" class="text-slate-400 hover:text-slate-600 text-lg leading-none">&times;</button>
+            </div>
+            <form method="POST" action="{{ url_for('quotes.create_os', qid=quote.id) }}">
+              <div class="px-5 py-4 grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <label class="block text-xs text-slate-500 mb-1">Data Início</label>
+                  <input type="date" name="pickup_date"
+                         class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-500 mb-1">Hora Início</label>
+                  <input type="time" name="pickup_time"
+                         class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+                </div>
+                <div class="col-span-2">
+                  <label class="block text-xs text-slate-500 mb-1">Local de Embarque</label>
+                  <input type="text" name="pickup_location" placeholder="Endereço / aeroporto..."
+                         class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+                </div>
+                <div class="col-span-2">
+                  <label class="block text-xs text-slate-500 mb-1">Local de Desembarque</label>
+                  <input type="text" name="dropoff_location" placeholder="Endereço / hotel..."
+                         class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+                </div>
+                <div class="col-span-2">
+                  <label class="block text-xs text-slate-500 mb-1">Nome do Passageiro</label>
+                  <input type="text" name="passenger_name"
+                         value="{{ quote.client.name if quote.client else '' }}"
+                         class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-500 mb-1">Telefone</label>
+                  <input type="text" name="passenger_phone"
+                         value="{{ (quote.client.whatsapp or quote.client.phone) if quote.client else '' }}"
+                         class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-500 mb-1">PAX</label>
+                  <input type="number" name="pax_count" value="1" min="1"
+                         class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+                </div>
+                <div class="col-span-2">
+                  <label class="block text-xs text-slate-500 mb-1">Número do Voo <span class="text-slate-400">(opcional)</span></label>
+                  <input type="text" name="flight_number" placeholder="LA1234..."
+                         class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+                </div>
+              </div>
+              <div class="px-5 py-3 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-2">
+                <button type="button" @click="showOsModal=false"
+                        class="text-slate-500 hover:text-slate-700 text-sm px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-600">
+                  Cancelar
+                </button>
+                <button type="submit"
+                        class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-5 py-2 rounded-lg">
+                  <i class="fa-solid fa-check mr-1"></i> Criar OS
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <a href="{{ url_for('quotes.edit', qid=quote.id) }}" class="aq-btn bg-slate-500 hover:bg-slate-600" data-tip="Editar Orçamento">
+          <i class="fa-solid fa-pen"></i>
+        </a>
+
+        {% set _em = (quote.client.email if quote.client and quote.client.email else quote.email) %}
+        {% set _ph = (quote.client.whatsapp if quote.client and quote.client.whatsapp else quote.phone) %}
+        <div class="w-full h-px bg-slate-100 dark:bg-slate-700 my-0.5"></div>
+
+        {# PT dropdown: PDF + Email + WhatsApp #}
+        <div class="relative" x-data="{open:false}" @click.outside="open=false">
+          <button @click="open=!open" class="aq-btn aq-pdf bg-rose-600 hover:bg-rose-700" data-tip="Português">
+            <i class="fa-solid fa-file-pdf"></i><span>PT</span>
+          </button>
+          <div x-show="open" x-cloak
+               class="absolute left-0 bottom-full mb-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 min-w-[148px] py-1 overflow-hidden">
+            <a href="{{ url_for('quotes.pdf', qid=quote.id, lang='pt') }}" target="_blank"
+               @click="open=false"
+               class="flex items-center gap-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
+              <i class="fa-solid fa-download text-rose-500"></i> Baixar PDF
+            </a>
+            {% if _em %}
+            <button onclick="sendEmail('pt')" @click="open=false"
+                    class="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
+              <i class="fa-solid fa-envelope text-blue-500"></i> Enviar Email
+            </button>
+            {% endif %}
+            {% if _ph %}
+            <button onclick="openWhatsApp('pt')" @click="open=false"
+                    class="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
+              <i class="fa-brands fa-whatsapp text-green-500"></i> WhatsApp
+            </button>
+            {% endif %}
+          </div>
+        </div>
+
+        {# EN dropdown: PDF + Email + WhatsApp #}
+        <div class="relative" x-data="{open:false}" @click.outside="open=false">
+          <button @click="open=!open" class="aq-btn aq-pdf bg-rose-800 hover:bg-rose-900" data-tip="English">
+            <i class="fa-solid fa-file-pdf"></i><span>EN</span>
+          </button>
+          <div x-show="open" x-cloak
+               class="absolute left-0 bottom-full mb-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 min-w-[148px] py-1 overflow-hidden">
+            <a href="{{ url_for('quotes.pdf', qid=quote.id, lang='en') }}" target="_blank"
+               @click="open=false"
+               class="flex items-center gap-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
+              <i class="fa-solid fa-download text-rose-700"></i> Download PDF
+            </a>
+            {% if _em %}
+            <button onclick="sendEmail('en')" @click="open=false"
+                    class="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
+              <i class="fa-solid fa-envelope text-blue-700"></i> Send Email
+            </button>
+            {% endif %}
+            {% if _ph %}
+            <button onclick="openWhatsApp('en')" @click="open=false"
+                    class="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
+              <i class="fa-brands fa-whatsapp text-green-600"></i> WhatsApp
+            </button>
+            {% endif %}
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    {% if quote.obs %}
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-4">
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Observações</p>
+      <p class="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap">{{ quote.obs }}</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function(){
+  const q = {
+    number:  "{{ quote.number }}",
+    total:   "{{ quote.total_amount|currency }}",
+    client:  "{{ ((quote.client.name if quote.client else quote.client_name) or '')|e }}",
+    email:   "{{ ((quote.client.email if quote.client and quote.client.email else quote.email) or '')|e }}",
+    phone:   "{{ ((quote.client.whatsapp if quote.client and quote.client.whatsapp else quote.phone) or '')|e }}",
+    pdfPT:   "{{ url_for('quotes.pdf', qid=quote.id, lang='pt') }}",
+    pdfEN:   "{{ url_for('quotes.pdf', qid=quote.id, lang='en') }}",
+  };
+
+  window.sendEmail = function(lang) {
+    const pt = lang === 'pt';
+    const sub = pt
+      ? `Cotação ${q.number} – Executive Car SP`
+      : `Quotation ${q.number} – Executive Car SP`;
+    const body = pt
+      ? `Prezado(a) ${q.client},\n\nSegue em anexo a cotação nº ${q.number} da Executive Car SP.\n\nValor Total: ${q.total}\n\nEm caso de dúvidas, estamos à disposição.\n\nAtenciosamente,\nExecutive Car SP`
+      : `Dear ${q.client},\n\nPlease find attached quotation #${q.number} from Executive Car SP.\n\nTotal Amount: ${q.total}\n\nShould you have any questions, please do not hesitate to contact us.\n\nBest regards,\nExecutive Car SP`;
+    window.open(pt ? q.pdfPT : q.pdfEN, '_blank');
+    window.location.href = `mailto:${q.email}?subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(body)}`;
+  };
+
+  window.openWhatsApp = function(lang) {
+    const clean   = q.phone.replace(/\D/g, '');
+    const num     = clean.startsWith('55') ? clean : '55' + clean;
+    const pt      = lang !== 'en';
+    const pdfLink = window.location.origin + (pt ? q.pdfPT : q.pdfEN);
+    const msg     = pt
+      ? `Olá *${q.client}*! 👋\n\nSegue a cotação *#${q.number}* da *Executive Car SP*.\n\n💰 Valor Total: *${q.total}*\n\n📄 PDF: ${pdfLink}\n\nPor favor, entre em contato para confirmar.`
+      : `Hello *${q.client}*! 👋\n\nPlease find your quotation *#${q.number}* from *Executive Car SP*.\n\n💰 Total Amount: *${q.total}*\n\n📄 PDF: ${pdfLink}\n\nPlease contact us to confirm.`;
+    window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
+  };
+})();
+</script>
+{% endblock %}

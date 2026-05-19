@@ -1,0 +1,498 @@
+{
+  "run_at": "2026-05-18T02:35:12.753640",
+  "base_url": "http://127.0.0.1:5004",
+  "summary": {
+    "total": 97,
+    "pass": 94,
+    "fail": 2,
+    "warn": 1,
+    "rate": 96.9
+  },
+  "results": [
+    {
+      "status": "PASS",
+      "test": "Login page loads (GET)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "Login POST success",
+      "detail": "HTTP 200 url=http://127.0.0.1:5004/"
+    },
+    {
+      "status": "PASS",
+      "test": "Redirected to dashboard",
+      "detail": "Ended at http://127.0.0.1:5004/"
+    },
+    {
+      "status": "PASS",
+      "test": "Dashboard HTML has content",
+      "detail": "URL=http://127.0.0.1:5004/"
+    },
+    {
+      "status": "PASS",
+      "test": "Dashboard loads (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "Dashboard has stats",
+      "detail": "Could not find stats widgets in dashboard HTML"
+    },
+    {
+      "status": "PASS",
+      "test": "New client form loads (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "Create client POST",
+      "detail": "HTTP 200, url=http://127.0.0.1:5004/clients/"
+    },
+    {
+      "status": "PASS",
+      "test": "Redirected to clients list",
+      "detail": "url=http://127.0.0.1:5004/clients/"
+    },
+    {
+      "status": "PASS",
+      "test": "Client appears in list",
+      "detail": "Name not found in clients list"
+    },
+    {
+      "status": "PASS",
+      "test": "Client ID found",
+      "detail": "id=1"
+    },
+    {
+      "status": "PASS",
+      "test": "Client search JSON (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "Search returns list",
+      "detail": "Got: <class 'list'>"
+    },
+    {
+      "status": "PASS",
+      "test": "New client in search results",
+      "detail": "names=['QA-ECS-1779082503']"
+    },
+    {
+      "status": "PASS",
+      "test": "New quote form loads (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "Catalog data in page",
+      "detail": "No catalog found in new quote page"
+    },
+    {
+      "status": "PASS",
+      "test": "Catalog parsed from page",
+      "detail": "17 categories, first pricing_id=8"
+    },
+    {
+      "status": "PASS",
+      "test": "Create quote POST (200)",
+      "detail": "HTTP 200, url=http://127.0.0.1:5004/quotes/new"
+    },
+    {
+      "status": "PASS",
+      "test": "Create quote returns ID",
+      "detail": "resp={'id': 15, 'number': '20260518023504', 'redirect': '/quotes/15'}"
+    },
+    {
+      "status": "PASS",
+      "test": "Quote created",
+      "detail": "id=15, number=20260518023504"
+    },
+    {
+      "status": "PASS",
+      "test": "Quote detail loads (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "FAIL",
+      "test": "Quote shows client name",
+      "detail": "Client name not in quote detail"
+    },
+    {
+      "status": "PASS",
+      "test": "Quote shows items",
+      "detail": "No items visible in quote detail"
+    },
+    {
+      "status": "PASS",
+      "test": "Quote shows total",
+      "detail": "Total amount not visible"
+    },
+    {
+      "status": "PASS",
+      "test": "Approve button present",
+      "detail": "No approve button found"
+    },
+    {
+      "status": "PASS",
+      "test": "PDF PT download (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "PDF PT is PDF file",
+      "detail": "content starts: b'%PDF-1.4\\n%'"
+    },
+    {
+      "status": "PASS",
+      "test": "PDF PT content-type",
+      "detail": "application/pdf"
+    },
+    {
+      "status": "PASS",
+      "test": "PDF PT size",
+      "detail": "752,009 bytes"
+    },
+    {
+      "status": "PASS",
+      "test": "PDF EN download (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "PDF EN is PDF file",
+      "detail": "content starts: b'%PDF-1.4\\n%'"
+    },
+    {
+      "status": "PASS",
+      "test": "PDF EN size",
+      "detail": "751,974 bytes"
+    },
+    {
+      "status": "PASS",
+      "test": "Approve quote (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "After approve → detail page",
+      "detail": "url=http://127.0.0.1:5004/quotes/15"
+    },
+    {
+      "status": "PASS",
+      "test": "Status shows Aprovado",
+      "detail": "Status 'aprovado' not visible in detail after approve"
+    },
+    {
+      "status": "PASS",
+      "test": "Confirm booking button present",
+      "detail": "No confirm-booking button after approval"
+    },
+    {
+      "status": "PASS",
+      "test": "Confirm booking (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "Redirected to booking detail",
+      "detail": "url=http://127.0.0.1:5004/bookings/4"
+    },
+    {
+      "status": "PASS",
+      "test": "Booking created",
+      "detail": "id=4"
+    },
+    {
+      "status": "PASS",
+      "test": "Booking detail loads (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "Booking shows RES- number",
+      "detail": "RES number not found in booking detail"
+    },
+    {
+      "status": "PASS",
+      "test": "Booking status confirmado",
+      "detail": "Status not visible"
+    },
+    {
+      "status": "PASS",
+      "test": "OS list loads (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "OS auto-created",
+      "detail": "id=4"
+    },
+    {
+      "status": "PASS",
+      "test": "OS has OS- code",
+      "detail": "No OS- code found"
+    },
+    {
+      "status": "PASS",
+      "test": "OS detail loads (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "OS has status field",
+      "detail": "No status found in OS detail"
+    },
+    {
+      "status": "PASS",
+      "test": "OS has assign driver form",
+      "detail": "No assign driver form found"
+    },
+    {
+      "status": "PASS",
+      "test": "OS has assign supplier form",
+      "detail": "No assign supplier form found"
+    },
+    {
+      "status": "PASS",
+      "test": "Assign driver (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "Stays on OS page",
+      "detail": "url=http://127.0.0.1:5004/os/4"
+    },
+    {
+      "status": "PASS",
+      "test": "OS status atribuido",
+      "detail": "Status 'atribuido' not found after driver assignment"
+    },
+    {
+      "status": "PASS",
+      "test": "Driver name visible",
+      "detail": "Driver name not visible in OS detail"
+    },
+    {
+      "status": "PASS",
+      "test": "Assign supplier (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "Supplier name visible",
+      "detail": "Supplier info not visible in OS detail"
+    },
+    {
+      "status": "PASS",
+      "test": "Add cost (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "Cost visible in OS",
+      "detail": "Cost not visible in OS detail"
+    },
+    {
+      "status": "PASS",
+      "test": "Add note (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "Note visible in OS",
+      "detail": "Note not visible in OS timeline"
+    },
+    {
+      "status": "PASS",
+      "test": "Status → em_execucao (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "Status em_execucao visible",
+      "detail": "Status 'em_execucao' not visible"
+    },
+    {
+      "status": "PASS",
+      "test": "Send driver info (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "Driver info sent flag visible",
+      "detail": "Sent flag not visible in OS detail"
+    },
+    {
+      "status": "PASS",
+      "test": "Status → finalizado (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "Status finalizado visible",
+      "detail": "Status 'finalizado' not visible"
+    },
+    {
+      "status": "PASS",
+      "test": "New driver form (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "Create driver (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "Driver appears in list",
+      "detail": "url=http://127.0.0.1:5004/drivers/, text_snippet=<!DOCTYPE html>\n<html lang=\"pt-BR\"\n      x-data=\"erp()\"\n      :class=\"{ 'dark': dark }\">\n<head>\n  <m"
+    },
+    {
+      "status": "PASS",
+      "test": "New supplier form (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "Create supplier (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "Supplier in list",
+      "detail": "url=http://127.0.0.1:5004/suppliers/"
+    },
+    {
+      "status": "PASS",
+      "test": "New vehicle form (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "Create vehicle (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "Vehicle in list",
+      "detail": "url=http://127.0.0.1:5004/vehicles/"
+    },
+    {
+      "status": "PASS",
+      "test": "Edit quote form loads (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "EDIT_DATA in page",
+      "detail": "EDIT_DATA constant not found in edit page"
+    },
+    {
+      "status": "PASS",
+      "test": "Edit quote POST (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "Redirected to detail after edit",
+      "detail": "url=http://127.0.0.1:5004/quotes/16/edit"
+    },
+    {
+      "status": "FAIL",
+      "test": "Edited name appears in detail",
+      "detail": "Updated name not visible in quote detail"
+    },
+    {
+      "status": "PASS",
+      "test": "Edited total visible",
+      "detail": "New total (850) not visible"
+    },
+    {
+      "status": "WARN",
+      "test": "Reject quote test skipped",
+      "detail": "Could not create rejection test quote"
+    },
+    {
+      "status": "PASS",
+      "test": "Dispatch dashboard loads (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "Dispatch has OS count",
+      "detail": "No dispatch content found"
+    },
+    {
+      "status": "PASS",
+      "test": "Reports page loads (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "Reports has data",
+      "detail": "No report data found in reports page"
+    },
+    {
+      "status": "PASS",
+      "test": "OS list filter finalizado (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "Shows finalizado OS",
+      "detail": "No finalizado OS found"
+    },
+    {
+      "status": "PASS",
+      "test": "OS list search (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "Quotes filter aprovado (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "Shows approved quotes",
+      "detail": "No approved quote found"
+    },
+    {
+      "status": "PASS",
+      "test": "Quotes search (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "Quote found by search",
+      "detail": "Client name not found in search results"
+    },
+    {
+      "status": "PASS",
+      "test": "Settings page loads (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "Settings has company fields",
+      "detail": "No settings fields found"
+    },
+    {
+      "status": "PASS",
+      "test": "Logout (200)",
+      "detail": "HTTP 200"
+    },
+    {
+      "status": "PASS",
+      "test": "Redirected to login",
+      "detail": "url=http://127.0.0.1:5004/auth/login"
+    },
+    {
+      "status": "PASS",
+      "test": "Protected route after logout → redirect to login",
+      "detail": "url=http://127.0.0.1:5004/auth/login?next=%2F"
+    }
+  ]
+}

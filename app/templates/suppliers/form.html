@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if supplier else 'Novo' }} Fornecedor{% endblock %}
+{% block page_title %}
+  <a href="{{ url_for('suppliers.index') }}" class="text-slate-400 hover:text-blue-500 mr-2 text-sm"><i class="fa-solid fa-arrow-left"></i></a>
+  {{ 'Editar' if supplier else 'Novo' }} Fornecedor
+{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto bg-white dark:bg-slate-800 rounded-xl shadow-sm p-6">
+  <form method="post" class="space-y-4">
+    {% for fname, label in [('name','Nome *'),('email','Email'),('phone','Telefone'),('document','CNPJ'),('address','Endereço'),('notes','Notas')] %}
+    <div>
+      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ label }}</label>
+      {% if fname == 'notes' %}
+      <textarea name="{{ fname }}" rows="3"
+                class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">{{ supplier|attr(fname) if supplier else '' }}</textarea>
+      {% else %}
+      <input name="{{ fname }}" value="{{ supplier|attr(fname) if supplier else '' }}"
+             {% if '*' in label %}required{% endif %}
+             class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      {% endif %}
+    </div>
+    {% endfor %}
+    <div class="flex justify-end gap-3 pt-2">
+      <a href="{{ url_for('suppliers.index') }}"
+         class="px-4 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700">Cancelar</a>
+      <button class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-6 py-2 rounded-lg">Salvar</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

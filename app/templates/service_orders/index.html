@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Ordens de Serviço{% endblock %}
+{% block page_title %}<i class="fa-solid fa-clipboard-list mr-2 text-blue-500"></i>Ordens de Serviço{% endblock %}
+
+{% block content %}
+<!-- Toolbar -->
+<div class="flex flex-wrap items-center gap-3 mb-6">
+  <a href="{{ url_for('service_orders.new') }}"
+     class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg flex items-center gap-2">
+    <i class="fa-solid fa-plus"></i> Nova OS
+  </a>
+  <form class="flex gap-2 flex-1 max-w-lg" method="get">
+    <input name="q" value="{{ q }}" placeholder="Código, passageiro..."
+           class="flex-1 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    <select name="status" class="border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none">
+      <option value="">Todos os status</option>
+      {% for s in OS_STATUSES %}
+      <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s|title }}</option>
+      {% endfor %}
+    </select>
+    <button class="bg-slate-200 dark:bg-slate-600 rounded-lg px-3 py-2 text-sm">
+      <i class="fa-solid fa-search"></i>
+    </button>
+  </form>
+</div>
+
+<!-- Table -->
+<div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
+  <table class="w-full text-sm">
+    <thead class="bg-slate-50 dark:bg-slate-700 text-left">
+      <tr>
+        <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Código</th>
+        <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Pickup</th>
+        <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Passageiro</th>
+        <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Motorista / Forn.</th>
+        <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Receita</th>
+        <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Margem</th>
+        <th class="px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Status</th>
+        <th class="px-4 py-3"></th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+      {% for os in os_list %}
+      <tr class="hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+        <td class="px-4 py-3 font-mono text-xs text-blue-600 font-semibold">{{ os.code }}</td>
+        <td class="px-4 py-3 text-slate-600 dark:text-slate-300">
+          {{ os.pickup_datetime|fdatetime if os.pickup_datetime else '–' }}
+        </td>
+        <td class="px-4 py-3 text-slate-700 dark:text-slate-200">
+          {{ os.passenger_name or '–' }}
+          {% if os.pax_count and os.pax_count > 1 %}
+          <span class="text-xs text-slate-400 ml-1">({{ os.pax_count }} pax)</span>
+          {% endif %}
+        </td>
+        <td class="px-4 py-3 text-slate-600 dark:text-slate-300">
+          {% if os.assigned_driver %}
+            <span class="flex items-center gap-1"><i class="fa-solid fa-id-card text-violet-400 text-xs"></i>{{ os.assigned_driver.name }}</span>
+          {% elif os.supplier %}
+            <span class="flex items-center gap-1"><i class="fa-solid fa-handshake text-purple-400 text-xs"></i>{{ os.supplier.name }}</span>
+          {% else %}
+            <span class="text-slate-400">–</span>
+          {% endif %}
+        </td>
+        <td class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200">{{ os.revenue_amount|currency }}</td>
+        <td class="px-4 py-3">
+          {% if os.margin_amount >= 0 %}
+          <span class="text-green-600 font-semibold">{{ os.margin_amount|currency }}</span>
+          {% else %}
+          <span class="text-red-600 font-semibold">{{ os.margin_amount|currency }}</span>
+          {% endif %}
+        </td>
+        <td class="px-4 py-3">
+          <span class="text-xs px-2 py-0.5 rounded-full {{ os.status|status_badge }}">{{ os.status_label }}</span>
+        </td>
+        <td class="px-4 py-3">
+          <a href="{{ url_for('service_orders.detail', os_id=os.id) }}"
+             class="text-blue-500 hover:text-blue-700 text-xs">Ver →</a>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="8" class="px-4 py-12 text-center text-slate-400">Nenhuma ordem de serviço encontrada.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Financeiro{% endblock %}
+{% block page_title %}<i class="fa-solid fa-coins mr-2 text-amber-500"></i>Financeiro{% endblock %}
+
+{% block content %}
+<!-- Monthly P&L -->
+{% if revenue is defined %}
+<div class="grid grid-cols-3 gap-4 mb-6">
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm">
+    <p class="text-xs text-slate-500 mb-1">Receita (mês)</p>
+    <p class="text-2xl font-bold text-green-600">{{ revenue|currency }}</p>
+  </div>
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm">
+    <p class="text-xs text-slate-500 mb-1">Custos (mês)</p>
+    <p class="text-2xl font-bold text-red-500">{{ costs|currency }}</p>
+  </div>
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm">
+    <p class="text-xs text-slate-500 mb-1">Margem (mês)</p>
+    <p class="text-2xl font-bold {% if profit >= 0 %}text-blue-600{% else %}text-red-600{% endif %}">{{ profit|currency }}</p>
+  </div>
+</div>
+{% endif %}
+
+<div class="flex justify-between items-center mb-4">
+  <h2 class="font-semibold text-slate-700 dark:text-slate-200">Registros Financeiros</h2>
+  <a href="{{ url_for('financial.new_record') }}"
+     class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg flex items-center gap-2">
+    <i class="fa-solid fa-plus"></i> Novo Registro
+  </a>
+</div>
+
+<div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
+  <table class="w-full text-sm">
+    <thead class="bg-slate-50 dark:bg-slate-700">
+      <tr>
+        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Data</th>
+        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Descrição</th>
+        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Tipo</th>
+        <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Valor</th>
+        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Status</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+      {% for r in records %}
+      <tr class="hover:bg-slate-50 dark:hover:bg-slate-700">
+        <td class="px-4 py-3 text-slate-500">{{ r.created_at|fdate }}</td>
+        <td class="px-4 py-3 text-slate-700 dark:text-slate-200">{{ r.description or '–' }}</td>
+        <td class="px-4 py-3">
+          <span class="text-xs px-2 py-0.5 rounded-full {% if r.type == 'revenue' %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %}">
+            {{ r.type }}
+          </span>
+        </td>
+        <td class="px-4 py-3 text-right font-semibold {% if r.type == 'revenue' %}text-green-600{% else %}text-red-500{% endif %}">
+          {{ r.amount|currency }}
+        </td>
+        <td class="px-4 py-3 text-xs text-slate-500">{{ r.status or '–' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="px-4 py-10 text-center text-slate-400">Nenhum registro.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

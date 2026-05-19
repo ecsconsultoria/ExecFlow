@@ -1,0 +1,392 @@
+{% extends "base.html" %}
+{% block title %}Serviços{% endblock %}
+{% block page_title %}<i class="fa-solid fa-list-check mr-2 text-blue-500"></i>Serviços{% endblock %}
+
+{% block content %}
+<div x-data="svcMgr()" class="space-y-5">
+
+  {# Flash messages #}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+    <div class="px-4 py-3 rounded-lg text-sm font-medium
+      {% if cat == 'success' %}bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/30 dark:text-green-300
+      {% elif cat == 'warning' %}bg-yellow-50 text-yellow-700 border border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300
+      {% else %}bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-300{% endif %}">
+      {{ msg }}
+    </div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- ── ADICIONAR SERVIÇO (painel colapsável) ──────────── -->
+  <div x-show="showAdd" x-transition class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 dark:border-slate-700">
+      <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+        <i class="fa-solid fa-plus mr-2 text-yellow-500"></i>Adicionar Serviço Personalizado
+      </span>
+      <button @click="showAdd=false" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+        <i class="fa-solid fa-xmark text-sm"></i>
+      </button>
+    </div>
+    <div class="p-5">
+      <form method="POST" action="{{ url_for('services.add') }}" class="space-y-4">
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Tipo de serviço *</label>
+            <input type="text" name="service_name" placeholder="ex: Transfer Airport CGH" required
+                   class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Veículo *</label>
+            <select name="category_id" required
+                    class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">– Selecione –</option>
+              {% for cat in categories %}
+              <option value="{{ cat.id }}">{{ cat.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Motorista</label>
+            <select name="driver_type"
+                    class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">– Nenhum –</option>
+              {% for dt in driver_types if dt %}
+              <option value="{{ dt }}">{{ dt }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Estado</label>
+            <select name="state_code"
+                    class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              {% for st in states %}
+              <option value="{{ st.code }}">{{ st.code }} – {{ st.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Preço Custo R$</label>
+            <input type="number" name="price_cost" step="0.01" min="0" placeholder="0,00"
+                   class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Preço Base R$</label>
+            <input type="number" name="price_base" step="0.01" min="0" placeholder="0,00"
+                   class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+        </div>
+        <div class="flex gap-3">
+          <button type="submit"
+                  class="bg-yellow-500 hover:bg-yellow-600 text-black text-sm font-semibold px-5 py-2 rounded-lg transition-colors">
+            <i class="fa-solid fa-floppy-disk mr-1"></i> Salvar
+          </button>
+          <button type="button" @click="showAdd=false"
+                  class="border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-sm px-4 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+            <i class="fa-solid fa-xmark mr-1"></i> Cancelar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── IMPORTAR EXCEL (painel colapsável) ────────────── -->
+  <div x-show="showImport" x-transition class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 dark:border-slate-700">
+      <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+        <i class="fa-solid fa-file-arrow-up mr-2 text-green-500"></i>Importar Serviços do Excel
+      </span>
+      <button @click="showImport=false" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+        <i class="fa-solid fa-xmark text-sm"></i>
+      </button>
+    </div>
+    <div class="p-5">
+      <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">
+        Colunas (a partir da linha 2):
+        <span class="font-mono bg-slate-100 dark:bg-slate-700 px-1 rounded">Serviço | Veículo | Motorista | Estado | Preço Custo | Preço Base</span>
+      </p>
+      <form method="POST" action="{{ url_for('services.import_excel') }}" enctype="multipart/form-data"
+            class="flex items-center gap-3">
+        <input type="file" name="file" accept=".xlsx,.xls"
+               class="flex-1 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm text-slate-600 dark:text-slate-300 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-slate-100 dark:file:bg-slate-600 file:text-slate-700 dark:file:text-slate-200">
+        <button type="submit"
+                class="bg-yellow-500 hover:bg-yellow-600 text-black text-sm font-semibold px-5 py-2 rounded-lg transition-colors flex-shrink-0">
+          <i class="fa-solid fa-upload mr-1"></i> Importar
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── TABELA DE SERVIÇOS ─────────────────────────────── -->
+  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
+    <div x-data="{actMenu:false}" @click.outside="actMenu=false" class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+      <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
+        <i class="fa-solid fa-table-list mr-2 text-blue-500"></i>Catálogo de Serviços
+      </span>
+      <div class="flex items-center gap-3">
+        <form id="bulk-form" method="POST" action="{{ url_for('services.delete_bulk') }}" x-show="selected.length > 0">
+          <input type="hidden" name="ids" :value="selected.join(',')">
+          <button type="button" @click="bulkDelete()"
+                  class="text-xs text-red-500 hover:text-red-700 font-medium flex items-center gap-1">
+            <i class="fa-solid fa-trash"></i> Excluir selecionados (<span x-text="selected.length"></span>)
+          </button>
+        </form>
+        <div class="relative inline-block text-left">
+          <button @click="actMenu=!actMenu"
+                  class="inline-flex items-center gap-1.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow transition-all whitespace-nowrap">
+            <i class="fa-solid fa-bolt"></i>
+            Ações
+            <i class="fa-solid fa-chevron-down text-xs transition-transform duration-200" :class="actMenu && 'rotate-180'"></i>
+          </button>
+          <div x-show="actMenu" x-transition:enter="transition ease-out duration-100"
+               x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+               x-transition:leave="transition ease-in duration-75"
+               x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95"
+               class="absolute right-0 mt-2 w-52 rounded-xl shadow-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 z-50 overflow-hidden">
+            <div class="py-1">
+              <button @click="showAdd=!showAdd; showImport=false; actMenu=false"
+                      class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                <i class="fa-solid fa-plus w-4 text-yellow-500"></i>
+                Adicionar Serviço
+              </button>
+              <button @click="showImport=!showImport; showAdd=false; actMenu=false"
+                      class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                <i class="fa-solid fa-file-arrow-up w-4 text-green-500"></i>
+                Importar Excel
+              </button>
+              <div class="border-t border-slate-100 dark:border-slate-700 my-1"></div>
+              <a href="{{ url_for('services.export_excel') }}"
+                 class="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                <i class="fa-solid fa-file-arrow-down w-4 text-blue-500"></i>
+                Exportar Excel
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 px-5 py-3 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/30">
+      <select x-model="fs" class="border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
+        <option value="">Serviço</option>
+        <template x-for="name in uniqueServiceNames()" :key="name">
+          <option :value="name" x-text="name"></option>
+        </template>
+      </select>
+      <select x-model="fv" class="border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
+        <option value="">Veículo</option>
+        <template x-for="name in uniqueCategoryNames()" :key="name">
+          <option :value="name" x-text="name"></option>
+        </template>
+      </select>
+      <select x-model="fd" class="border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
+        <option value="">Motorista</option>
+        <template x-for="dt in uniqueDriverTypes()" :key="dt">
+          <option :value="dt" x-text="dt"></option>
+        </template>
+      </select>
+      <select x-model="fst" class="border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
+        <option value="">Estado</option>
+        <template x-for="code in uniqueStateCodes()" :key="code">
+          <option :value="code" x-text="code"></option>
+        </template>
+      </select>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 dark:bg-slate-700/50 text-slate-500 text-xs uppercase">
+          <tr>
+            <th class="px-2 py-2 w-6">
+              <input type="checkbox" @change="toggleAll($event)" class="rounded border-slate-300 text-blue-600">
+            </th>
+            <th class="px-2 py-2 text-left cursor-pointer select-none hover:text-slate-700 dark:hover:text-slate-200" @click="sortBy('service_name')">
+              Serviço <i class="fa-solid fa-fw ml-0.5" :class="sortIcon('service_name')"></i>
+            </th>
+            <th class="px-2 py-2 text-left cursor-pointer select-none hover:text-slate-700 dark:hover:text-slate-200" @click="sortBy('category_name')">
+              Veículo <i class="fa-solid fa-fw ml-0.5" :class="sortIcon('category_name')"></i>
+            </th>
+            <th class="px-2 py-2 w-20 text-left cursor-pointer select-none hover:text-slate-700 dark:hover:text-slate-200" @click="sortBy('driver_type')">
+              Motorista <i class="fa-solid fa-fw ml-0.5" :class="sortIcon('driver_type')"></i>
+            </th>
+            <th class="px-2 py-2 text-right cursor-pointer select-none hover:text-slate-700 dark:hover:text-slate-200" @click="sortBy('price_cost')">
+              Custo <i class="fa-solid fa-fw ml-0.5" :class="sortIcon('price_cost')"></i>
+            </th>
+            <th class="px-2 py-2 text-right cursor-pointer select-none hover:text-slate-700 dark:hover:text-slate-200" @click="sortBy('price_base')">
+              Base <i class="fa-solid fa-fw ml-0.5" :class="sortIcon('price_base')"></i>
+            </th>
+            <th class="px-2 py-2 text-left whitespace-nowrap cursor-pointer select-none hover:text-slate-700 dark:hover:text-slate-200" @click="sortBy('state_code')">
+              UF <i class="fa-solid fa-fw ml-0.5" :class="sortIcon('state_code')"></i>
+            </th>
+            <th class="px-2 py-2 w-14"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+          <template x-for="p in sortedRows()" :key="p.id">
+          <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30">
+            <td class="px-2 py-1.5">
+              <input type="checkbox" :value="p.id" class="row-cb rounded border-slate-300 text-blue-600"
+                     @change="toggleOne(p.id, $event.target.checked)">
+            </td>
+
+            <!-- Normal view -->
+            <td class="px-2 py-1.5 text-slate-700 dark:text-slate-200 font-medium" x-show="editId !== p.id" x-text="p.service_name"></td>
+            <td class="px-2 py-1.5 text-slate-500 dark:text-slate-300" x-show="editId !== p.id" x-text="p.category_name || '–'"></td>
+            <td class="px-2 py-1.5 text-slate-500" x-show="editId !== p.id" x-text="p.driver_type || '–'"></td>
+            <td class="px-2 py-1.5 text-right font-mono text-slate-600 dark:text-slate-300" x-show="editId !== p.id" x-text="p.price_cost_fmt"></td>
+            <td class="px-2 py-1.5 text-right font-mono font-semibold text-slate-700 dark:text-slate-200" x-show="editId !== p.id" x-text="p.price_base_fmt"></td>
+              <td class="px-2 py-1.5 text-slate-400" x-show="editId !== p.id" x-text="p.state_code || '–'"></td>
+            <td class="px-2 py-1.5" x-show="editId !== p.id">
+              <div class="flex gap-2 justify-end">
+                <button @click="startEdit(p.id, p.price_cost, p.price_base)"
+                        class="text-blue-400 hover:text-blue-600 p-1"><i class="fa-solid fa-pencil text-xs"></i></button>
+                <form method="POST" :action="p.delete_url"
+                      onsubmit="return confirm('Remover este serviço?')">
+                  <button type="submit" class="text-red-400 hover:text-red-600 p-1">
+                    <i class="fa-solid fa-trash text-xs"></i>
+                  </button>
+                </form>
+              </div>
+            </td>
+
+            <!-- Inline edit -->
+            <td colspan="7" class="px-2 py-1.5" x-show="editId === p.id">
+              <form method="POST" :action="p.edit_url"
+                    class="flex items-center gap-3 flex-wrap">
+                <span class="text-xs font-medium text-slate-600 dark:text-slate-300"
+                      x-text="p.service_name + (p.category_name ? ' — ' + p.category_name : '')"></span>
+                <label class="text-xs text-slate-500">Custo R$</label>
+                <input type="number" name="price_cost" x-model="editCost" step="0.01" min="0"
+                       class="w-28 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+                <label class="text-xs text-slate-500">Base R$</label>
+                <input type="number" name="price_base" x-model="editBase" step="0.01" min="0"
+                       class="w-28 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+                <button type="submit"
+                        class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg">
+                  <i class="fa-solid fa-check mr-1"></i>Salvar
+                </button>
+                <button type="button" @click="editId = null"
+                        class="text-slate-400 hover:text-slate-600 text-xs px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600">
+                  Cancelar
+                </button>
+              </form>
+            </td>
+          </tr>
+          </template>
+          <template x-if="sortedRows().length === 0">
+          <tr>
+            <td colspan="8" class="px-4 py-10 text-center text-slate-400">
+              Nenhum serviço cadastrado ainda.
+              <button @click="showAdd = true" class="text-blue-500 hover:underline ml-1">Adicionar agora →</button>
+            </td>
+          </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+function svcMgr() {
+  return {
+    showAdd:    false,
+    showImport: false,
+    editId:     null,
+    editCost:   0,
+    editBase:   0,
+    selected:   [],
+    sortCol:    'service_name',
+    sortDir:    'asc',
+    fs:  '{{ f_service|e }}',
+    fv:  '{{ f_vehicle|e }}',
+    fd:  '{{ f_driver|e }}',
+    fst: '{{ f_state|e }}',
+    rows: [
+      {% for p in pricing_rows %}
+      {
+        id:             {{ p.id }},
+        service_name:   {{ p.service.name|tojson }},
+        category_name:  {{ (p.category.name if p.category else '')|tojson }},
+        driver_type:    {{ (p.driver_type or '')|tojson }},
+        price_cost:     {{ p.price_cost or 0 }},
+        price_base:     {{ p.price_base or 0 }},
+        price_cost_fmt: {{ (p.price_cost|currency if p.price_cost else '–')|tojson }},
+        price_base_fmt: {{ (p.price_base|currency if p.price_base else '–')|tojson }},
+        state_code:     {{ (p.service.state.code if p.service.state else '')|tojson }},
+        edit_url:       '/services/edit/{{ p.id }}',
+        delete_url:     '/services/delete/{{ p.id }}',
+      },
+      {% endfor %}
+    ],
+
+    sortBy(col) {
+      if (this.sortCol === col) {
+        this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        this.sortCol = col;
+        this.sortDir = 'asc';
+      }
+    },
+
+    sortIcon(col) {
+      if (this.sortCol !== col) return 'fa-sort text-slate-300 dark:text-slate-600';
+      return this.sortDir === 'asc' ? 'fa-sort-up text-blue-500' : 'fa-sort-down text-blue-500';
+    },
+
+    uniqueServiceNames()  { return [...new Set(this.rows.map(r => r.service_name))].sort(); },
+    uniqueCategoryNames() { return [...new Set(this.rows.map(r => r.category_name).filter(Boolean))].sort(); },
+    uniqueDriverTypes()   { return [...new Set(this.rows.map(r => r.driver_type).filter(Boolean))].sort(); },
+    uniqueStateCodes()    { return [...new Set(this.rows.map(r => r.state_code).filter(Boolean))].sort(); },
+
+    sortedRows() {
+      const col = this.sortCol;
+      const dir = this.sortDir === 'asc' ? 1 : -1;
+      return [...this.rows]
+        .filter(r =>
+          (!this.fs  || r.service_name  === this.fs)  &&
+          (!this.fv  || r.category_name === this.fv)  &&
+          (!this.fd  || r.driver_type   === this.fd)  &&
+          (!this.fst || r.state_code    === this.fst)
+        )
+        .sort((a, b) => {
+          let va = a[col] ?? '';
+          let vb = b[col] ?? '';
+          if (typeof va === 'string') va = va.toLowerCase();
+          if (typeof vb === 'string') vb = vb.toLowerCase();
+          return va < vb ? -dir : va > vb ? dir : 0;
+        });
+    },
+
+    startEdit(id, cost, base) {
+      this.editId   = id;
+      this.editCost = cost;
+      this.editBase = base;
+    },
+
+    toggleAll(e) {
+      if (e.target.checked) {
+        this.selected = Array.from(document.querySelectorAll('.row-cb')).map(c => parseInt(c.value));
+        document.querySelectorAll('.row-cb').forEach(c => c.checked = true);
+      } else {
+        this.selected = [];
+        document.querySelectorAll('.row-cb').forEach(c => c.checked = false);
+      }
+    },
+
+    toggleOne(id, checked) {
+      if (checked) { if (!this.selected.includes(id)) this.selected.push(id); }
+      else { this.selected = this.selected.filter(x => x !== id); }
+    },
+
+    bulkDelete() {
+      if (!this.selected.length) return;
+      if (!confirm(`Remover ${this.selected.length} registro(s)?`)) return;
+      const form = document.getElementById('bulk-form');
+      form.querySelector('[name="ids"]').value = this.selected.join(',');
+      form.submit();
+    },
+  };
+}
+</script>
+{% endblock %}

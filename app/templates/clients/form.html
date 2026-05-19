@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if client else 'Novo' }} Cliente{% endblock %}
+{% block page_title %}
+  <a href="{{ url_for('clients.index') }}" class="text-slate-400 hover:text-blue-500 mr-2 text-sm"><i class="fa-solid fa-arrow-left"></i></a>
+  {{ 'Editar' if client else 'Novo' }} Cliente
+{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto bg-white dark:bg-slate-800 rounded-xl shadow-sm p-6">
+  <form method="post" class="space-y-4">
+    {% for fname, label, type in [
+      ('name',    'Empresa / Cliente *', 'text'),
+      ('contact', 'Nome do Contato',     'text'),
+      ('document','CPF/CNPJ',            'text'),
+    ] %}
+    <div>
+      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ label }}</label>
+      <input type="{{ type }}" name="{{ fname }}"
+             value="{{ client|attr(fname) if client and client|attr(fname) else '' }}"
+             {% if '*' in label %}required{% endif %}
+             class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+    {% endfor %}
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo</label>
+      <select name="client_type" class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none">
+        <option value="pf" {% if client and client.client_type == 'pf' %}selected{% endif %}>Pessoa Física</option>
+        <option value="pj" {% if client and client.client_type == 'pj' %}selected{% endif %}>Pessoa Jurídica</option>
+      </select>
+    </div>
+
+    {% for fname, label, type in [
+      ('email',    'Email',    'email'),
+      ('phone',    'Telefone', 'text'),
+      ('whatsapp', 'Celular',  'text'),
+    ] %}
+    <div>
+      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ label }}</label>
+      <input type="{{ type }}" name="{{ fname }}"
+             value="{{ client|attr(fname) if client and client|attr(fname) else '' }}"
+             class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+    {% endfor %}
+    <div>
+      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Endereço</label>
+      <input type="text" name="address"
+             value="{{ client.address if client and client.address else '' }}"
+             class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+    <div class="grid grid-cols-3 gap-3">
+      <div class="col-span-2">
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cidade</label>
+        <input type="text" name="city"
+               value="{{ client.city if client and client.city else '' }}"
+               class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Estado</label>
+        <input type="text" name="state" maxlength="10"
+               value="{{ client.state if client and client.state else '' }}"
+               class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">País</label>
+      <input type="text" name="country"
+             value="{{ client.country if client and client.country else 'Brasil' }}"
+             class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <div class="flex justify-end gap-3 pt-2">
+      <a href="{{ url_for('clients.index') }}"
+         class="px-4 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700">Cancelar</a>
+      <button class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-6 py-2 rounded-lg">Salvar</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
