@@ -118,7 +118,7 @@
 
   <!-- Actions -->
   <div class="space-y-4">
-    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-4" x-data="{showOsModal:false}">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-4">
       <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Ações</p>
       <div class="flex flex-wrap gap-2">
 
@@ -135,10 +135,18 @@
         </form>
         {% endif %}
 
-        {% if quote.status in ('aprovado', 'pago') and not service_order %}
-        <button @click="showOsModal=true" class="aq-btn bg-blue-600 hover:bg-blue-700" data-tip="Criar Ordem de Serviço">
-          <i class="fa-solid fa-clipboard-list"></i>
-        </button>
+        {% if quote.status in ('aprovado', 'pago') and not quote_order %}
+        <form method="post" action="{{ url_for('orders.create', qid=quote.id) }}">
+          <button type="submit" class="aq-btn bg-teal-600 hover:bg-teal-700" data-tip="Criar Pedido">
+            <i class="fa-solid fa-bag-shopping"></i>
+          </button>
+        </form>
+        {% endif %}
+
+        {% if quote_order %}
+        <a href="{{ url_for('orders.detail', oid=quote_order.id) }}" class="aq-btn bg-teal-600 hover:bg-teal-700" data-tip="Ver Pedido {{ quote_order.number }}">
+          <i class="fa-solid fa-bag-shopping"></i>
+        </a>
         {% endif %}
 
         {% if service_order %}
@@ -146,76 +154,6 @@
           <i class="fa-solid fa-clipboard-list"></i>
         </a>
         {% endif %}
-
-        <!-- Modal Criar OS -->
-        <div x-show="showOsModal" x-cloak
-             class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-             @keydown.escape.window="showOsModal=false">
-          <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg" @click.stop>
-            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700">
-              <h3 class="font-semibold text-slate-700 dark:text-slate-200 text-sm">
-                <i class="fa-solid fa-clipboard-list mr-2 text-blue-500"></i>Criar Ordem de Serviço
-              </h3>
-              <button @click="showOsModal=false" class="text-slate-400 hover:text-slate-600 text-lg leading-none">&times;</button>
-            </div>
-            <form method="POST" action="{{ url_for('quotes.create_os', qid=quote.id) }}">
-              <div class="px-5 py-4 grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <label class="block text-xs text-slate-500 mb-1">Data Início</label>
-                  <input type="date" name="pickup_date"
-                         class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
-                </div>
-                <div>
-                  <label class="block text-xs text-slate-500 mb-1">Hora Início</label>
-                  <input type="time" name="pickup_time"
-                         class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
-                </div>
-                <div class="col-span-2">
-                  <label class="block text-xs text-slate-500 mb-1">Local de Embarque</label>
-                  <input type="text" name="pickup_location" placeholder="Endereço / aeroporto..."
-                         class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
-                </div>
-                <div class="col-span-2">
-                  <label class="block text-xs text-slate-500 mb-1">Local de Desembarque</label>
-                  <input type="text" name="dropoff_location" placeholder="Endereço / hotel..."
-                         class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
-                </div>
-                <div class="col-span-2">
-                  <label class="block text-xs text-slate-500 mb-1">Nome do Passageiro</label>
-                  <input type="text" name="passenger_name"
-                         value="{{ quote.client.name if quote.client else '' }}"
-                         class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
-                </div>
-                <div>
-                  <label class="block text-xs text-slate-500 mb-1">Telefone</label>
-                  <input type="text" name="passenger_phone"
-                         value="{{ (quote.client.whatsapp or quote.client.phone) if quote.client else '' }}"
-                         class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
-                </div>
-                <div>
-                  <label class="block text-xs text-slate-500 mb-1">PAX</label>
-                  <input type="number" name="pax_count" value="1" min="1"
-                         class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
-                </div>
-                <div class="col-span-2">
-                  <label class="block text-xs text-slate-500 mb-1">Número do Voo <span class="text-slate-400">(opcional)</span></label>
-                  <input type="text" name="flight_number" placeholder="LA1234..."
-                         class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
-                </div>
-              </div>
-              <div class="px-5 py-3 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-2">
-                <button type="button" @click="showOsModal=false"
-                        class="text-slate-500 hover:text-slate-700 text-sm px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-600">
-                  Cancelar
-                </button>
-                <button type="submit"
-                        class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-5 py-2 rounded-lg">
-                  <i class="fa-solid fa-check mr-1"></i> Criar OS
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
 
         <a href="{{ url_for('quotes.edit', qid=quote.id) }}" class="aq-btn bg-slate-500 hover:bg-slate-600" data-tip="Editar Orçamento">
           <i class="fa-solid fa-pen"></i>
@@ -232,7 +170,7 @@
           </button>
           <div x-show="open" x-cloak
                class="absolute left-0 bottom-full mb-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 min-w-[148px] py-1 overflow-hidden">
-            <a href="{{ url_for('quotes.pdf', qid=quote.id, lang='pt') }}" target="_blank"
+            <a href="{{ url_for('quotes.pdf', qid=quote.id, lang='pt') }}"
                @click="open=false"
                class="flex items-center gap-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
               <i class="fa-solid fa-download text-rose-500"></i> Baixar PDF
@@ -259,7 +197,7 @@
           </button>
           <div x-show="open" x-cloak
                class="absolute left-0 bottom-full mb-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 min-w-[148px] py-1 overflow-hidden">
-            <a href="{{ url_for('quotes.pdf', qid=quote.id, lang='en') }}" target="_blank"
+            <a href="{{ url_for('quotes.pdf', qid=quote.id, lang='en') }}"
                @click="open=false"
                class="flex items-center gap-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
               <i class="fa-solid fa-download text-rose-700"></i> Download PDF
@@ -315,7 +253,6 @@
     const body = pt
       ? `Prezado(a) ${q.client},\n\nSegue em anexo a cotação nº ${q.number} da Executive Car SP.\n\nValor Total: ${q.total}\n\nEm caso de dúvidas, estamos à disposição.\n\nAtenciosamente,\nExecutive Car SP`
       : `Dear ${q.client},\n\nPlease find attached quotation #${q.number} from Executive Car SP.\n\nTotal Amount: ${q.total}\n\nShould you have any questions, please do not hesitate to contact us.\n\nBest regards,\nExecutive Car SP`;
-    window.open(pt ? q.pdfPT : q.pdfEN, '_blank');
     window.location.href = `mailto:${q.email}?subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(body)}`;
   };
 

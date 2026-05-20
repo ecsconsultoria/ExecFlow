@@ -441,7 +441,7 @@ function quoteBuilder() {
           const cat = this.catalog.find(c => c.id === item.category_id);
           if (cat) {
             const d10h = cat.services.find(s =>
-              /10\s*h/i.test(s.name) && s.driver_type === (item._svc.driver_type || '')
+              /10\s*h/i.test(s.name) && s.driver_type === (item.driver_type || '')
             );
             if (d10h) item.hour_extra = Math.round(this.priceFor(d10h) * 0.10 * 100) / 100;
           }
@@ -460,7 +460,10 @@ function quoteBuilder() {
       const refNote = this.getRefNote(svc.id);
 
       // Compute hour_extra rate = 10 % of the Diária-10h price for same category + driver_type
-      const diaria10h = cat.services.find(s =>
+      // Use the ORIGINAL (unfiltered) catalog so that Diária 10h is always found
+      // even when the user has a service filter applied that hides it from the accordion.
+      const origCat   = this.catalog.find(c => c.id === cat.id) || cat;
+      const diaria10h = origCat.services.find(s =>
         /10\s*h/i.test(s.name) && s.driver_type === svc.driver_type
       );
       const d10hPrice     = diaria10h ? this.priceFor(diaria10h) : 0;

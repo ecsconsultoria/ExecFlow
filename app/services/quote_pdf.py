@@ -156,14 +156,20 @@ _VEHICLE_EN: dict[str, str] = {
     "suv premium":               "Premium SUV",
     "suv blindado":              "Bulletproof SUV",
     "suv blindado premium":      "Bulletproof Premium SUV",
-    "minivan executiva":         "Executive Minivan",
-    "minivan executivo":         "Executive Minivan",
-    "minivan premium":           "Premium Minivan",
-    "minivan blindada":          "Bulletproof Minivan",
-    "minivan blindada premium":  "Bulletproof Premium Minivan",
+    "minivan executiva":          "Executive Minivan",
+    "minivan executivo":          "Executive Minivan",
+    "minivan executiva premium":  "Executive Premium Minivan",
+    "minivan executivo premium":  "Executive Premium Minivan",
+    "minivan premium":            "Premium Minivan",
+    "minivan blindada":           "Bulletproof Minivan",
+    "minivan blindado":           "Bulletproof Minivan",
+    "minivan blindada premium":   "Bulletproof Premium Minivan",
+    "minivan blindado premium":   "Bulletproof Premium Minivan",
     "van executiva":             "Executive Van",
+    "van executivo":             "Executive Van",
     "van premium":               "Premium Van",
     "van blindada":              "Bulletproof Van",
+    "van blindado":              "Bulletproof Van",
     "microônibus executivo":     "Executive Mini-Bus",
     "microonibus executivo":     "Executive Mini-Bus",
     "ônibus executivo":          "Executive Bus",
@@ -209,18 +215,24 @@ _VEHICLE_MODEL_PT: dict[str, str] = {
     "suv premium":               "Volvo XC 90 ou Similar",
     "suv blindado":              "Jeep Commander ou Similar",
     "suv blindado premium":      "Volvo XC 90 ou Similar",
-    "minivan executiva":         "Kia Carnival ou Similar",
-    "minivan executivo":         "Kia Carnival ou Similar",
-    "minivan premium":           "Mercedes Vito",
-    "minivan blindada":          "Kia Carnival ou Similar",
-    "minivan blindada premium":  "Mercedes Vito",
+    "minivan executiva":          "Kia Carnival ou Similar",
+    "minivan executivo":          "Kia Carnival ou Similar",
+    "minivan executiva premium":  "Mercedes Vito ou Similar",
+    "minivan executivo premium":  "Mercedes Vito ou Similar",
+    "minivan premium":            "Mercedes Vito ou Similar",
+    "minivan blindada":           "Kia Carnival ou Similar",
+    "minivan blindado":           "Kia Carnival ou Similar",
+    "minivan blindada premium":   "Mercedes Vito ou Similar",
+    "minivan blindado premium":   "Mercedes Vito ou Similar",
     "van executiva":             "Mercedes Sprinter ou Similar",
+    "van executivo":             "Mercedes Sprinter ou Similar",
     "van premium":               "Mercedes Sprinter ou Similar",
     "van blindada":              "Mercedes Sprinter ou Similar",
-    "microônibus executivo":     "Micro Ônibus 30L",
-    "microonibus executivo":     "Micro Ônibus 30L",
-    "ônibus executivo":          "Ônibus 46L",
-    "onibus executivo":          "Ônibus 46L",
+    "van blindado":              "Mercedes Sprinter ou Similar",
+    "microônibus executivo":     "Micro Ônibus Executivo 30L",
+    "microonibus executivo":     "Micro Ônibus Executivo 30L",
+    "ônibus executivo":          "Ônibus Executivo 46L",
+    "onibus executivo":          "Ônibus Executivo 46L",
 }
 
 _VEHICLE_MODEL_EN: dict[str, str] = {
@@ -233,31 +245,53 @@ _VEHICLE_MODEL_EN: dict[str, str] = {
     "suv premium":               "Volvo XC 90 or Similar",
     "suv blindado":              "Jeep Commander or Similar",
     "suv blindado premium":      "Volvo XC 90 or Similar",
-    "minivan executiva":         "Kia Carnival or Similar",
-    "minivan executivo":         "Kia Carnival or Similar",
-    "minivan premium":           "Mercedes Vito",
-    "minivan blindada":          "Kia Carnival or Similar",
-    "minivan blindada premium":  "Mercedes Vito",
+    "minivan executiva":          "Kia Carnival or Similar",
+    "minivan executivo":          "Kia Carnival or Similar",
+    "minivan executiva premium":  "Mercedes Vito or Similar",
+    "minivan executivo premium":  "Mercedes Vito or Similar",
+    "minivan premium":            "Mercedes Vito or Similar",
+    "minivan blindada":           "Kia Carnival or Similar",
+    "minivan blindado":           "Kia Carnival or Similar",
+    "minivan blindada premium":   "Mercedes Vito or Similar",
+    "minivan blindado premium":   "Mercedes Vito or Similar",
     "van executiva":             "Mercedes Sprinter or Similar",
+    "van executivo":             "Mercedes Sprinter or Similar",
     "van premium":               "Mercedes Sprinter or Similar",
     "van blindada":              "Mercedes Sprinter or Similar",
-    "microônibus executivo":     "Micro Bus 30L",
-    "microonibus executivo":     "Micro Bus 30L",
-    "ônibus executivo":          "Bus 46L",
-    "onibus executivo":          "Bus 46L",
+    "van blindado":              "Mercedes Sprinter or Similar",
+    "microônibus executivo":     "Executive Mini-Bus 30L",
+    "microonibus executivo":     "Executive Mini-Bus 30L",
+    "ônibus executivo":          "Executive Bus 46L",
+    "onibus executivo":          "Executive Bus 46L",
 }
+
+
+def _swap_gender(k: str) -> str:
+    """Swap gendered adjective suffix (o↔a) for fallback dict lookup."""
+    _MAP = {
+        "blindado": "blindada", "blindada": "blindado",
+        "executivo": "executiva", "executiva": "executivo",
+    }
+    words = k.split()
+    for i in range(len(words) - 1, -1, -1):
+        if words[i] in _MAP:
+            alt = words[:]
+            alt[i] = _MAP[words[i]]
+            return " ".join(alt)
+    return k
 
 
 def _get_vehicle_model(cat_name: str, lang: str) -> str:
     k = cat_name.strip().lower()
     d = _VEHICLE_MODEL_EN if lang == "en" else _VEHICLE_MODEL_PT
-    return d.get(k, "")
+    return d.get(k) or d.get(_swap_gender(k), "")
 
 
 def _translate_vehicle(name: str, lang: str) -> str:
     if lang == "pt" or not name:
         return name
-    return _VEHICLE_EN.get(name.strip().lower(), name)
+    k = name.strip().lower()
+    return _VEHICLE_EN.get(k) or _VEHICLE_EN.get(_swap_gender(k), name)
 
 
 def _title_case(s: str) -> str:

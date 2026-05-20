@@ -13,6 +13,7 @@ def register_blueprints(app):
     from .reports       import reports_bp
     from .service_orders import service_orders_bp
     from .dispatch       import dispatch_bp
+    from .orders         import orders_bp
 
     app.register_blueprint(auth_bp,           url_prefix="/auth")
     app.register_blueprint(dashboard_bp,      url_prefix="/")
@@ -28,3 +29,4 @@ def register_blueprints(app):
     app.register_blueprint(reports_bp,        url_prefix="/reports")
     app.register_blueprint(service_orders_bp, url_prefix="/os")
     app.register_blueprint(dispatch_bp,       url_prefix="/dispatch")
+    app.register_blueprint(orders_bp,         url_prefix="/orders")

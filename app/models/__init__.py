@@ -21,6 +21,7 @@ from .operation_cost           import OperationCost, COST_TYPES, COST_TYPE_LABEL
 from .revenue_entry            import RevenueEntry, REVENUE_STATUSES
 from .supplier_payment         import SupplierPayment, PAYMENT_STATUSES
 from .financial_entry          import FinancialEntry, ENTRY_TYPES
+from .order                    import Order, OrderItem, OrderPayment, ORDER_STATUSES
 
 __all__ = [
     "TimestampMixin", "SoftDeleteMixin",
@@ -43,4 +44,6 @@ __all__ = [
     "RevenueEntry", "REVENUE_STATUSES",
     "SupplierPayment", "PAYMENT_STATUSES",
     "FinancialEntry", "ENTRY_TYPES",
+    # Order (Pedido)
+    "Order", "OrderItem", "OrderPayment", "ORDER_STATUSES",
 ]

@@ -27,20 +27,9 @@ from ..utils import now_br
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _next_os_code(company_id: int) -> str:
-    """Gera o próximo código OS-YYYY-NNNN para a empresa."""
-    year = now_br().year
-    last = (ServiceOrder.query
-            .filter_by(company_id=company_id)
-            .filter(ServiceOrder.code.like(f"OS-{year}-%"))
-            .order_by(ServiceOrder.id.desc())
-            .first())
-    seq = 1
-    if last:
-        try:
-            seq = int(last.code.split("-")[-1]) + 1
-        except (ValueError, IndexError):
-            pass
-    return f"OS-{year}-{seq:04d}"
+    """Gera o próximo código OS-AAMMDD-NNN para a empresa."""
+    from . import numbering_service
+    return numbering_service.next_os(company_id)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

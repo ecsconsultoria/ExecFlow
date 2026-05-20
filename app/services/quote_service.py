@@ -6,7 +6,8 @@ from ..utils         import now_br
 
 
 def _next_number(company_id: int) -> str:
-    return now_br().strftime("%Y%m%d%H%M%S")
+    from . import numbering_service
+    return numbering_service.next_rfq(company_id)
 
 
 class QuoteService:

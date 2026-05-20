@@ -1,0 +1,477 @@
+"""blueprints/orders/routes.py — Rotas do módulo Pedidos (Orders)."""
+from datetime import datetime
+
+from flask import render_template, request, redirect, url_for, flash, abort, send_file, jsonify
+from flask_login import login_required, current_user
+
+from . import orders_bp
+from ...models.order        import Order, OrderItem, OrderPayment, ORDER_STATUSES
+from ...models.quote        import Quote
+from ...models.service_order import ServiceOrder
+from ...models.service      import Service
+from ...models.vehicle      import VehicleCategory
+from ...models.company      import Company
+from ...extensions          import db
+from ...services            import order_service
+from ...services            import service_order_service as sos
+from ...utils               import now_br
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Lista
+# ─────────────────────────────────────────────────────────────────────────────
+
+@orders_bp.route("/")
+@login_required
+def index():
+    status = request.args.get("status", "")
+    q      = request.args.get("q", "")
+    query  = Order.query.filter_by(company_id=current_user.company_id, deleted_at=None)
+    if status:
+        query = query.filter_by(status=status)
+    if q:
+        query = query.filter(
+            Order.client_name.ilike(f"%{q}%") | Order.number.ilike(f"%{q}%")
+        )
+    orders = query.order_by(Order.created_at.desc()).all()
+    return render_template("orders/index.html", orders=orders,
+                           status=status, q=q, ORDER_STATUSES=ORDER_STATUSES)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Criação a partir de Orçamento
+# ─────────────────────────────────────────────────────────────────────────────
+
+@orders_bp.route("/create/<int:qid>", methods=["POST"])
+@login_required
+def create(qid):
+    """Cria Pedido a partir de um Orçamento aprovado."""
+    quote = Quote.query.filter_by(
+        id=qid, company_id=current_user.company_id, deleted_at=None
+    ).first_or_404()
+
+    if quote.status not in ("aprovado", "pago"):
+        flash("Orçamento precisa estar aprovado para criar Pedido.", "warning")
+        return redirect(url_for("quotes.detail", qid=qid))
+
+    # Evita duplicatas
+    existing = Order.query.filter_by(quote_id=qid, deleted_at=None).first()
+    if existing:
+        flash(f"Pedido {existing.number} já existe para este orçamento.", "info")
+        return redirect(url_for("orders.detail", oid=existing.id))
+
+    order = order_service.create_from_quote(quote, current_user.id)
+    flash(f"Pedido {order.number} criado com sucesso.", "success")
+    return redirect(url_for("orders.detail", oid=order.id))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Detalhe
+# ─────────────────────────────────────────────────────────────────────────────
+
+@orders_bp.route("/<int:oid>")
+@login_required
+def detail(oid):
+    order = Order.query.filter_by(
+        id=oid, company_id=current_user.company_id, deleted_at=None
+    ).first_or_404()
+
+    # OS vinculadas via quote_id
+    linked_os = []
+    if order.quote_id:
+        linked_os = (
+            ServiceOrder.query
+            .filter_by(quote_id=order.quote_id)
+            .filter(ServiceOrder.deleted_at.is_(None))
+            .order_by(ServiceOrder.id.desc())
+            .all()
+        )
+
+    # Nome do vendedor (criador do pedido)
+    seller_name = "–"
+    if order.created_by:
+        try:
+            from ...models.user import User
+            u = User.query.get(order.created_by)
+            seller_name = u.name if u else "–"
+        except Exception:
+            pass
+
+    from sqlalchemy import or_
+    services   = Service.query.filter(
+        or_(Service.company_id == current_user.company_id, Service.company_id.is_(None))
+    ).filter_by(is_active=True).order_by(Service.name).all()
+    categories = VehicleCategory.query.filter_by(is_active=True).order_by(VehicleCategory.name).all()
+    company    = Company.query.get(order.company_id)
+
+    return render_template(
+        "orders/detail.html",
+        order=order,
+        linked_os=linked_os,
+        seller_name=seller_name,
+        ORDER_STATUSES=ORDER_STATUSES,
+        services=services,
+        categories=categories,
+        company=company,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Transições de status
+# ─────────────────────────────────────────────────────────────────────────────
+
+@orders_bp.route("/<int:oid>/open", methods=["POST"])
+@login_required
+def open_order(oid):
+    order = _get_order(oid)
+    try:
+        order_service.open_order(order, current_user.id)
+        flash("Pedido aberto.", "success")
+    except ValueError as e:
+        flash(str(e), "warning")
+    return redirect(url_for("orders.detail", oid=oid))
+
+
+@orders_bp.route("/<int:oid>/faturar", methods=["POST"])
+@login_required
+def faturar(oid):
+    order = _get_order(oid)
+    try:
+        order_service.faturar(order, request.form.to_dict(), current_user.id)
+        flash("Pedido faturado.", "success")
+    except ValueError as e:
+        flash(str(e), "warning")
+    return redirect(url_for("orders.detail", oid=oid))
+
+
+@orders_bp.route("/<int:oid>/fechar", methods=["POST"])
+@login_required
+def fechar(oid):
+    order = _get_order(oid)
+    try:
+        order_service.fechar(order, current_user.id)
+        flash("Pedido fechado.", "success")
+    except ValueError as e:
+        flash(str(e), "warning")
+    return redirect(url_for("orders.detail", oid=oid))
+
+
+@orders_bp.route("/<int:oid>/cancel", methods=["POST"])
+@login_required
+def cancel(oid):
+    order = _get_order(oid)
+    reason = request.form.get("reason", "")
+    try:
+        order_service.cancel(order, reason, current_user.id)
+        flash("Pedido cancelado.", "info")
+    except ValueError as e:
+        flash(str(e), "warning")
+    return redirect(url_for("orders.detail", oid=oid))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Pagamentos / Parcelas
+# ─────────────────────────────────────────────────────────────────────────────
+
+@orders_bp.route("/<int:oid>/generate-payments", methods=["POST"])
+@login_required
+def generate_payments(oid):
+    order = _get_order(oid)
+    # Atualiza forma/prazo antes de gerar parcelas
+    pm = request.form.get("payment_method", "").strip()
+    pt = request.form.get("payment_terms", "").strip()
+    if pm:
+        order.payment_method = pm
+    if pt:
+        order.payment_terms = pt
+    # Custom total override (campo VALOR)
+    custom_total = None
+    raw_custom = request.form.get("custom_amount", "").strip()
+    if raw_custom:
+        try:
+            # Handle Brazilian format: "5.000,00" → remove . then swap , → .
+            custom_total = float(raw_custom.replace(".", "").replace(",", "."))
+        except ValueError:
+            pass
+    pmts = order_service.generate_payments(order, custom_total=custom_total)
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        total_scheduled = sum(p.amount or 0 for p in order.payments)
+        a_pagar = max(order.computed_total - total_scheduled, 0)
+        return jsonify({
+            'ok': True,
+            'installments': [{
+                'id':       p.id,
+                'no':       p.installment_no,
+                'due_date': p.due_date.isoformat() if p.due_date else '',
+                'amount':   float(p.amount or 0),
+                'notes':    p.notes or '',
+            } for p in pmts],
+            'a_pagar':     a_pagar,
+            'total_count': len(order.payments),
+        })
+    flash(f"{len(pmts)} parcela(s) gerada(s).", "success")
+    return redirect(url_for("orders.detail", oid=oid))
+
+
+@orders_bp.route("/<int:oid>/payments/add", methods=["POST"])
+@login_required
+def add_payment(oid):
+    order = _get_order(oid)
+    try:
+        order_service.add_payment(order, request.form.to_dict())
+        flash("Parcela adicionada.", "success")
+    except Exception as e:
+        flash(str(e), "warning")
+    return redirect(url_for("orders.detail", oid=oid))
+
+
+@orders_bp.route("/payments/<int:pid>/delete", methods=["POST"])
+@login_required
+def delete_payment(pid):
+    pmt   = OrderPayment.query.get_or_404(pid)
+    order = pmt.order
+    _check_company(order)
+    try:
+        order_service.delete_payment(pmt)
+    except ValueError as e:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'ok': False, 'error': str(e)}), 400
+        flash(str(e), "warning")
+        return redirect(url_for("orders.detail", oid=order.id))
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        total_scheduled = sum(p.amount or 0 for p in order.payments)
+        a_pagar = max(order.computed_total - total_scheduled, 0)
+        return jsonify({'ok': True, 'a_pagar': a_pagar, 'total_count': len(order.payments)})
+    flash("Parcela removida.", "info")
+    return redirect(url_for("orders.detail", oid=order.id))
+
+
+@orders_bp.route("/payments/<int:pid>/baixa", methods=["POST"])
+@login_required
+def baixa(pid):
+    pmt   = OrderPayment.query.get_or_404(pid)
+    order = pmt.order
+    _check_company(order)
+    try:
+        raw         = request.form.get("paid_amount", "")
+        paid_amount = float(str(raw).replace(",", ".")) if raw else (pmt.amount or 0)
+        order_service.baixa(pmt, paid_amount, current_user.id)
+        flash("Pagamento registrado.", "success")
+    except Exception as e:
+        flash(str(e), "warning")
+    return redirect(url_for("orders.detail", oid=order.id))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Atualização de campos (cabeçalho / ajustes / parcela inline)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@orders_bp.route("/<int:oid>/update-header", methods=["POST"])
+@login_required
+def update_header(oid):
+    order = _get_order(oid)
+    data = request.form.to_dict()
+    # Combine delivery_date + delivery_time into delivery_datetime
+    d_date = data.pop("delivery_date", "").strip()
+    d_time = data.pop("delivery_time", "").strip()
+    if d_date:
+        data["delivery_datetime"] = f"{d_date}T{d_time or '00:00'}"
+    order_service.update_header(order, data)
+    flash("Cabeçalho atualizado.", "success")
+    return redirect(url_for("orders.detail", oid=oid))
+
+
+@orders_bp.route("/<int:oid>/update-adjustments", methods=["POST"])
+@login_required
+def update_adjustments(oid):
+    order = _get_order(oid)
+    order_service.update_adjustments(order, request.form.to_dict())
+    flash("Ajustes financeiros salvos.", "success")
+    return redirect(url_for("orders.detail", oid=oid))
+
+
+@orders_bp.route("/<int:oid>/save-all", methods=["POST"])
+@login_required
+def save_all(oid):
+    """Salva cabeçalho + ajustes. Se action='faturar', também fatura o pedido."""
+    order  = _get_order(oid)
+    data   = request.form.to_dict()
+    # Combine delivery_date + delivery_time
+    d_date = data.pop("delivery_date", "").strip()
+    d_time = data.pop("delivery_time", "").strip()
+    if d_date:
+        data["delivery_datetime"] = f"{d_date}T{d_time or '00:00'}"
+    else:
+        data.pop("delivery_datetime", None)
+    order_service.update_header(order, data)
+    # Contact fields
+    for field in ("client_name", "email", "phone", "celular"):
+        if field in data:
+            setattr(order, field, data[field] or "")
+    db.session.commit()
+    # Adjustments
+    order_service.update_adjustments(order, data)
+    # Action
+    action = data.get("action", "save")
+    if action == "faturar":
+        try:
+            order_service.faturar(order, data, current_user.id)
+            flash("Pedido salvo e faturado com sucesso.", "success")
+        except ValueError as e:
+            flash(str(e), "warning")
+    else:
+        flash("Pedido salvo.", "success")
+    return redirect(url_for("orders.detail", oid=oid))
+
+
+@orders_bp.route("/payments/<int:pid>/update", methods=["POST"])
+@login_required
+def update_payment(pid):
+    pmt   = OrderPayment.query.get_or_404(pid)
+    order = pmt.order
+    _check_company(order)
+    order_service.update_payment_inline(pmt, request.form.to_dict())
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'ok': True})
+    flash("Parcela atualizada.", "success")
+    return redirect(url_for("orders.detail", oid=order.id))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PDF
+# ─────────────────────────────────────────────────────────────────────────────
+
+@orders_bp.route("/<int:oid>/pdf/<lang>")
+@login_required
+def pdf(oid, lang):
+    from ...services.order_pdf import generate_order_pdf
+    order = _get_order(oid)
+    lang  = lang if lang in ("pt", "en") else "pt"
+    buf   = generate_order_pdf(order, lang=lang)
+    suffix = "PT" if lang == "pt" else "EN"
+    filename = f"Pedido_{order.number}_{suffix}.pdf"
+    return send_file(buf, mimetype="application/pdf",
+                     as_attachment=True, download_name=filename)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Itens do pedido
+# ─────────────────────────────────────────────────────────────────────────────
+
+@orders_bp.route("/<int:oid>/items/add", methods=["POST"])
+@login_required
+def add_item(oid):
+    order = _get_order(oid)
+    _check_company(order)
+    order_service.add_item(order, request.form.to_dict())
+    flash("Item adicionado.", "success")
+    return redirect(url_for("orders.detail", oid=oid))
+
+
+@orders_bp.route("/items/<int:iid>/delete", methods=["POST"])
+@login_required
+def delete_item(iid):
+    item = OrderItem.query.get_or_404(iid)
+    order = item.order
+    _check_company(order)
+    oid = order.id
+    order_service.delete_item(item)
+    flash("Item removido.", "success")
+    return redirect(url_for("orders.detail", oid=oid))
+
+
+@orders_bp.route("/items/<int:iid>/update", methods=["POST"])
+@login_required
+def update_item(iid):
+    item  = OrderItem.query.get_or_404(iid)
+    order = item.order
+    _check_company(order)
+    order_service.update_item(item, request.form.to_dict())
+    flash("Item atualizado.", "success")
+    return redirect(url_for("orders.detail", oid=order.id))
+
+
+@orders_bp.route("/<int:oid>/update-obs", methods=["POST"])
+@login_required
+def update_obs(oid):
+    order = _get_order(oid)
+    _check_company(order)
+    order.obs = request.form.get("obs", "") or ""
+    db.session.commit()
+    flash("Observação salva.", "success")
+    return redirect(url_for("orders.detail", oid=oid))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Criar OS a partir do Pedido
+# ─────────────────────────────────────────────────────────────────────────────
+
+@orders_bp.route("/<int:oid>/create-os", methods=["POST"])
+@login_required
+def create_os(oid):
+    order = _get_order(oid)
+    if order.status not in ("aberto", "faturado"):
+        flash("Pedido precisa estar aberto ou faturado para criar OS.", "warning")
+        return redirect(url_for("orders.detail", oid=oid))
+
+    # Verifica se já existe OS para este pedido (via quote_id)
+    if order.quote_id:
+        existing_os = (
+            ServiceOrder.query
+            .filter_by(quote_id=order.quote_id)
+            .filter(ServiceOrder.deleted_at.is_(None))
+            .first()
+        )
+        if existing_os:
+            flash(f"OS {existing_os.code} já existe para este pedido.", "info")
+            return redirect(url_for("service_orders.detail", os_id=existing_os.id))
+
+    f         = request.form
+    pickup_dt = None
+    date_str  = f.get("pickup_date", "").strip()
+    time_str  = f.get("pickup_time", "").strip()
+    if date_str and time_str:
+        try:
+            pickup_dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+        except ValueError:
+            pass
+    elif date_str:
+        try:
+            pickup_dt = datetime.strptime(date_str, "%Y-%m-%d")
+        except ValueError:
+            pass
+
+    # Usa o orçamento associado ao pedido como fonte para a OS
+    quote = order.quote
+    if not quote:
+        flash("Pedido sem orçamento associado — crie a OS manualmente.", "warning")
+        return redirect(url_for("orders.detail", oid=oid))
+
+    os_obj = sos.create_from_quote(quote, current_user.id, {
+        "pickup_datetime":  pickup_dt,
+        "pickup_location":  f.get("pickup_location",  "").strip() or None,
+        "dropoff_location": f.get("dropoff_location", "").strip() or None,
+        "passenger_name":   f.get("passenger_name",   "").strip() or None,
+        "passenger_phone":  f.get("passenger_phone",  "").strip() or None,
+        "pax_count":        int(f.get("pax_count", 1) or 1),
+        "flight_number":    f.get("flight_number",    "").strip() or None,
+        "notes":            f.get("notes",            "").strip() or None,
+    })
+    db.session.commit()
+    flash(f"OS {os_obj.code} criada com sucesso.", "success")
+    return redirect(url_for("service_orders.detail", os_id=os_obj.id))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Helpers
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _get_order(oid: int) -> Order:
+    return Order.query.filter_by(
+        id=oid, company_id=current_user.company_id, deleted_at=None
+    ).first_or_404()
+
+
+def _check_company(order: Order) -> None:
+    if order.company_id != current_user.company_id:
+        abort(403)

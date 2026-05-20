@@ -123,19 +123,36 @@ def new():
 @quotes_bp.route("/<int:qid>")
 @login_required
 def detail(qid):
+    from ...models.order import Order
     quote = Quote.query.filter_by(id=qid, company_id=current_user.company_id, deleted_at=None).first_or_404()
+    quote_order   = Order.query.filter_by(quote_id=quote.id, deleted_at=None).first()
     service_order = ServiceOrder.query.filter_by(quote_id=quote.id).filter(ServiceOrder.deleted_at.is_(None)).first()
     return render_template("quotes/detail.html", quote=quote, billing_types=BILLING_TYPES,
-                           service_order=service_order)
+                           service_order=service_order, quote_order=quote_order)
 
 
 @quotes_bp.route("/<int:qid>/edit", methods=["GET", "POST"])
 @login_required
 def edit(qid):
+    from ...models.order import Order
     quote = Quote.query.filter_by(id=qid, company_id=current_user.company_id, deleted_at=None).first_or_404()
+    # Lock: cannot edit a quote that already has an open order
+    linked_order = Order.query.filter_by(quote_id=quote.id, deleted_at=None).first()
+    if linked_order:
+        flash(
+            f"Orçamento bloqueado para edição — já existe o Pedido #{linked_order.number} "
+            f"gerado a partir dele. Edite o pedido diretamente.",
+            "danger",
+        )
+        return redirect(url_for("quotes.detail", qid=qid))
     if request.method == "POST":
         data = request.get_json(silent=True) or request.form.to_dict()
+        was_approved = quote.status == "aprovado"
         QuoteService.update_quote(quote, data)
+        if was_approved:
+            quote.status = "pendente"
+            db.session.commit()
+            flash("Orçamento editado — status revertido para Pendente. O cliente precisará aprovar novamente.", "warning")
         if request.is_json:
             return jsonify({"id": quote.id, "number": quote.number,
                             "redirect": url_for("quotes.detail", qid=qid)})
@@ -184,7 +201,7 @@ def pdf(qid, lang):
     quote = Quote.query.filter_by(id=qid, company_id=current_user.company_id, deleted_at=None).first_or_404()
     from ...services.quote_pdf import generate_quote_pdf
     buf = generate_quote_pdf(quote, lang=lang)
-    filename = f"proposta-{quote.number}-{lang}.pdf"
+    filename = f"{quote.number}.pdf"
     return send_file(buf, mimetype="application/pdf",
                      as_attachment=True, download_name=filename)
 
