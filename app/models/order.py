@@ -63,6 +63,7 @@ class Order(db.Model, TimestampMixin, SoftDeleteMixin):
     closed_at    = db.Column(db.DateTime, nullable=True)
     cancelled_at = db.Column(db.DateTime, nullable=True)
     cancel_reason = db.Column(db.Text)
+    reopened_at  = db.Column(db.DateTime, nullable=True)
 
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
 

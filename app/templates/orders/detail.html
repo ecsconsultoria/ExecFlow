@@ -96,6 +96,8 @@
   }
 }" x-cloak>
 
+{% set locked = order.status in ('fechado', 'faturado') %}
+
 {# ══════════════════════════════════════════
    MAIN FORM — cabeçalho + ajustes + faturar modal
    Botões no sidebar referenciam form="main-form"
@@ -231,11 +233,13 @@
   {# Cabeçalho do card #}
   <div class="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 dark:border-slate-700">
     <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Itens do Pedido</p>
+    {% if not locked %}
     <button type="button" @click="showAddItemModal=true"
             class="flex items-center gap-1 text-xs bg-teal-50 hover:bg-teal-100 text-teal-700
                    dark:bg-teal-900/30 dark:text-teal-300 font-semibold px-3 py-1.5 rounded-lg transition-colors">
       <i class="fa-solid fa-plus"></i> Adicionar Item
     </button>
+    {% endif %}
   </div>
 
   {# Tabela de itens #}
@@ -280,6 +284,7 @@
         <td class="px-3 py-2 text-right font-bold text-slate-700 dark:text-slate-100 font-mono whitespace-nowrap">{{ item.total_price|currency }}</td>
         <td class="px-3 py-2">
           <div class="flex items-center justify-end gap-1">
+            {% if not locked %}
             {# Editar #}
             <button type="button"
                     @click="openEditItem(
@@ -299,6 +304,7 @@
                     title="Remover item">
               <i class="fa-solid fa-trash-can text-xs"></i>
             </button>
+            {% endif %}
           </div>
         </td>
       </tr>
@@ -382,6 +388,7 @@
         <p class="text-xs text-emerald-400">Pago: {{ order.total_paid()|currency }}</p>
         {% endif %}
       </div>
+      {% if not locked %}
       <div class="space-y-2">
         <div>
           <label class="lbl text-slate-400">Forma</label>
@@ -417,6 +424,7 @@
           Gerar Contas <i class="fa-solid fa-arrow-right"></i>
         </button>
       </div>
+      {% endif %}
     </div>
 
     {# Painel direito — parcelas #}
@@ -464,6 +472,7 @@
               <td class="px-2 py-1.5 text-center"
                   x-data="{b:false,v:'{{ '%.2f'|format(pmt.amount or 0)|replace('.', ',') }}'}">  
                 <div class="flex items-center justify-center gap-0.5">
+                  {% if not locked %}
                   <template x-if="!b">
                     <button type="button" @click="b=true"
                             class="p-1 rounded text-emerald-600 hover:bg-emerald-100" title="Dar baixa">
@@ -486,14 +495,17 @@
                       </button>
                     </form>
                   </template>
+                  {% endif %}
                 </div>
               </td>
             </form>
             <td class="px-2 py-1.5 text-center">
+              {% if not locked %}
               <button type="button" onclick="deletePmt({{ pmt.id }})"
                       class="p-1 rounded text-red-400 hover:bg-red-100" title="Excluir">
                 <i class="fa-solid fa-trash-can" style="font-size:9px"></i>
               </button>
+              {% endif %}
             </td>
 
             {% else %}
@@ -601,6 +613,11 @@
         <dt>Faturado</dt><dd class="text-right">{{ order.invoiced_at|fdatetime }}</dd>
       </div>
       {% endif %}
+      {% if order.reopened_at %}
+      <div class="flex justify-between gap-2">
+        <dt>Reaberto</dt><dd class="text-right text-sky-500">{{ order.reopened_at|fdatetime }}</dd>
+      </div>
+      {% endif %}
       {% if order.closed_at %}
       <div class="flex justify-between gap-2">
         <dt>Fechado</dt><dd class="text-right text-emerald-500">{{ order.closed_at|fdatetime }}</dd>
@@ -629,7 +646,7 @@
   <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-2">
     <div class="flex flex-row gap-1.5">
 
-      {% if order.status not in ('cancelado', 'fechado') %}
+      {% if order.status not in ('cancelado', 'fechado', 'faturado') %}
       <button type="submit" form="main-form" name="action" value="save"
               data-tip="Salvar"
               class="act-btn bg-teal-600 hover:bg-teal-700">
@@ -686,6 +703,14 @@
               data-tip="Cancelar Pedido"
               class="act-btn bg-red-500 hover:bg-red-600">
         <i class="fa-solid fa-ban"></i>
+      </button>
+      {% endif %}
+
+      {% if order.status == 'faturado' %}
+      <button type="button" onclick="document.getElementById('reabrir-form').submit()"
+              data-tip="Reabrir para Aberto"
+              class="act-btn bg-sky-600 hover:bg-sky-700">
+        <i class="fa-solid fa-rotate-left"></i>
       </button>
       {% endif %}
 
@@ -767,6 +792,11 @@
 {# Form independente — Abrir Pedido (fora do main-form) #}
 <form id="open-order-form" method="post"
       action="{{ url_for('orders.open_order', oid=order.id) }}" class="hidden">
+</form>
+
+{# Form independente — Reabrir Pedido (faturado → aberto) #}
+<form id="reabrir-form" method="post"
+      action="{{ url_for('orders.reabrir', oid=order.id) }}" class="hidden">
 </form>
 
 {# Form independente — Gerar Contas (fora do main-form) #}
@@ -936,7 +966,7 @@
     }
 
     // Intentional navigations that should NOT trigger the dialog
-    ['open-order-form', 'gen-payments-form'].forEach(id => {
+    ['open-order-form', 'gen-payments-form', 'reabrir-form'].forEach(id => {
       const f = document.getElementById(id);
       if (f) f.addEventListener('submit', () => { dirty = false; });
     });

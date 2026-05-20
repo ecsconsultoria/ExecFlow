@@ -169,6 +169,18 @@ def cancel(oid):
     return redirect(url_for("orders.detail", oid=oid))
 
 
+@orders_bp.route("/<int:oid>/reabrir", methods=["POST"])
+@login_required
+def reabrir(oid):
+    order = _get_order(oid)
+    try:
+        order_service.reabrir(order, current_user.id)
+        flash("Pedido reaberto para edição.", "success")
+    except ValueError as e:
+        flash(str(e), "warning")
+    return redirect(url_for("orders.detail", oid=oid))
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Pagamentos / Parcelas
 # ─────────────────────────────────────────────────────────────────────────────
@@ -177,6 +189,11 @@ def cancel(oid):
 @login_required
 def generate_payments(oid):
     order = _get_order(oid)
+    if order.status in ("fechado", "faturado", "cancelado"):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'ok': False, 'error': 'Pedido bloqueado'}), 403
+        flash("Pedido não pode ser editado no status atual.", "warning")
+        return redirect(url_for("orders.detail", oid=oid))
     # Atualiza forma/prazo antes de gerar parcelas
     pm = request.form.get("payment_method", "").strip()
     pt = request.form.get("payment_terms", "").strip()
@@ -231,6 +248,11 @@ def delete_payment(pid):
     pmt   = OrderPayment.query.get_or_404(pid)
     order = pmt.order
     _check_company(order)
+    if order.status in ("fechado", "faturado", "cancelado"):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'ok': False, 'error': 'Pedido bloqueado'}), 403
+        flash("Pedido não pode ser editado no status atual.", "warning")
+        return redirect(url_for("orders.detail", oid=order.id))
     try:
         order_service.delete_payment(pmt)
     except ValueError as e:
@@ -252,6 +274,9 @@ def baixa(pid):
     pmt   = OrderPayment.query.get_or_404(pid)
     order = pmt.order
     _check_company(order)
+    if order.status in ("fechado", "cancelado"):
+        flash("Pedido não pode ser editado no status atual.", "warning")
+        return redirect(url_for("orders.detail", oid=order.id))
     try:
         raw         = request.form.get("paid_amount", "")
         paid_amount = float(str(raw).replace(",", ".")) if raw else (pmt.amount or 0)
@@ -295,6 +320,9 @@ def update_adjustments(oid):
 def save_all(oid):
     """Salva cabeçalho + ajustes. Se action='faturar', também fatura o pedido."""
     order  = _get_order(oid)
+    if order.status in ("fechado", "faturado", "cancelado"):
+        flash("Pedido não pode ser editado no status atual.", "warning")
+        return redirect(url_for("orders.detail", oid=oid))
     data   = request.form.to_dict()
     # Combine delivery_date + delivery_time
     d_date = data.pop("delivery_date", "").strip()
@@ -330,6 +358,11 @@ def update_payment(pid):
     pmt   = OrderPayment.query.get_or_404(pid)
     order = pmt.order
     _check_company(order)
+    if order.status in ("fechado", "faturado", "cancelado"):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'ok': False, 'error': 'Pedido bloqueado'}), 403
+        flash("Pedido não pode ser editado no status atual.", "warning")
+        return redirect(url_for("orders.detail", oid=order.id))
     order_service.update_payment_inline(pmt, request.form.to_dict())
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return jsonify({'ok': True})
@@ -363,6 +396,9 @@ def pdf(oid, lang):
 def add_item(oid):
     order = _get_order(oid)
     _check_company(order)
+    if order.status in ("fechado", "faturado", "cancelado"):
+        flash("Não é possível adicionar itens neste status.", "warning")
+        return redirect(url_for("orders.detail", oid=oid))
     order_service.add_item(order, request.form.to_dict())
     flash("Item adicionado.", "success")
     return redirect(url_for("orders.detail", oid=oid))
@@ -374,6 +410,9 @@ def delete_item(iid):
     item = OrderItem.query.get_or_404(iid)
     order = item.order
     _check_company(order)
+    if order.status in ("fechado", "faturado", "cancelado"):
+        flash("Não é possível remover itens neste status.", "warning")
+        return redirect(url_for("orders.detail", oid=order.id))
     oid = order.id
     order_service.delete_item(item)
     flash("Item removido.", "success")
@@ -386,6 +425,9 @@ def update_item(iid):
     item  = OrderItem.query.get_or_404(iid)
     order = item.order
     _check_company(order)
+    if order.status in ("fechado", "faturado", "cancelado"):
+        flash("Não é possível editar itens neste status.", "warning")
+        return redirect(url_for("orders.detail", oid=order.id))
     order_service.update_item(item, request.form.to_dict())
     flash("Item atualizado.", "success")
     return redirect(url_for("orders.detail", oid=order.id))
@@ -396,6 +438,9 @@ def update_item(iid):
 def update_obs(oid):
     order = _get_order(oid)
     _check_company(order)
+    if order.status in ("fechado", "faturado", "cancelado"):
+        flash("Pedido não pode ser editado no status atual.", "warning")
+        return redirect(url_for("orders.detail", oid=oid))
     order.obs = request.form.get("obs", "") or ""
     db.session.commit()
     flash("Observação salva.", "success")

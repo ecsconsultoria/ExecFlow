@@ -154,6 +154,17 @@ def cancel(order: Order, reason: str, user_id: int) -> None:
     db.session.commit()
 
 
+def reabrir(order: Order, user_id: int) -> None:
+    if order.status != "faturado":
+        raise ValueError(f"Somente pedidos faturados podem ser reabertos (status atual: '{order.status}')")
+    order.status         = "aberto"
+    order.reopened_at    = now_br()
+    order.invoiced_at    = None
+    order.invoice_number = ""
+    order.invoice_due_date = None
+    db.session.commit()
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Pagamentos / Parcelas
 # ─────────────────────────────────────────────────────────────────────────────

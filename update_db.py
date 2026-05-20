@@ -17,6 +17,7 @@ new_cols = [
     ("discount_value",     "FLOAT DEFAULT 0"),
     ("freight_amount",     "FLOAT DEFAULT 0"),
     ("other_costs_amount", "FLOAT DEFAULT 0"),
+    ("reopened_at",        "DATETIME"),
 ]
 
 for col, col_type in new_cols:
