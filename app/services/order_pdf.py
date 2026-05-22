@@ -37,7 +37,7 @@ from .quote_pdf import (
 # Extra order-specific translations merged into a local dict
 _T: dict[str, dict[str, str]] = {
     **_QT,
-    "order_title":      {"pt": "PEDIDO DE SERVIÇO",       "en": "SERVICE ORDER"},
+    "order_title":      {"pt": "PEDIDO DE VENDA",          "en": "SALES ORDER"},
     "order_no":         {"pt": "Nº Pedido",                "en": "Order No."},
     "emission":         {"pt": "Data de Emissão",          "en": "Issue Date"},
     "delivery":         {"pt": "Data de Entrega",          "en": "Delivery Date"},
@@ -164,7 +164,8 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
                               alignment=TA_RIGHT, leading=13)
     company_info_lines = []
     if company_doc:
-        company_info_lines.append(f"<b>CNPJ:</b> {company_doc}")
+        cnpj_lbl = "CNPJ" if lang == "pt" else "TAX ID"
+        company_info_lines.append(f"<b>{cnpj_lbl}:</b> {company_doc}")
     if company and getattr(company, "phone", None):
         phone_lbl = "Telefone" if lang == "pt" else "Phone"
         company_info_lines.append(f"<b>{phone_lbl}:</b> {company.phone}")
@@ -224,7 +225,6 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
     status_val = _STATUS_LABELS_ORD.get(order.status or "novo", {}).get(lang, order.status or "–")
 
     order_col_labels = [
-        _t("order_no",    lang),
         _t("emission",    lang),
         _t("delivery",    lang),
         _t("billing_lbl", lang),
@@ -232,7 +232,6 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         "STATUS",
     ]
     order_col_values = [
-        order.number,
         _fmt_date(order.emission_date),
         _fmt_datetime(order.delivery_datetime),
         _billing_label(order.billing_type or "recibo", lang),
@@ -242,7 +241,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
     order_meta_tbl = Table(
         [[Paragraph(h, cell_hdr) for h in order_col_labels],
          [Paragraph(v, cell_body_c) for v in order_col_values]],
-        colWidths=[W * 0.13, W * 0.13, W * 0.22, W * 0.18, W * 0.20, W * 0.14],
+        colWidths=[W * 0.16, W * 0.27, W * 0.21, W * 0.22, W * 0.14],
     )
     order_meta_tbl.setStyle(TableStyle([
         ("BACKGROUND",    (0, 0), (-1, 0), BRAND_DARK),
@@ -498,12 +497,22 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         obs_hdr_label = "OBSERVAÇÕES" if lang == "pt" else "NOTES"
         story.append(Paragraph(obs_hdr_label, sec_hdr))
         story.append(HRFlowable(width=W, thickness=1, color=BRAND_GOLD, spaceAfter=3))
-        story.append(Paragraph(order.obs, normal))
+        bullet_st = ParagraphStyle("obs_bullet", parent=normal, leftIndent=12, firstLineIndent=-8)
+        for line in order.obs.splitlines():
+            safe = line.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            if not safe.strip():
+                story.append(Spacer(1, 3))
+            elif safe.lstrip().startswith("- ") or safe.lstrip().startswith("* "):
+                text = safe.lstrip()[2:]
+                story.append(Paragraph(f"\u2022 {text}", bullet_st))
+            else:
+                story.append(Paragraph(safe, normal))
         story.append(Spacer(1, 4 * mm))
 
     # ── Footer as page callback (like quote PDF) ───────────────────────────
     from datetime import datetime as _dt
-    tax_part     = (f"{company_name} \u2022 CNPJ {company_doc}" if company_doc else company_name)
+    cnpj_lbl_footer = "CNPJ" if lang == "pt" else "TAX ID"
+    tax_part     = (f"{company_name} \u2022 {cnpj_lbl_footer} {company_doc}" if company_doc else company_name)
     now_str      = _dt.now().strftime("%d/%m/%Y %H:%M")
     _footer_line = f"{_t('generated', lang)} {now_str}   \u2022   {tax_part}"
     _lm, _rm, _pw = 15 * mm, A4[0] - 15 * mm, A4[0]

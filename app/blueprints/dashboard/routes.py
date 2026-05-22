@@ -7,6 +7,7 @@ from ...models.booking  import Booking
 from ...models.financial import FinancialRecord
 from ...models.company  import Company
 from ...models.service_order import ServiceOrder
+from ...models.order import Order
 from ...extensions import db
 import os
 import uuid
@@ -19,7 +20,7 @@ def index():
     total_clients  = Client.query.filter_by(company_id=cid, deleted_at=None).count()
     total_quotes   = Quote.query.filter_by(company_id=cid,  deleted_at=None).count()
     total_bookings = Booking.query.filter_by(company_id=cid, deleted_at=None).count()
-    total_os       = ServiceOrder.query.filter_by(company_id=cid, deleted_at=None).count()
+    total_orders   = Order.query.filter_by(company_id=cid, deleted_at=None).count()
 
     pending_quotes = (Quote.query
                       .filter_by(company_id=cid, status="pendente", deleted_at=None)
@@ -57,7 +58,7 @@ def index():
         total_clients=total_clients,
         total_quotes=total_quotes,
         total_bookings=total_bookings,
-        total_os=total_os,
+        total_orders=total_orders,
         revenue=revenue,
         pending_quotes=pending_quotes,
         upcoming_bookings=upcoming_bookings,

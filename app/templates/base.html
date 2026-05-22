@@ -70,7 +70,7 @@
     <a href="{{ url_for('orders.index') }}"
        class="{{ sl_active if request.blueprint == 'orders' else sl }}">
       <i class="fa-solid fa-bag-shopping w-5 text-center shrink-0"></i>
-      <span x-show="sidebarOpen" x-transition class="truncate">Pedidos</span>
+      <span x-show="sidebarOpen" x-transition class="truncate">Sales Orders (SO)</span>
     </a>
     <!-- OPERACIONAL V4 -->
     <p x-show="sidebarOpen" class="text-xs font-semibold text-slate-500 uppercase tracking-wider px-3 mt-5 mb-1">Operacional</p>
@@ -79,10 +79,10 @@
       <i class="fa-solid fa-tower-broadcast w-5 text-center shrink-0"></i>
       <span x-show="sidebarOpen" x-transition class="truncate">Centro de Despacho</span>
     </a>
-    <a href="{{ url_for('service_orders.index') }}"
-       class="{{ sl_active if request.blueprint == 'service_orders' else sl }}">
-      <i class="fa-solid fa-clipboard-list w-5 text-center shrink-0"></i>
-      <span x-show="sidebarOpen" x-transition class="truncate">Ordens de Serviço</span>
+    <a href="{{ url_for('purchase_orders.index') }}"
+       class="{{ sl_active if request.blueprint == 'purchase_orders' else sl }}">
+      <i class="fa-solid fa-cart-flatbed w-5 text-center shrink-0"></i>
+      <span x-show="sidebarOpen" x-transition class="truncate">Purchase Orders (PO)</span>
     </a>
 
     <!-- EQUIPE -->

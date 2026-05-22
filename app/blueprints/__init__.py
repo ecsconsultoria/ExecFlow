@@ -11,22 +11,22 @@ def register_blueprints(app):
     from .bookings      import bookings_bp
     from .financial     import financial_bp
     from .reports       import reports_bp
-    from .service_orders import service_orders_bp
-    from .dispatch       import dispatch_bp
-    from .orders         import orders_bp
+    from .dispatch         import dispatch_bp
+    from .orders           import orders_bp
+    from .purchase_orders  import purchase_orders_bp
 
-    app.register_blueprint(auth_bp,           url_prefix="/auth")
-    app.register_blueprint(dashboard_bp,      url_prefix="/")
-    app.register_blueprint(clients_bp,        url_prefix="/clients")
-    app.register_blueprint(suppliers_bp,      url_prefix="/suppliers")
-    app.register_blueprint(drivers_bp,        url_prefix="/drivers")
-    app.register_blueprint(vehicles_bp,       url_prefix="/vehicles")
-    app.register_blueprint(categories_bp,     url_prefix="/categories")
-    app.register_blueprint(services_bp,       url_prefix="/services")
-    app.register_blueprint(quotes_bp,         url_prefix="/quotes")
-    app.register_blueprint(bookings_bp,       url_prefix="/bookings")
-    app.register_blueprint(financial_bp,      url_prefix="/financial")
-    app.register_blueprint(reports_bp,        url_prefix="/reports")
-    app.register_blueprint(service_orders_bp, url_prefix="/os")
-    app.register_blueprint(dispatch_bp,       url_prefix="/dispatch")
-    app.register_blueprint(orders_bp,         url_prefix="/orders")
+    app.register_blueprint(auth_bp,             url_prefix="/auth")
+    app.register_blueprint(dashboard_bp,        url_prefix="/")
+    app.register_blueprint(clients_bp,          url_prefix="/clients")
+    app.register_blueprint(suppliers_bp,        url_prefix="/suppliers")
+    app.register_blueprint(drivers_bp,          url_prefix="/drivers")
+    app.register_blueprint(vehicles_bp,         url_prefix="/vehicles")
+    app.register_blueprint(categories_bp,       url_prefix="/categories")
+    app.register_blueprint(services_bp,         url_prefix="/services")
+    app.register_blueprint(quotes_bp,           url_prefix="/quotes")
+    app.register_blueprint(bookings_bp,         url_prefix="/bookings")
+    app.register_blueprint(financial_bp,        url_prefix="/financial")
+    app.register_blueprint(reports_bp,          url_prefix="/reports")
+    app.register_blueprint(dispatch_bp,         url_prefix="/dispatch")
+    app.register_blueprint(orders_bp,           url_prefix="/orders")
+    app.register_blueprint(purchase_orders_bp,  url_prefix="/po")

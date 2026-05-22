@@ -149,13 +149,7 @@
         </a>
         {% endif %}
 
-        {% if service_order %}
-        <a href="{{ url_for('service_orders.detail', os_id=service_order.id) }}" class="aq-btn bg-violet-600 hover:bg-violet-700" data-tip="Ver Ordem de Serviço">
-          <i class="fa-solid fa-clipboard-list"></i>
-        </a>
-        {% endif %}
-
-        <a href="{{ url_for('quotes.edit', qid=quote.id) }}" class="aq-btn bg-slate-500 hover:bg-slate-600" data-tip="Editar Orçamento">
+<a href="{{ url_for('quotes.edit', qid=quote.id) }}" class="aq-btn bg-slate-500 hover:bg-slate-600" data-tip="Editar Orçamento">
           <i class="fa-solid fa-pen"></i>
         </a>
 

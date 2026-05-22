@@ -16,7 +16,7 @@ from ..utils import now_br
 # ─────────────────────────────────────────────────────────────────────────────
 
 def create_from_quote(quote, user_id: int) -> Order:
-    """Cria um Pedido (BR-AAMMDD-NNN) a partir de um Orçamento aprovado."""
+    """Cria um Pedido (SO-AAMMDD-NNN) a partir de um Orçamento aprovado."""
     from . import numbering_service
 
     order = Order(

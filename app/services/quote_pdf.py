@@ -321,10 +321,14 @@ def _translate_service(name: str, lang: str, vehicle: str = "") -> str:
     is_freelance = "free lance" in vehicle.lower() if vehicle else False
     v = re.sub(r"\bTransfer(?:\s+Airport)?\b", "Airport Transfer", name)
     if not is_freelance:
-        v = re.sub(r"Di[aá]ria\s+0?5h\b(?:\s*\+\s*\d+\s*[Kk][Mm]\s*Franquia)?",
-                   "Disposal 5 Hours + 50 Km Included", v, flags=re.IGNORECASE)
-        v = re.sub(r"Di[aá]ria\s+10h\b(?:\s*\+\s*\d+\s*[Kk][Mm]\s*Franquia)?",
-                   "Disposal 10 Hours + 100 Km Included", v, flags=re.IGNORECASE)
+        v = re.sub(
+            r"Di[aá]ria\s+0?5h\b(?:\s*\+\s*(\d+)\s*[Kk][Mm]\s*Franquia)?",
+            lambda m: f"Disposal 5 Hours + {m.group(1) or '50'} Km Included",
+            v, flags=re.IGNORECASE)
+        v = re.sub(
+            r"Di[aá]ria\s+10h\b(?:\s*\+\s*(\d+)\s*[Kk][Mm]\s*Franquia)?",
+            lambda m: f"Disposal 10 Hours + {m.group(1) or '100'} Km Included",
+            v, flags=re.IGNORECASE)
     v = re.sub(r"\s*\+\s*\d+\s*[Kk][Mm]\s*Franquia", "", v, flags=re.IGNORECASE)
     v = re.sub(r"\bDi[aá]ria\b", "Disposal", v)
     return v

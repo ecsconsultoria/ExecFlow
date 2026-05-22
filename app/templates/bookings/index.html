@@ -22,12 +22,7 @@
         <td class="px-4 py-3 text-slate-700 dark:text-slate-200">{{ b.client.name if b.client else '–' }}</td>
         <td class="px-4 py-3 text-slate-500">{{ b.created_at|fdate }}</td>
         <td class="px-4 py-3">
-          {% if b.service_order %}
-          <a href="{{ url_for('service_orders.detail', os_id=b.service_order.id) }}"
-             class="font-mono text-xs text-blue-500 hover:underline">{{ b.service_order.code }}</a>
-          {% else %}
           <span class="text-slate-400 text-xs">–</span>
-          {% endif %}
         </td>
         <td class="px-4 py-3">
           <span class="text-xs px-2 py-0.5 rounded-full {{ b.status|status_badge }}">{{ b.status }}</span>

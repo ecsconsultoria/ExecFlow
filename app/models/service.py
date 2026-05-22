@@ -27,6 +27,14 @@ class Service(db.Model, TimestampMixin):
     km_included    = db.Column(db.Float)
     is_active      = db.Column(db.Boolean, default=True)
 
+    # ── Flags operacionais (controlam campos dinâmicos no form de PO) ─────────
+    is_operational     = db.Column(db.Boolean, default=False)  # gera PO ao ser confirmado
+    requires_route     = db.Column(db.Boolean, default=False)  # exibe pickup/dropoff
+    requires_passenger = db.Column(db.Boolean, default=False)  # exibe dados do passageiro
+    requires_vehicle   = db.Column(db.Boolean, default=False)  # exibe categoria/veículo
+    requires_dispatch  = db.Column(db.Boolean, default=False)  # aparece no Centro de Despacho
+    requires_schedule  = db.Column(db.Boolean, default=False)  # exige data/hora de pickup
+
     pricing     = db.relationship("ServicePricing", backref="service",
                                   lazy="dynamic", cascade="all, delete-orphan")
     quote_items = db.relationship("QuoteItem", backref="service", lazy="dynamic")

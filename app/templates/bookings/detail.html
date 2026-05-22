@@ -20,13 +20,7 @@
           <dd><a href="{{ url_for('quotes.detail', qid=booking.quote.id) }}" class="text-blue-500 hover:underline">{{ booking.quote.number }}</a></dd>
         </div>
         {% endif %}
-        {% if booking.service_order %}
-        <div>
-          <dt class="text-slate-500">Ordem de Serviço</dt>
-          <dd><a href="{{ url_for('service_orders.detail', os_id=booking.service_order.id) }}" class="text-blue-500 hover:underline">{{ booking.service_order.code }}</a></dd>
-        </div>
-        {% endif %}
-        {% if booking.notes %}
+{% if booking.notes %}
         <div class="sm:col-span-2"><dt class="text-slate-500">Observações</dt><dd>{{ booking.notes }}</dd></div>
         {% endif %}
       </dl>
@@ -35,12 +29,6 @@
   <div class="space-y-3">
     <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-5">
       <h2 class="font-semibold text-slate-700 dark:text-slate-200 mb-3">Ações</h2>
-      {% if booking.service_order %}
-      <a href="{{ url_for('service_orders.detail', os_id=booking.service_order.id) }}"
-         class="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white text-sm py-2 rounded-lg mb-2">
-        <i class="fa-solid fa-clipboard-list mr-1"></i> Gerenciar OS
-      </a>
-      {% endif %}
       {% if booking.status not in ('cancelado','concluido') %}
       <form method="post" action="{{ url_for('bookings.cancel', bid=booking.id) }}"
             onsubmit="return confirm('Cancelar este booking?')">

@@ -277,7 +277,7 @@ def create_os(qid):
     })
     db.session.commit()
     flash(f"OS {os_obj.code} criada com sucesso.", "success")
-    return redirect(url_for("service_orders.detail", os_id=os_obj.id))
+    return redirect(url_for("quotes.detail", qid=quote.id))
 
 
 @quotes_bp.route("/<int:qid>/delete", methods=["POST"])

@@ -1,6 +1,6 @@
 """numbering_service.py — Geração centralizada de numeração sequencial para documentos ERP.
 
-Padrão: PREFIX-AAMMDD-NNN  (ex: RFQ-260519-001, BR-260519-001, OS-260519-001)
+Padrão: PREFIX-AAMMDD-NNN  (ex: RFQ-260519-001, SO-260519-001, OS-260519-001)
 - Segurança: filtra por company_id e prefixo do dia para sequência diária
 - Thread-safe: depende de flush/commit do SQLAlchemy antes de chamar
 """
@@ -34,9 +34,9 @@ def next_rfq(company_id: int) -> str:
 
 
 def next_order(company_id: int) -> str:
-    """Próximo número de Pedido: BR-AAMMDD-NNN."""
+    """Próximo número de Pedido: SO-AAMMDD-NNN."""
     from ..models.order import Order
-    prefix = "BR-" + now_br().strftime("%y%m%d")
+    prefix = "SO-" + now_br().strftime("%y%m%d")
     return _next_seq(Order, "number", company_id, prefix)
 
 
@@ -45,3 +45,10 @@ def next_os(company_id: int) -> str:
     from ..models.service_order import ServiceOrder
     prefix = "OS-" + now_br().strftime("%y%m%d")
     return _next_seq(ServiceOrder, "code", company_id, prefix)
+
+
+def next_po(company_id: int) -> str:
+    """Próximo número de Purchase Order: PO-AAMMDD-NNN."""
+    from ..models.purchase_order import PurchaseOrder
+    prefix = "PO-" + now_br().strftime("%y%m%d")
+    return _next_seq(PurchaseOrder, "number", company_id, prefix)

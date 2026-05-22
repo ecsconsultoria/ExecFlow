@@ -5,16 +5,18 @@ from flask import render_template, request, redirect, url_for, flash, abort, sen
 from flask_login import login_required, current_user
 
 from . import orders_bp
-from ...models.order        import Order, OrderItem, OrderPayment, ORDER_STATUSES
-from ...models.quote        import Quote
-from ...models.service_order import ServiceOrder
-from ...models.service      import Service
-from ...models.vehicle      import VehicleCategory
-from ...models.company      import Company
-from ...extensions          import db
-from ...services            import order_service
-from ...services            import service_order_service as sos
-from ...utils               import now_br
+from ...models.order          import Order, OrderItem, OrderPayment, ORDER_STATUSES
+from ...models.quote          import Quote
+from ...models.service_order  import ServiceOrder
+from ...models.purchase_order import PurchaseOrder
+from ...models.service        import Service
+from ...models.vehicle        import VehicleCategory
+from ...models.company        import Company
+from ...extensions            import db
+from ...services              import order_service
+from ...services              import service_order_service as sos
+from ...services              import purchase_order_service as pos
+from ...utils                 import now_br
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -76,7 +78,7 @@ def detail(oid):
         id=oid, company_id=current_user.company_id, deleted_at=None
     ).first_or_404()
 
-    # OS vinculadas via quote_id
+    # OS vinculadas via quote_id (dispatch center)
     linked_os = []
     if order.quote_id:
         linked_os = (
@@ -86,6 +88,15 @@ def detail(oid):
             .order_by(ServiceOrder.id.desc())
             .all()
         )
+
+    # POs vinculadas via order_id
+    linked_po = (
+        PurchaseOrder.query
+        .filter_by(order_id=order.id)
+        .filter(PurchaseOrder.deleted_at.is_(None))
+        .order_by(PurchaseOrder.id.desc())
+        .all()
+    )
 
     # Nome do vendedor (criador do pedido)
     seller_name = "–"
@@ -108,6 +119,7 @@ def detail(oid):
         "orders/detail.html",
         order=order,
         linked_os=linked_os,
+        linked_po=linked_po,
         seller_name=seller_name,
         ORDER_STATUSES=ORDER_STATUSES,
         services=services,
@@ -448,8 +460,49 @@ def update_obs(oid):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Criar OS a partir do Pedido
+# Deletar Sales Order
 # ─────────────────────────────────────────────────────────────────────────────
+
+@orders_bp.route("/<int:oid>/delete", methods=["POST"])
+@login_required
+def delete(oid):
+    order = Order.query.filter_by(id=oid, company_id=current_user.company_id, deleted_at=None).first_or_404()
+    order.soft_delete()
+    db.session.commit()
+    flash(f"Pedido {order.number} excluído.", "info")
+    return redirect(url_for("orders.index"))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Criar PO a partir do Sales Order
+# ─────────────────────────────────────────────────────────────────────────────
+
+@orders_bp.route("/<int:oid>/create-po", methods=["POST"])
+@login_required
+def create_po(oid):
+    order = _get_order(oid)
+    if order.status not in ("aberto", "faturado"):
+        flash("Sales Order precisa estar aberta ou faturada para criar PO.", "warning")
+        return redirect(url_for("orders.detail", oid=oid))
+
+    data = request.form.to_dict()
+    data["order_id"] = order.id
+    if order.quote_id:
+        data["quote_id"] = order.quote_id
+    # Pré-preenche cliente como passageiro se não informado
+    if not data.get("passenger_name") and order.client:
+        data["passenger_name"] = order.client.name
+    if not data.get("passenger_phone") and order.phone:
+        data["passenger_phone"] = order.phone
+
+    po = pos.create(order.company_id, data, current_user.id)
+    db.session.commit()
+    flash(f"PO {po.number} criada vinculada ao Sales Order {order.number}.", "success")
+    return redirect(url_for("purchase_orders.detail", po_id=po.id))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Criar OS a partir do Pedido (mantido para uso interno do dispatch)
 
 @orders_bp.route("/<int:oid>/create-os", methods=["POST"])
 @login_required
@@ -469,7 +522,7 @@ def create_os(oid):
         )
         if existing_os:
             flash(f"OS {existing_os.code} já existe para este pedido.", "info")
-            return redirect(url_for("service_orders.detail", os_id=existing_os.id))
+            return redirect(url_for("orders.detail", oid=oid))
 
     f         = request.form
     pickup_dt = None
@@ -504,7 +557,7 @@ def create_os(oid):
     })
     db.session.commit()
     flash(f"OS {os_obj.code} criada com sucesso.", "success")
-    return redirect(url_for("service_orders.detail", os_id=os_obj.id))
+    return redirect(url_for("orders.detail", oid=oid))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
