@@ -64,23 +64,32 @@ def _ensure_schema_columns():
     the SQLAlchemy models.
     """
     import logging
+    log = logging.getLogger(__name__)
     try:
         from sqlalchemy import inspect as _inspect, text as _text
         insp = _inspect(db.engine)
         table_names = set(insp.get_table_names())
-        with db.engine.begin() as conn:
-            # services.is_operational — added 2026-05-23
-            if 'services' in table_names:
-                existing = {c['name'] for c in insp.get_columns('services')}
-                if 'is_operational' not in existing:
-                    conn.execute(_text(
-                        'ALTER TABLE services ADD COLUMN is_operational BOOLEAN DEFAULT FALSE'
-                    ))
-                    logging.getLogger(__name__).info(
-                        'Schema patch applied: services.is_operational'
-                    )
+
+        # ── services: operational flag columns added 2026-05-23 ───────────────
+        _NEW_SERVICE_COLS = [
+            'is_operational',
+            'requires_route',
+            'requires_passenger',
+            'requires_vehicle',
+            'requires_dispatch',
+            'requires_schedule',
+        ]
+        if 'services' in table_names:
+            existing = {c['name'] for c in insp.get_columns('services')}
+            with db.engine.begin() as conn:
+                for col in _NEW_SERVICE_COLS:
+                    if col not in existing:
+                        conn.execute(_text(
+                            f'ALTER TABLE services ADD COLUMN {col} BOOLEAN DEFAULT FALSE'
+                        ))
+                        log.info('Schema patch applied: services.%s', col)
     except Exception as exc:
-        logging.getLogger(__name__).warning('_ensure_schema_columns failed: %s', exc)
+        log.warning('_ensure_schema_columns failed: %s', exc)
 
 
 def _seed_initial_data(app: Flask):
