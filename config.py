@@ -31,6 +31,8 @@ class Config:
     BASE_URL       = os.environ.get("BASE_URL", "http://localhost:5004")
     ORCAMENTOS_DIR = os.environ.get("ORCAMENTOS_DIR", "orcamentos")
     WPP_NUMBER     = os.environ.get("WPP_NUMBER", "5511989178312")
+    # Persistent upload folder (set UPLOAD_FOLDER=/orcamentos/uploads on Render)
+    UPLOAD_FOLDER  = os.environ.get("UPLOAD_FOLDER", "")
 
     # Tax rates
     NF_RATE   = float(os.environ.get("NF_RATE", "0.10"))

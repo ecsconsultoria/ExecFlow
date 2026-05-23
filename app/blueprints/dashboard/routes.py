@@ -86,10 +86,10 @@ def settings():
                 flash("Formato de imagem não suportado. Use PNG, JPG, GIF, WEBP ou SVG.", "danger")
                 return redirect(url_for("dashboard.settings"))
             filename  = f"logo_{company.id}_{uuid.uuid4().hex[:8]}{ext}"
-            upload_dir = os.path.join(current_app.root_path, "static", "uploads")
+            upload_dir = current_app.config["UPLOAD_FOLDER"]
             os.makedirs(upload_dir, exist_ok=True)
             logo_file.save(os.path.join(upload_dir, filename))
-            company.logo_url = url_for("static", filename=f"uploads/{filename}")
+            company.logo_url = f"/uploads/{filename}"
         else:
             logo_url = (request.form.get("logo_url", "") or "").strip()
             company.logo_url = logo_url if logo_url else company.logo_url

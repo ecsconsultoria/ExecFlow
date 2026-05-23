@@ -390,9 +390,14 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
     if logo_url:
         try:
             from reportlab.platypus import Image as RLImage
+            from flask import current_app
             logo_path = logo_url
-            if logo_url.startswith("/static/"):
-                from flask import current_app
+            if logo_url.startswith("/uploads/"):
+                logo_path = os.path.join(
+                    current_app.config["UPLOAD_FOLDER"],
+                    logo_url[len("/uploads/"):].lstrip("/")
+                )
+            elif logo_url.startswith("/static/"):
                 logo_path = os.path.join(
                     current_app.root_path, "static",
                     logo_url[len("/static/"):].lstrip("/")

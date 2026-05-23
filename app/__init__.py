@@ -1,5 +1,5 @@
 import os
-from flask import Flask
+from flask import Flask, send_from_directory
 from .extensions import db, migrate, login_manager
 from .blueprints import register_blueprints
 
@@ -23,6 +23,19 @@ def create_app(config_name: str | None = None) -> Flask:
     login_manager.init_app(app)
 
     register_blueprints(app)
+
+    # ── Persistent upload folder ──────────────────────────────────────────────
+    # In production set env var UPLOAD_FOLDER=/orcamentos/uploads (Render disk).
+    # Locally falls back to app/static/uploads so dev works without any config.
+    _upload_folder = app.config.get("UPLOAD_FOLDER") or os.path.join(
+        app.root_path, "static", "uploads"
+    )
+    app.config["UPLOAD_FOLDER"] = _upload_folder
+    os.makedirs(_upload_folder, exist_ok=True)
+
+    @app.route("/uploads/<path:filename>")
+    def uploaded_file(filename):
+        return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
 
     # Jinja2 filters
     from .utils import utc_to_br
