@@ -397,8 +397,9 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
                     current_app.root_path, "static",
                     logo_url[len("/static/"):].lstrip("/")
                 )
-            logo_img = RLImage(logo_path, width=9 * mm * 10, height=4.5 * mm * 10,
-                               kind="proportional")
+            if os.path.isfile(logo_path):
+                logo_img = RLImage(logo_path, width=9 * mm * 10, height=4.5 * mm * 10,
+                                   kind="proportional")
         except Exception:
             logo_img = None
 

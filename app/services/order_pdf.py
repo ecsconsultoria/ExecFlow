@@ -156,7 +156,8 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
                     logo_url[len("/static/"):].lstrip("/")
                 )
             # Smaller logo: max 30 mm height, proportional
-            logo_img = RLImage(logo_path, width=60 * mm, height=30 * mm, kind="proportional")
+            if os.path.isfile(logo_path):
+                logo_img = RLImage(logo_path, width=60 * mm, height=30 * mm, kind="proportional")
         except Exception:
             logo_img = None
 
