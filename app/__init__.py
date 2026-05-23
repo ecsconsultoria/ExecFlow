@@ -88,6 +88,14 @@ def _ensure_schema_columns():
                             f'ALTER TABLE services ADD COLUMN {col} BOOLEAN DEFAULT FALSE'
                         ))
                         log.info('Schema patch applied: services.%s', col)
+
+        # ── service_pricing: fix driver_type typo 'Bilingue' → 'Bilíngue' ────
+        if 'service_pricing' in table_names:
+            with db.engine.begin() as conn:
+                conn.execute(_text(
+                    "UPDATE service_pricing SET driver_type = 'Bilíngue'"
+                    " WHERE driver_type = 'Bilingue'"
+                ))
     except Exception as exc:
         log.warning('_ensure_schema_columns failed: %s', exc)
 
