@@ -49,9 +49,38 @@ def create_app(config_name: str | None = None) -> Flask:
     with app.app_context():
         from . import models  # noqa
         db.create_all()
+        _ensure_schema_columns()
         _seed_initial_data(app)
 
     return app
+
+
+def _ensure_schema_columns():
+    """Safely add any model columns missing from an existing DB.
+
+    db.create_all() only creates new tables — it will never ALTER an existing
+    table to add new columns.  This function bridges that gap so that Render
+    (and any other deployment that skips `flask db upgrade`) stays in sync with
+    the SQLAlchemy models.
+    """
+    import logging
+    try:
+        from sqlalchemy import inspect as _inspect, text as _text
+        insp = _inspect(db.engine)
+        table_names = set(insp.get_table_names())
+        with db.engine.begin() as conn:
+            # services.is_operational — added 2026-05-23
+            if 'services' in table_names:
+                existing = {c['name'] for c in insp.get_columns('services')}
+                if 'is_operational' not in existing:
+                    conn.execute(_text(
+                        'ALTER TABLE services ADD COLUMN is_operational BOOLEAN DEFAULT FALSE'
+                    ))
+                    logging.getLogger(__name__).info(
+                        'Schema patch applied: services.is_operational'
+                    )
+    except Exception as exc:
+        logging.getLogger(__name__).warning('_ensure_schema_columns failed: %s', exc)
 
 
 def _seed_initial_data(app: Flask):
