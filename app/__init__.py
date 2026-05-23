@@ -27,11 +27,15 @@ def create_app(config_name: str | None = None) -> Flask:
     # ── Persistent upload folder ──────────────────────────────────────────────
     # In production set env var UPLOAD_FOLDER=/orcamentos/uploads (Render disk).
     # Locally falls back to app/static/uploads so dev works without any config.
-    _upload_folder = app.config.get("UPLOAD_FOLDER") or os.path.join(
-        app.root_path, "static", "uploads"
-    )
+    _static_uploads = os.path.join(app.root_path, "static", "uploads")
+    _upload_folder = app.config.get("UPLOAD_FOLDER") or _static_uploads
+    try:
+        os.makedirs(_upload_folder, exist_ok=True)
+    except PermissionError:
+        # Configured path not available (e.g. disk not mounted); fall back gracefully.
+        _upload_folder = _static_uploads
+        os.makedirs(_upload_folder, exist_ok=True)
     app.config["UPLOAD_FOLDER"] = _upload_folder
-    os.makedirs(_upload_folder, exist_ok=True)
 
     @app.route("/uploads/<path:filename>")
     def uploaded_file(filename):
