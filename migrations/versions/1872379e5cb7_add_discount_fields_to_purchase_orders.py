@@ -16,13 +16,25 @@ branch_labels = None
 depends_on = None
 
 
+def _col_exists(table, column):
+    conn = op.get_bind()
+    insp = sa.inspect(conn)
+    return column in [c['name'] for c in insp.get_columns(table)]
+
+
 def upgrade():
-    with op.batch_alter_table('purchase_orders', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('discount_type', sa.String(length=5), nullable=True))
-        batch_op.add_column(sa.Column('discount_value', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('freight_amount', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('other_costs_amount', sa.Float(), nullable=True))
-        batch_op.add_column(sa.Column('other_costs_label', sa.String(length=200), nullable=True))
+    cols = [
+        ('discount_type',        sa.Column('discount_type',        sa.String(length=5),   nullable=True)),
+        ('discount_value',       sa.Column('discount_value',       sa.Float(),            nullable=True)),
+        ('freight_amount',       sa.Column('freight_amount',       sa.Float(),            nullable=True)),
+        ('other_costs_amount',   sa.Column('other_costs_amount',   sa.Float(),            nullable=True)),
+        ('other_costs_label',    sa.Column('other_costs_label',    sa.String(length=200), nullable=True)),
+    ]
+    missing = [(n, c) for n, c in cols if not _col_exists('purchase_orders', n)]
+    if missing:
+        with op.batch_alter_table('purchase_orders', schema=None) as batch_op:
+            for _, col in missing:
+                batch_op.add_column(col)
 
 
 def downgrade():

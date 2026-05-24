@@ -16,10 +16,22 @@ branch_labels = None
 depends_on = None
 
 
+def _col_exists(table, column):
+    conn = op.get_bind()
+    insp = sa.inspect(conn)
+    return column in [c['name'] for c in insp.get_columns(table)]
+
+
 def upgrade():
-    with op.batch_alter_table('purchase_orders', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('invoiced_at', sa.DateTime(), nullable=True))
-        batch_op.add_column(sa.Column('invoiced_by', sa.Integer(), nullable=True))
+    cols = [
+        ('invoiced_at', sa.Column('invoiced_at', sa.DateTime(), nullable=True)),
+        ('invoiced_by', sa.Column('invoiced_by', sa.Integer(), nullable=True)),
+    ]
+    missing = [(n, c) for n, c in cols if not _col_exists('purchase_orders', n)]
+    if missing:
+        with op.batch_alter_table('purchase_orders', schema=None) as batch_op:
+            for _, col in missing:
+                batch_op.add_column(col)
 
 
 def downgrade():

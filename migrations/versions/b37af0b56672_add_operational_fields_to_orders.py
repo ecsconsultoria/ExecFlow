@@ -16,19 +16,31 @@ branch_labels = None
 depends_on = None
 
 
+def _col_exists(table, column):
+    conn = op.get_bind()
+    insp = sa.inspect(conn)
+    return column in [c['name'] for c in insp.get_columns(table)]
+
+
 def upgrade():
-    with op.batch_alter_table('orders', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('driver_name', sa.String(length=200), nullable=True))
-        batch_op.add_column(sa.Column('driver_phone', sa.String(length=50), nullable=True))
-        batch_op.add_column(sa.Column('vehicle_model', sa.String(length=200), nullable=True))
-        batch_op.add_column(sa.Column('vehicle_plate', sa.String(length=20), nullable=True))
-        batch_op.add_column(sa.Column('pickup_location', sa.Text(), nullable=True))
-        batch_op.add_column(sa.Column('dropoff_location', sa.Text(), nullable=True))
-        batch_op.add_column(sa.Column('passenger_name', sa.String(length=200), nullable=True))
-        batch_op.add_column(sa.Column('passenger_phone', sa.String(length=50), nullable=True))
-        batch_op.add_column(sa.Column('flight_number', sa.String(length=50), nullable=True))
-        batch_op.add_column(sa.Column('pax_count', sa.Integer(), nullable=True))
-        batch_op.add_column(sa.Column('vehicle_description', sa.String(length=200), nullable=True))
+    cols = [
+        ('driver_name',         sa.Column('driver_name',         sa.String(length=200), nullable=True)),
+        ('driver_phone',        sa.Column('driver_phone',        sa.String(length=50),  nullable=True)),
+        ('vehicle_model',       sa.Column('vehicle_model',       sa.String(length=200), nullable=True)),
+        ('vehicle_plate',       sa.Column('vehicle_plate',       sa.String(length=20),  nullable=True)),
+        ('pickup_location',     sa.Column('pickup_location',     sa.Text(),             nullable=True)),
+        ('dropoff_location',    sa.Column('dropoff_location',    sa.Text(),             nullable=True)),
+        ('passenger_name',      sa.Column('passenger_name',      sa.String(length=200), nullable=True)),
+        ('passenger_phone',     sa.Column('passenger_phone',     sa.String(length=50),  nullable=True)),
+        ('flight_number',       sa.Column('flight_number',       sa.String(length=50),  nullable=True)),
+        ('pax_count',           sa.Column('pax_count',           sa.Integer(),          nullable=True)),
+        ('vehicle_description', sa.Column('vehicle_description', sa.String(length=200), nullable=True)),
+    ]
+    missing = [(n, c) for n, c in cols if not _col_exists('orders', n)]
+    if missing:
+        with op.batch_alter_table('orders', schema=None) as batch_op:
+            for _, col in missing:
+                batch_op.add_column(col)
 
 
 def downgrade():

@@ -16,10 +16,19 @@ branch_labels = None
 depends_on = None
 
 
+def _col_exists(table, column):
+    conn = op.get_bind()
+    insp = sa.inspect(conn)
+    return column in [c['name'] for c in insp.get_columns(table)]
+
+
 def upgrade():
-    with op.batch_alter_table('quotes', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('approved_by', sa.Integer(), nullable=True))
-        batch_op.add_column(sa.Column('rejected_by', sa.Integer(), nullable=True))
+    cols = [('approved_by', sa.Integer()), ('rejected_by', sa.Integer())]
+    missing = [(n, t) for n, t in cols if not _col_exists('quotes', n)]
+    if missing:
+        with op.batch_alter_table('quotes', schema=None) as batch_op:
+            for name, typ in missing:
+                batch_op.add_column(sa.Column(name, typ, nullable=True))
 
 
 def downgrade():

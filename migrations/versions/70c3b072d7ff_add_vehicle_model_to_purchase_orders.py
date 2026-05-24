@@ -16,9 +16,16 @@ branch_labels = None
 depends_on = None
 
 
+def _col_exists(table, column):
+    conn = op.get_bind()
+    insp = sa.inspect(conn)
+    return column in [c['name'] for c in insp.get_columns(table)]
+
+
 def upgrade():
-    with op.batch_alter_table('purchase_orders', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('vehicle_model', sa.String(length=200), nullable=True))
+    if not _col_exists('purchase_orders', 'vehicle_model'):
+        with op.batch_alter_table('purchase_orders', schema=None) as batch_op:
+            batch_op.add_column(sa.Column('vehicle_model', sa.String(length=200), nullable=True))
 
 
 def downgrade():
