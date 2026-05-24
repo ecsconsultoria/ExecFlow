@@ -106,6 +106,16 @@ def _ensure_schema_columns():
                         ))
                         log.info('Schema patch applied: services.%s', col)
 
+        # ── orders: other_costs_label column added 2026-05-24 ─────────────────
+        if 'orders' in table_names:
+            existing_o = {c['name'] for c in insp.get_columns('orders')}
+            if 'other_costs_label' not in existing_o:
+                with db.engine.begin() as conn:
+                    conn.execute(_text(
+                        "ALTER TABLE orders ADD COLUMN other_costs_label VARCHAR(200) DEFAULT ''"
+                    ))
+                log.info('Schema patch applied: orders.other_costs_label')
+
         # ── service_pricing: fix driver_type typo 'Bilingue' → 'Bilíngue' ────
         if 'service_pricing' in table_names:
             with db.engine.begin() as conn:

@@ -85,6 +85,17 @@ def update_header(order: Order, data: dict) -> None:
     for field in ("payment_method", "payment_terms", "obs", "celular"):
         if field in data:
             setattr(order, field, data[field] or "")
+    # Operational fields
+    for field in ("driver_name", "driver_phone", "vehicle_model", "vehicle_plate",
+                  "pickup_location", "dropoff_location", "passenger_name", "passenger_phone",
+                  "flight_number", "vehicle_description"):
+        if field in data:
+            setattr(order, field, data[field] or "")
+    if "pax_count" in data:
+        try:
+            order.pax_count = int(data["pax_count"]) if data["pax_count"] else None
+        except (ValueError, TypeError):
+            pass
     db.session.commit()
 
 
@@ -94,6 +105,7 @@ def update_adjustments(order: Order, data: dict) -> None:
     order.discount_value     = _parse_float(data.get("discount_value", 0))
     order.freight_amount     = _parse_float(data.get("freight_amount", 0))
     order.other_costs_amount = _parse_float(data.get("other_costs_amount", 0))
+    order.other_costs_label  = data.get("other_costs_label", "") or ""
     db.session.commit()
 
 
@@ -120,6 +132,7 @@ def open_order(order: Order, user_id: int) -> None:
         raise ValueError(f"Não é possível abrir pedido com status '{order.status}'")
     order.status    = "aberto"
     order.opened_at = now_br()
+    order.opened_by = user_id
     db.session.commit()
 
 
@@ -129,6 +142,7 @@ def faturar(order: Order, data: dict, user_id: int) -> None:
     order.status          = "faturado"
     order.invoice_number  = data.get("invoice_number", "") or ""
     order.invoiced_at     = now_br()
+    order.invoiced_by     = user_id
     if data.get("invoice_due_date"):
         try:
             order.invoice_due_date = date.fromisoformat(str(data["invoice_due_date"]))
@@ -142,6 +156,7 @@ def fechar(order: Order, user_id: int) -> None:
         raise ValueError(f"Não é possível fechar pedido com status '{order.status}'")
     order.status    = "fechado"
     order.closed_at = now_br()
+    order.closed_by = user_id
     db.session.commit()
 
 
@@ -150,6 +165,7 @@ def cancel(order: Order, reason: str, user_id: int) -> None:
         raise ValueError("Não é possível cancelar pedido já fechado")
     order.status        = "cancelado"
     order.cancelled_at  = now_br()
+    order.cancelled_by  = user_id
     order.cancel_reason = reason or ""
     db.session.commit()
 
@@ -159,6 +175,7 @@ def reabrir(order: Order, user_id: int) -> None:
         raise ValueError(f"Somente pedidos faturados podem ser reabertos (status atual: '{order.status}')")
     order.status         = "aberto"
     order.reopened_at    = now_br()
+    order.reopened_by    = user_id
     order.invoiced_at    = None
     order.invoice_number = ""
     order.invoice_due_date = None

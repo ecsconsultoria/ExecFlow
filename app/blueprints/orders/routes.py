@@ -17,6 +17,7 @@ from ...services              import order_service
 from ...services              import service_order_service as sos
 from ...services              import purchase_order_service as pos
 from ...utils                 import now_br
+from ...utils.audit           import log_activity
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -31,6 +32,8 @@ def index():
     query  = Order.query.filter_by(company_id=current_user.company_id, deleted_at=None)
     if status:
         query = query.filter_by(status=status)
+    else:
+        query = query.filter(Order.status != "excluido")
     if q:
         query = query.filter(
             Order.client_name.ilike(f"%{q}%") | Order.number.ilike(f"%{q}%")
@@ -56,13 +59,17 @@ def create(qid):
         flash("Orçamento precisa estar aprovado para criar Pedido.", "warning")
         return redirect(url_for("quotes.detail", qid=qid))
 
-    # Evita duplicatas
-    existing = Order.query.filter_by(quote_id=qid, deleted_at=None).first()
+    # Evita duplicatas (ignora SOs excluídos)
+    existing = Order.query.filter_by(quote_id=qid).filter(
+        Order.status != "excluido"
+    ).first()
     if existing:
         flash(f"Pedido {existing.number} já existe para este orçamento.", "info")
         return redirect(url_for("orders.detail", oid=existing.id))
 
     order = order_service.create_from_quote(quote, current_user.id)
+    log_activity("order", order.id, order.company_id, f"Criado a partir do Orçamento {quote.number}", current_user.id)
+    db.session.commit()
     flash(f"Pedido {order.number} criado com sucesso.", "success")
     return redirect(url_for("orders.detail", oid=order.id))
 
@@ -109,11 +116,13 @@ def detail(oid):
             pass
 
     from sqlalchemy import or_
+    from ...models.audit import AuditLog
     services   = Service.query.filter(
         or_(Service.company_id == current_user.company_id, Service.company_id.is_(None))
     ).filter_by(is_active=True).order_by(Service.name).all()
     categories = VehicleCategory.query.filter_by(is_active=True).order_by(VehicleCategory.name).all()
     company    = Company.query.get(order.company_id)
+    audit_logs = AuditLog.query.filter_by(entity="order", entity_id=order.id).order_by(AuditLog.created_at.asc()).all()
 
     return render_template(
         "orders/detail.html",
@@ -125,6 +134,7 @@ def detail(oid):
         services=services,
         categories=categories,
         company=company,
+        audit_logs=audit_logs,
     )
 
 
@@ -138,6 +148,8 @@ def open_order(oid):
     order = _get_order(oid)
     try:
         order_service.open_order(order, current_user.id)
+        log_activity("order", order.id, order.company_id, "Aberto", current_user.id)
+        db.session.commit()
         flash("Pedido aberto.", "success")
     except ValueError as e:
         flash(str(e), "warning")
@@ -150,6 +162,8 @@ def faturar(oid):
     order = _get_order(oid)
     try:
         order_service.faturar(order, request.form.to_dict(), current_user.id)
+        log_activity("order", order.id, order.company_id, "Faturado", current_user.id)
+        db.session.commit()
         flash("Pedido faturado.", "success")
     except ValueError as e:
         flash(str(e), "warning")
@@ -162,6 +176,8 @@ def fechar(oid):
     order = _get_order(oid)
     try:
         order_service.fechar(order, current_user.id)
+        log_activity("order", order.id, order.company_id, "Fechado", current_user.id)
+        db.session.commit()
         flash("Pedido fechado.", "success")
     except ValueError as e:
         flash(str(e), "warning")
@@ -175,6 +191,8 @@ def cancel(oid):
     reason = request.form.get("reason", "")
     try:
         order_service.cancel(order, reason, current_user.id)
+        log_activity("order", order.id, order.company_id, "Cancelado", current_user.id)
+        db.session.commit()
         flash("Pedido cancelado.", "info")
     except ValueError as e:
         flash(str(e), "warning")
@@ -187,6 +205,8 @@ def reabrir(oid):
     order = _get_order(oid)
     try:
         order_service.reabrir(order, current_user.id)
+        log_activity("order", order.id, order.company_id, "Reaberto", current_user.id)
+        db.session.commit()
         flash("Pedido reaberto para edição.", "success")
     except ValueError as e:
         flash(str(e), "warning")
@@ -213,6 +233,17 @@ def generate_payments(oid):
         order.payment_method = pm
     if pt:
         order.payment_terms = pt
+    # Preserva campos de data/hora do cabeçalho enviados junto ao form de pagamentos
+    header_fields = ("emission_date", "delivery_date", "delivery_time")
+    if any(request.form.get(f) for f in header_fields):
+        hdata = request.form.to_dict()
+        d_date = hdata.pop("delivery_date", "").strip()
+        d_time = hdata.pop("delivery_time", "").strip()
+        if d_date:
+            hdata["delivery_datetime"] = f"{d_date}T{d_time or '00:00'}"
+        else:
+            hdata.pop("delivery_datetime", None)
+        order_service.update_header(order, hdata)
     # Custom total override (campo VALOR)
     custom_total = None
     raw_custom = request.form.get("custom_amount", "").strip()
@@ -223,6 +254,8 @@ def generate_payments(oid):
         except ValueError:
             pass
     pmts = order_service.generate_payments(order, custom_total=custom_total)
+    log_activity("order", order.id, order.company_id, "Parcelas geradas", current_user.id)
+    db.session.commit()
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         total_scheduled = sum(p.amount or 0 for p in order.payments)
         a_pagar = max(order.computed_total - total_scheduled, 0)
@@ -242,12 +275,29 @@ def generate_payments(oid):
     return redirect(url_for("orders.detail", oid=oid))
 
 
+@orders_bp.route("/<int:oid>/recalculate-payments", methods=["POST"])
+@login_required
+def recalculate_payments(oid):
+    """Apaga parcelas não-pagas e regera com base no total atual."""
+    order = _get_order(oid)
+    if order.status in ("fechado", "faturado", "cancelado"):
+        flash("Pedido não pode ser editado no status atual.", "warning")
+        return redirect(url_for("orders.detail", oid=oid))
+    pmts = order_service.generate_payments(order)  # REGENERATE MODE
+    log_activity("order", order.id, order.company_id, "Parcelas recalculadas", current_user.id)
+    db.session.commit()
+    flash(f"Parcelas recalculadas — {len(pmts)} parcela(s) gerada(s).", "success")
+    return redirect(url_for("orders.detail", oid=oid))
+
+
 @orders_bp.route("/<int:oid>/payments/add", methods=["POST"])
 @login_required
 def add_payment(oid):
     order = _get_order(oid)
     try:
         order_service.add_payment(order, request.form.to_dict())
+        log_activity("order", order.id, order.company_id, "Parcela adicionada", current_user.id)
+        db.session.commit()
         flash("Parcela adicionada.", "success")
     except Exception as e:
         flash(str(e), "warning")
@@ -272,6 +322,8 @@ def delete_payment(pid):
             return jsonify({'ok': False, 'error': str(e)}), 400
         flash(str(e), "warning")
         return redirect(url_for("orders.detail", oid=order.id))
+    log_activity("order", order.id, order.company_id, "Parcela removida", current_user.id)
+    db.session.commit()
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         total_scheduled = sum(p.amount or 0 for p in order.payments)
         a_pagar = max(order.computed_total - total_scheduled, 0)
@@ -293,6 +345,8 @@ def baixa(pid):
         raw         = request.form.get("paid_amount", "")
         paid_amount = float(str(raw).replace(",", ".")) if raw else (pmt.amount or 0)
         order_service.baixa(pmt, paid_amount, current_user.id)
+        log_activity("order", order.id, order.company_id, f"Parcela {pmt.installment_no} baixada", current_user.id)
+        db.session.commit()
         flash("Pagamento registrado.", "success")
     except Exception as e:
         flash(str(e), "warning")
@@ -314,6 +368,8 @@ def update_header(oid):
     if d_date:
         data["delivery_datetime"] = f"{d_date}T{d_time or '00:00'}"
     order_service.update_header(order, data)
+    log_activity("order", order.id, order.company_id, "Cabeçalho atualizado", current_user.id)
+    db.session.commit()
     flash("Cabeçalho atualizado.", "success")
     return redirect(url_for("orders.detail", oid=oid))
 
@@ -323,6 +379,8 @@ def update_header(oid):
 def update_adjustments(oid):
     order = _get_order(oid)
     order_service.update_adjustments(order, request.form.to_dict())
+    log_activity("order", order.id, order.company_id, "Ajustes financeiros atualizados", current_user.id)
+    db.session.commit()
     flash("Ajustes financeiros salvos.", "success")
     return redirect(url_for("orders.detail", oid=oid))
 
@@ -354,12 +412,22 @@ def save_all(oid):
     # Action
     action = data.get("action", "save")
     if action == "faturar":
+        if not order.emission_date:
+            flash("Preencha a Data de Emissão antes de faturar.", "warning")
+            return redirect(url_for("orders.detail", oid=oid))
+        if not list(order.payments):
+            flash("Gere as contas a receber antes de faturar.", "warning")
+            return redirect(url_for("orders.detail", oid=oid))
         try:
             order_service.faturar(order, data, current_user.id)
+            log_activity("order", order.id, order.company_id, "Faturado", current_user.id)
+            db.session.commit()
             flash("Pedido salvo e faturado com sucesso.", "success")
         except ValueError as e:
             flash(str(e), "warning")
     else:
+        log_activity("order", order.id, order.company_id, "Dados salvos", current_user.id)
+        db.session.commit()
         flash("Pedido salvo.", "success")
     return redirect(url_for("orders.detail", oid=oid))
 
@@ -412,6 +480,8 @@ def add_item(oid):
         flash("Não é possível adicionar itens neste status.", "warning")
         return redirect(url_for("orders.detail", oid=oid))
     order_service.add_item(order, request.form.to_dict())
+    log_activity("order", order.id, order.company_id, "Item adicionado", current_user.id)
+    db.session.commit()
     flash("Item adicionado.", "success")
     return redirect(url_for("orders.detail", oid=oid))
 
@@ -427,6 +497,8 @@ def delete_item(iid):
         return redirect(url_for("orders.detail", oid=order.id))
     oid = order.id
     order_service.delete_item(item)
+    log_activity("order", oid, order.company_id, "Item removido", current_user.id)
+    db.session.commit()
     flash("Item removido.", "success")
     return redirect(url_for("orders.detail", oid=oid))
 
@@ -441,6 +513,8 @@ def update_item(iid):
         flash("Não é possível editar itens neste status.", "warning")
         return redirect(url_for("orders.detail", oid=order.id))
     order_service.update_item(item, request.form.to_dict())
+    log_activity("order", order.id, order.company_id, "Item atualizado", current_user.id)
+    db.session.commit()
     flash("Item atualizado.", "success")
     return redirect(url_for("orders.detail", oid=order.id))
 
@@ -454,6 +528,7 @@ def update_obs(oid):
         flash("Pedido não pode ser editado no status atual.", "warning")
         return redirect(url_for("orders.detail", oid=oid))
     order.obs = request.form.get("obs", "") or ""
+    log_activity("order", order.id, order.company_id, "Observação atualizada", current_user.id)
     db.session.commit()
     flash("Observação salva.", "success")
     return redirect(url_for("orders.detail", oid=oid))
@@ -466,8 +541,16 @@ def update_obs(oid):
 @orders_bp.route("/<int:oid>/delete", methods=["POST"])
 @login_required
 def delete(oid):
-    order = Order.query.filter_by(id=oid, company_id=current_user.company_id, deleted_at=None).first_or_404()
-    order.soft_delete()
+    order = Order.query.filter_by(id=oid, company_id=current_user.company_id).filter(
+        Order.status != "excluido"
+    ).first_or_404()
+    order.status = "excluido"
+    # Reverte o orçamento vinculado para "aprovado" para permitir criar novo SO
+    if order.quote_id:
+        quote = Quote.query.get(order.quote_id)
+        if quote and quote.status == "reserva_confirmada":
+            quote.status = "aprovado"
+    log_activity("order", order.id, order.company_id, "Excluído", current_user.id)
     db.session.commit()
     flash(f"Pedido {order.number} excluído.", "info")
     return redirect(url_for("orders.index"))
@@ -496,6 +579,7 @@ def create_po(oid):
         data["passenger_phone"] = order.phone
 
     po = pos.create(order.company_id, data, current_user.id)
+    log_activity("order", order.id, order.company_id, f"PC/PO {po.number} criada", current_user.id)
     db.session.commit()
     flash(f"PO {po.number} criada vinculada ao Sales Order {order.number}.", "success")
     return redirect(url_for("purchase_orders.detail", po_id=po.id))
@@ -555,6 +639,7 @@ def create_os(oid):
         "flight_number":    f.get("flight_number",    "").strip() or None,
         "notes":            f.get("notes",            "").strip() or None,
     })
+    log_activity("order", order.id, order.company_id, f"OS {os_obj.code} criada", current_user.id)
     db.session.commit()
     flash(f"OS {os_obj.code} criada com sucesso.", "success")
     return redirect(url_for("orders.detail", oid=oid))

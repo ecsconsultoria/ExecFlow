@@ -73,7 +73,6 @@
    Alpine.js state — envelope TUDO
 ══════════════════════════════════════════ #}
 <div x-data="{
-  showFaturarModal:  false,
   showCancelModal:   false,
   showDeleteModal:   false,
   showObsModal:      false,
@@ -86,6 +85,7 @@
   editItemUrl: '',
   discType:    '{{ order.discount_type or 'R$' }}',
   usarHora:    {{ 'true' if (order.delivery_datetime and (order.delivery_datetime.hour or order.delivery_datetime.minute)) else 'false' }},
+  showOpSO:    {{ 'true' if (order.driver_name or order.vehicle_model or order.pickup_location or order.passenger_name) else 'false' }},
   openEditItem(id, desc, qty, unit) {
     this.editItemId  = id;
     this.editDesc    = desc;
@@ -117,8 +117,8 @@
 
   <div class="px-4 pt-3 pb-3">
 
-    {# ── Linha 1: Vendedor | Emissão | Data Entrega | Hora | Faturamento | Nº+Obs ── #}
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-3 gap-y-3 pb-3">
+    {# ── Linha 1: Vendedor | Emissão | Data Entrega | Faturamento | Nº+Obs ── #}
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-3 gap-y-3 pb-3">
 
       <div>
         <label class="lbl">Vendedor</label>
@@ -140,18 +140,6 @@
       </div>
 
       <div>
-        <label class="lbl flex items-center gap-1.5">
-          Hora
-          <input type="checkbox" x-model="usarHora" class="rounded text-teal-600 cursor-pointer">
-        </label>
-        <input type="time" name="delivery_time"
-               value="{{ order.delivery_datetime.strftime('%H:%M') if order.delivery_datetime else '' }}"
-               class="fi"
-               :disabled="!usarHora"
-               x-bind:class="usarHora ? 'fi' : 'fi opacity-30'">
-      </div>
-
-      <div>
         <label class="lbl">Faturamento</label>
         <p class="text-sm text-slate-600 dark:text-slate-300 pt-1 leading-tight">{{ order.billing_type|billing_label }}</p>
         {% if order.invoice_number %}
@@ -163,12 +151,6 @@
         <div class="flex-1 min-w-0">
           <label class="lbl">Nº Pedido</label>
           <p class="text-sm font-mono font-bold text-slate-700 dark:text-slate-100 pt-1 truncate">{{ order.number }}</p>
-          {% if order.quote %}
-          <a href="{{ url_for('quotes.detail', qid=order.quote_id) }}"
-             class="text-xs text-teal-500 hover:underline font-mono leading-none">
-            {{ order.quote.number }}
-          </a>
-          {% endif %}
         </div>
         {# Obs icon — abre modal #}
         <button type="button" @click="showObsModal=true"
@@ -233,13 +215,20 @@
   {# Cabeçalho do card #}
   <div class="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 dark:border-slate-700">
     <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Itens do Pedido</p>
-    {% if not locked %}
-    <button type="button" @click="showAddItemModal=true"
-            class="flex items-center gap-1 text-xs bg-teal-50 hover:bg-teal-100 text-teal-700
-                   dark:bg-teal-900/30 dark:text-teal-300 font-semibold px-3 py-1.5 rounded-lg transition-colors">
-      <i class="fa-solid fa-plus"></i> Adicionar Item
-    </button>
-    {% endif %}
+    <div class="flex items-center gap-3">
+      <label class="flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer hover:text-violet-500 transition-colors select-none">
+        <input type="checkbox" x-model="showOpSO"
+               class="rounded text-violet-600 cursor-pointer">
+        Dados Operacionais
+      </label>
+      {% if not locked %}
+      <button type="button" @click="showAddItemModal=true"
+              class="flex items-center gap-1 text-xs bg-teal-50 hover:bg-teal-100 text-teal-700
+                     dark:bg-teal-900/30 dark:text-teal-300 font-semibold px-3 py-1.5 rounded-lg transition-colors">
+        <i class="fa-solid fa-plus"></i> Adicionar Item
+      </button>
+      {% endif %}
+    </div>
   </div>
 
   {# Tabela de itens #}
@@ -320,7 +309,7 @@
 
   {# ── Ajustes financeiros (campos dentro do main-form) ── #}
   <div class="px-4 py-3 border-t-2 border-slate-100 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-700/20">
-    <div class="flex flex-wrap items-end gap-3">
+    <div class="flex flex-wrap items-end justify-end gap-4">
 
       <div class="min-w-[155px]">
         <label class="lbl">Desconto</label>
@@ -339,25 +328,126 @@
         </div>
       </div>
 
-      <div class="min-w-[100px]">
-        <label class="lbl">Frete</label>
-        <input type="text" name="freight_amount" placeholder="0,00"
-               value="{{ order.freight_amount or '' }}" class="fi font-mono">
+      <div class="text-right">
+        <label class="lbl">Total Final</label>
+        <p class="text-2xl font-extrabold text-teal-600 dark:text-teal-400 font-mono leading-tight">
+          {{ order.computed_total|currency }}
+        </p>
       </div>
 
-      <div class="min-w-[120px]">
-        <label class="lbl">Outros Custos</label>
-        <input type="text" name="other_costs_amount" placeholder="0,00"
-               value="{{ order.other_costs_amount or '' }}" class="fi font-mono">
-      </div>
+    </div>
+  </div>
 
-      <div class="flex-1 min-w-[120px] flex items-end justify-end">
-        <div class="text-right">
-          <label class="lbl">Total Final</label>
-          <p class="text-2xl font-extrabold text-teal-600 dark:text-teal-400 font-mono leading-tight">
-            {{ order.computed_total|currency }}
-          </p>
+  {# ── Dados Operacionais (SO) ── #}
+  <div x-show="showOpSO" x-cloak
+       class="border-t-2 border-violet-100 dark:border-violet-900/30 bg-violet-50/30 dark:bg-violet-900/10">
+    <div class="px-4 py-2 border-b border-violet-100 dark:border-violet-900/20">
+      <p class="text-xs font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wider">
+        <i class="fa-solid fa-car mr-1"></i> Dados Operacionais
+      </p>
+    </div>
+    <div class="px-4 py-3 space-y-3">
+
+      {# Linha 1: Motorista | Fone | Modelo | Placa #}
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div>
+          <label class="lbl">Motorista</label>
+          <input name="driver_name" type="text" class="fi"
+                 value="{{ order.driver_name or '' }}"
+                 {% if locked %}disabled{% endif %}>
         </div>
+        <div>
+          <label class="lbl">Fone</label>
+          <input name="driver_phone" type="text" class="fi"
+                 value="{{ order.driver_phone or '' }}"
+                 {% if locked %}disabled{% endif %}>
+        </div>
+        <div>
+          <label class="lbl">Modelo</label>
+          <input name="vehicle_model" type="text" class="fi"
+                 placeholder="Ex: Toyota Corolla"
+                 value="{{ order.vehicle_model or '' }}"
+                 {% if locked %}disabled{% endif %}>
+        </div>
+        <div>
+          <label class="lbl">Placa</label>
+          <input name="vehicle_plate" type="text" class="fi"
+                 placeholder="ABC-1D23"
+                 value="{{ order.vehicle_plate or '' }}"
+                 {% if locked %}disabled{% endif %}>
+        </div>
+      </div>
+
+      {# Linha 2: Data Pickup | Hora | Local de Embarque | Local de Desembarque #}
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div>
+          <label class="lbl">Data Pickup</label>
+          <input type="date" name="delivery_date"
+                 value="{{ order.delivery_datetime.strftime('%Y-%m-%d') if order.delivery_datetime else '' }}"
+                 class="fi" :disabled="!showOpSO{{ ' || true' if locked else '' }}">
+        </div>
+        <div>
+          <label class="lbl flex items-center gap-1.5">
+            Hora
+            <input type="checkbox" x-model="usarHora"
+                   class="rounded text-violet-600 cursor-pointer ml-1"
+                   {% if locked %}disabled{% endif %}>
+          </label>
+          <input type="time" name="delivery_time"
+                 value="{{ order.delivery_datetime.strftime('%H:%M') if order.delivery_datetime else '' }}"
+                 class="fi" :disabled="!usarHora || !showOpSO{{ ' || true' if locked else '' }}"
+                 :class="usarHora ? '' : 'opacity-30'">
+        </div>
+        <div>
+          <label class="lbl">Local de Embarque</label>
+          <input name="pickup_location" type="text" class="fi"
+                 value="{{ order.pickup_location or '' }}"
+                 {% if locked %}disabled{% endif %}>
+        </div>
+        <div>
+          <label class="lbl">Local de Desembarque</label>
+          <input name="dropoff_location" type="text" class="fi"
+                 value="{{ order.dropoff_location or '' }}"
+                 {% if locked %}disabled{% endif %}>
+        </div>
+      </div>
+
+      {# Linha 3: Passageiro | Fone Passageiro | Nº Voo | PAX #}
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div>
+          <label class="lbl">Passageiro</label>
+          <input name="passenger_name" type="text" class="fi"
+                 value="{{ order.passenger_name or '' }}"
+                 {% if locked %}disabled{% endif %}>
+        </div>
+        <div>
+          <label class="lbl">Fone Passageiro</label>
+          <input name="passenger_phone" type="text" class="fi"
+                 value="{{ order.passenger_phone or '' }}"
+                 {% if locked %}disabled{% endif %}>
+        </div>
+        <div>
+          <label class="lbl">Nº Voo</label>
+          <input name="flight_number" type="text" class="fi"
+                 value="{{ order.flight_number or '' }}"
+                 {% if locked %}disabled{% endif %}>
+        </div>
+        <div>
+          <label class="lbl">PAX</label>
+          <input name="pax_count" type="number" min="1" step="1"
+                 value="{{ order.pax_count or 1 }}"
+                 class="fi text-right font-mono"
+                 {% if locked %}disabled{% endif %}>
+        </div>
+      </div>
+
+      {# Observações Operacionais #}
+      <div>
+        <label class="lbl">Observações</label>
+        <input name="vehicle_description" type="text" class="fi"
+               placeholder="Observações adicionais…"
+               value="{{ order.vehicle_description or '' }}"
+               {% if locked %}disabled{% endif %}>
       </div>
 
     </div>
@@ -366,7 +456,6 @@
 </div>
 {# /Card 2 #}
 
-
 {# ────────────────────────────────
    Card 3 — Pagamento
 ──────────────────────────────── #}
@@ -374,6 +463,25 @@
   <div class="px-4 py-2.5 border-b border-slate-100 dark:border-slate-700">
     <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Pagamento</p>
   </div>
+  {# Divergence badge #}
+  {%- set ns_div = namespace(pmts_total=0) -%}
+  {%- for p in order.payments -%}{%- set ns_div.pmts_total = ns_div.pmts_total + (p.amount or 0) -%}{%- endfor -%}
+  {%- if order.payments and (order.computed_total - ns_div.pmts_total)|abs > 0.01 -%}
+  <div class="flex items-center gap-2 px-4 py-2.5 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-700">
+    <i class="fa-solid fa-triangle-exclamation text-amber-500 text-sm"></i>
+    <span class="text-xs text-amber-700 dark:text-amber-300 flex-1">
+      Total do pedido <strong>{{ order.computed_total|currency }}</strong> diverge do total parcelado <strong>{{ ns_div.pmts_total|currency }}</strong>.
+    </span>
+    {% if not locked %}
+    <form method="post" action="{{ url_for('orders.recalculate_payments', oid=order.id) }}" class="shrink-0">
+      <button type="submit"
+              class="text-xs bg-amber-500 hover:bg-amber-600 text-white font-semibold px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap">
+        <i class="fa-solid fa-rotate mr-1"></i>Recalcular
+      </button>
+    </form>
+    {% endif %}
+  </div>
+  {%- endif -%}
   <div class="flex flex-col sm:flex-row">
 
     {# Painel esquerdo — controle #}
@@ -443,6 +551,7 @@
             <th class="px-2 py-1.5 text-left">Obs</th>
             <th class="px-2 py-1.5 text-right">Valor</th>
             <th class="px-2 py-1.5 text-center w-20">Baixa</th>
+            <th class="px-2 py-1.5 text-center">Pago em</th>
             <th class="px-2 py-1.5 w-6"></th>
           </tr>
         </thead>
@@ -469,36 +578,20 @@
                        value="{{ '%.2f'|format(pmt.amount or 0)|replace('.', ',') }}"
                        class="fi text-right font-mono" style="min-width:75px">
               </td>
-              <td class="px-2 py-1.5 text-center"
-                  x-data="{b:false,v:'{{ '%.2f'|format(pmt.amount or 0)|replace('.', ',') }}'}">  
-                <div class="flex items-center justify-center gap-0.5">
-                  {% if not locked %}
-                  <template x-if="!b">
-                    <button type="button" @click="b=true"
-                            class="p-1 rounded text-emerald-600 hover:bg-emerald-100" title="Dar baixa">
-                      <i class="fa-solid fa-circle-check"></i>
-                    </button>
-                  </template>
-                  <template x-if="b">
-                    <form method="post" action="{{ url_for('orders.baixa', pid=pmt.id) }}"
-                          class="flex items-center gap-0.5">
-                      <input type="text" name="paid_amount" x-model="v"
-                             class="fi w-14 text-right font-mono"
-                             @keydown.escape="b=false"
-                             @keydown.enter.prevent="$el.closest('form').submit()">
-                      <button type="submit" class="p-1 rounded bg-emerald-600 text-white">
-                        <i class="fa-solid fa-check" style="font-size:9px"></i>
-                      </button>
-                      <button type="button" @click="b=false"
-                              class="p-1 rounded bg-slate-200 text-slate-600">
-                        <i class="fa-solid fa-xmark" style="font-size:9px"></i>
-                      </button>
-                    </form>
-                  </template>
-                  {% endif %}
-                </div>
-              </td>
             </form>
+            <td class="px-2 py-1.5 text-center"
+                id="baixa-o-td-{{ pmt.id }}"
+                data-url="{{ url_for('orders.baixa', pid=pmt.id) }}"
+                data-amount="{{ '%.2f'|format(pmt.amount or 0)|replace('.', ',') }}">
+              {% if order.status not in ('fechado', 'cancelado') %}
+              <button type="button" onclick="openBaixaO({{ pmt.id }})"
+                      class="p-1 rounded text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-900/30"
+                      title="Dar baixa">
+                <i class="fa-solid fa-circle-check"></i>
+              </button>
+              {% endif %}
+            </td>
+            <td class="px-2 py-1.5 text-center text-slate-400">–</td>
             <td class="px-2 py-1.5 text-center">
               {% if not locked %}
               <button type="button" onclick="deletePmt({{ pmt.id }})"
@@ -512,12 +605,15 @@
             <td class="px-2 py-1.5 text-slate-500">{{ pmt.due_date.strftime('%d/%m/%Y') if pmt.due_date else '–' }}</td>
             <td class="px-2 py-1.5 text-slate-400 italic">{{ pmt.notes or '–' }}</td>
             <td class="px-2 py-1.5 text-right font-semibold text-emerald-600 font-mono">{{ pmt.paid_amount|currency }}</td>
-            <td class="px-2 py-1.5 text-center" colspan="2">
+            <td class="px-2 py-1.5 text-center">
               <span class="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded text-xs font-semibold">
                 <i class="fa-solid fa-check mr-0.5"></i>PAGO
               </span>
-              {% if pmt.paid_at %}<span class="text-slate-400 text-xs ml-1">{{ pmt.paid_at|fdate }}</span>{% endif %}
             </td>
+            <td class="px-2 py-1.5 text-center text-slate-500 text-xs">
+              {% if pmt.paid_at %}{{ pmt.paid_at|fdate }}{% else %}–{% endif %}
+            </td>
+            <td></td>
             {% endif %}
           </tr>
           {% endfor %}
@@ -527,7 +623,7 @@
           <tr>
             <td colspan="3" class="px-2 py-1.5 text-right font-semibold text-emerald-600">Recebido</td>
             <td class="px-2 py-1.5 text-right font-bold text-emerald-600 font-mono">{{ order.total_paid()|currency }}</td>
-            <td colspan="2"></td>
+            <td colspan="3"></td>
           </tr>
           <tr>
             <td colspan="3" class="px-2 py-1.5 text-right font-semibold
@@ -536,7 +632,7 @@
               {% if order.total_pending()>0 %}text-red-500{% else %}text-emerald-600{% endif %}">
               {{ order.total_pending()|currency }}
             </td>
-            <td colspan="2"></td>
+            <td colspan="3"></td>
           </tr>
           {% endif %}
         </tfoot>
@@ -564,39 +660,89 @@
 <div class="space-y-4">
 
   {# Card: Histórico #}
-  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-4">
-    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Histórico</p>
+  <div x-data="{ histOpen: {{ 'false' if audit_logs else 'true' }} }"
+       class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
+    {# Toggle header #}
+    <button type="button" @click="histOpen = !histOpen"
+            class="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-colors duration-150">
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-clock-rotate-left text-slate-400 text-[11px]"></i>
+        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Histórico</span>
+        {% if audit_logs %}
+        <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400">{{ audit_logs|length }}</span>
+        {% endif %}
+      </div>
+      <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform duration-200"
+         :class="histOpen ? 'rotate-180' : ''"></i>
+    </button>
+    {# Content #}
+    <div x-show="histOpen"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 -translate-y-1"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 -translate-y-1"
+         class="px-4 pb-4">
+    {% if audit_logs %}
+    <ol class="relative border-l border-slate-200 dark:border-slate-600 ml-2 space-y-3">
+      {% for log in audit_logs %}
+      <li class="ml-4">
+        <span class="absolute -left-1.5 mt-1 w-3 h-3 rounded-full bg-slate-300 dark:bg-slate-500 border-2 border-white dark:border-slate-800"></span>
+        <p class="text-xs font-medium text-slate-700 dark:text-slate-200">{{ log.action }}</p>
+        <p class="text-[11px] text-slate-400">{{ log.created_at|fdatetime }}{% if log.user %} · {{ log.user.name }}{% endif %}</p>
+      </li>
+      {% endfor %}
+    </ol>
+    {% else %}
     <dl class="space-y-1.5 text-xs text-slate-500">
       <div class="flex justify-between gap-2">
         <dt>Criado</dt>
-        <dd class="text-right">{{ order.created_at|fdatetime if order.created_at else '–' }}{% if seller_name and seller_name != '–' %}<br><span class="text-slate-400">{{ seller_name }}</span>{% endif %}</dd>
+        <dd class="text-right">{{ order.created_at|fdatetime if order.created_at else '–' }}{% if seller_name and seller_name != '–' %} <span class="text-slate-400">· {{ seller_name }}</span>{% endif %}</dd>
       </div>
       {% if order.opened_at %}
       <div class="flex justify-between gap-2">
-        <dt>Aberto</dt><dd class="text-right">{{ order.opened_at|fdatetime }}</dd>
+        <dt>Aberto</dt><dd class="text-right">{{ order.opened_at|fdatetime }}{% if order.opener %} <span class="text-slate-400">· {{ order.opener.name }}</span>{% endif %}</dd>
       </div>
       {% endif %}
       {% if order.invoiced_at %}
       <div class="flex justify-between gap-2">
-        <dt>Faturado</dt><dd class="text-right">{{ order.invoiced_at|fdatetime }}</dd>
+        <dt>Faturado</dt><dd class="text-right">{{ order.invoiced_at|fdatetime }}{% if order.invoicer %} <span class="text-slate-400">· {{ order.invoicer.name }}</span>{% endif %}</dd>
       </div>
       {% endif %}
       {% if order.reopened_at %}
       <div class="flex justify-between gap-2">
-        <dt>Reaberto</dt><dd class="text-right text-sky-500">{{ order.reopened_at|fdatetime }}</dd>
+        <dt>Reaberto</dt><dd class="text-right text-sky-500">{{ order.reopened_at|fdatetime }}{% if order.reopener %} <span class="text-slate-400">· {{ order.reopener.name }}</span>{% endif %}</dd>
       </div>
       {% endif %}
       {% if order.closed_at %}
       <div class="flex justify-between gap-2">
-        <dt>Fechado</dt><dd class="text-right text-emerald-500">{{ order.closed_at|fdatetime }}</dd>
+        <dt>Fechado</dt><dd class="text-right text-emerald-500">{{ order.closed_at|fdatetime }}{% if order.closer %} <span class="text-slate-400">· {{ order.closer.name }}</span>{% endif %}</dd>
       </div>
       {% endif %}
       {% if order.cancelled_at %}
       <div class="flex justify-between gap-2">
-        <dt>Cancelado</dt><dd class="text-right text-red-500">{{ order.cancelled_at|fdatetime }}</dd>
+        <dt>Cancelado</dt><dd class="text-right text-red-500">{{ order.cancelled_at|fdatetime }}{% if order.canceller %} <span class="text-slate-400">· {{ order.canceller.name }}</span>{% endif %}</dd>
       </div>
       {% endif %}
     </dl>
+    {% endif %}
+    {% if order.quote %}
+    <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700">
+      <p class="lbl">RFQ Vinculada</p>
+      <a href="{{ url_for('quotes.detail', qid=order.quote_id) }}"
+         class="text-xs font-mono text-teal-600 hover:underline">{{ order.quote.number }}</a>
+    </div>
+    {% endif %}
+    {% if order.purchase_orders %}
+    <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700">
+      <p class="lbl">PO(s) Gerada(s)</p>
+      {% for po in order.purchase_orders %}
+      <a href="{{ url_for('purchase_orders.detail', po_id=po.id) }}"
+         class="block text-xs font-mono text-violet-600 hover:underline">{{ po.number }}</a>
+      {% endfor %}
+    </div>
+    {% endif %}
     {% if order.cancel_reason %}
     <div class="mt-2 p-2 bg-red-50 dark:bg-red-900/20 rounded text-xs text-red-600">
       <strong>Motivo:</strong> {{ order.cancel_reason }}
@@ -608,7 +754,8 @@
       <p class="text-xs text-slate-600 dark:text-slate-300 italic leading-relaxed">{{ order.obs }}</p>
     </div>
     {% endif %}
-  </div>
+    </div>{# /x-show #}
+  </div>{# /x-data #}
 
   {# ── Botões de Ação ── mesma largura do card histórico #}
   <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-2">
@@ -623,7 +770,17 @@
       {% endif %}
 
       {% if order.status == 'aberto' %}
-      <button type="button" @click="showFaturarModal=true"
+      <button type="button"
+              @click="
+                if (!document.querySelector('[name=emission_date]')?.value) {
+                  alert('Preencha a Data de Emiss\u00e3o antes de faturar.');
+                  return;
+                }
+                const f = $el.closest('form');
+                const h = document.createElement('input');
+                h.type='hidden'; h.name='action'; h.value='faturar';
+                f.appendChild(h); f.submit();
+              "
               data-tip="Faturar"
               class="act-btn bg-amber-500 hover:bg-amber-600">
         <i class="fa-solid fa-file-invoice"></i>
@@ -640,7 +797,7 @@
 
       {% if order.status in ('aberto','faturado') %}
       <a href="{{ url_for('purchase_orders.new', order_id=order.id) }}"
-         data-tip="Criar PO"
+         data-tip="Criar PC/PO"
          class="act-btn bg-violet-600 hover:bg-violet-700">
         <i class="fa-solid fa-cart-flatbed"></i>
       </a>
@@ -649,13 +806,13 @@
       <a href="{{ url_for('orders.pdf', oid=order.id, lang='pt') }}" target="_blank"
          data-tip="PDF PT"
          class="act-btn bg-rose-600 hover:bg-rose-700">
-        <i class="fa-solid fa-file-pdf"></i>
+        <i class="fa-solid fa-file-pdf"></i><span style="font-size:10px;margin-left:3px">PT</span>
       </a>
 
       <a href="{{ url_for('orders.pdf', oid=order.id, lang='en') }}" target="_blank"
          data-tip="PDF EN"
          class="act-btn bg-rose-800 hover:bg-rose-900">
-        <i class="fa-regular fa-file-pdf"></i>
+        <i class="fa-solid fa-file-pdf"></i><span style="font-size:10px;margin-left:3px">EN</span>
       </a>
 
       {% if order.status not in ('fechado','cancelado') %}
@@ -691,52 +848,6 @@
 {# /grid #}
 
 
-{# ══════════════════════════════════════════
-   MODAL: Faturar
-   DENTRO do main-form — seus campos (invoice_number,
-   invoice_due_date) e o botão submit com name="action"
-   value="faturar" são enviados junto com todos os
-   campos do cabeçalho e ajustes.
-══════════════════════════════════════════ #}
-<div x-show="showFaturarModal" x-cloak
-     class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-     @keydown.escape.window="showFaturarModal=false">
-  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md" @click.stop>
-    <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 dark:border-slate-700">
-      <h3 class="font-semibold text-slate-700 dark:text-slate-200 text-sm">
-        <i class="fa-solid fa-file-invoice mr-2 text-amber-500"></i>Emitir Fatura e Salvar Pedido
-      </h3>
-      <button type="button" @click="showFaturarModal=false"
-              class="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
-    </div>
-    <div class="px-5 py-4 space-y-3">
-      <div>
-        <label class="lbl">Nº Nota / Fatura</label>
-        <input type="text" name="invoice_number" placeholder="NF-001..."
-               value="{{ order.invoice_number or '' }}" class="fi">
-      </div>
-      <div>
-        <label class="lbl">Data de Vencimento</label>
-        <input type="date" name="invoice_due_date"
-               value="{{ order.invoice_due_date.isoformat() if order.invoice_due_date else '' }}"
-               class="fi">
-      </div>
-      <p class="text-xs text-slate-400 italic">
-        Todas as alterações do pedido serão salvas junto com o faturamento.
-      </p>
-    </div>
-    <div class="px-5 py-3 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-2">
-      <button type="button" @click="showFaturarModal=false"
-              class="text-slate-500 text-sm px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-600">
-        Cancelar
-      </button>
-      <button type="submit" name="action" value="faturar"
-              class="bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold px-5 py-2 rounded-lg">
-        <i class="fa-solid fa-check mr-1"></i> Salvar e Faturar
-      </button>
-    </div>
-  </div>
-</div>
 
 </form>
 {# /main-form #}
@@ -750,7 +861,7 @@
   {% for item in order.items %}
   <form id="del-item-{{ item.id }}" method="post"
         action="{{ url_for('orders.delete_item', iid=item.id) }}"
-        onsubmit="return confirm('Remover item {{ loop.index }}?')">
+        {% if order.status != 'novo' %}onsubmit="return confirm('Remover item {{ loop.index }}?')"{% endif %}>
   </form>
   {% endfor %}
 </div>
@@ -768,9 +879,12 @@
 {# Form independente — Gerar Contas (fora do main-form) #}
 <form id="gen-payments-form" method="post"
       action="{{ url_for('orders.generate_payments', oid=order.id) }}" class="hidden">
-  <input type="hidden" id="gp-f-method" name="payment_method">
-  <input type="hidden" id="gp-f-terms"  name="payment_terms">
-  <input type="hidden" id="gp-f-amount" name="custom_amount">
+  <input type="hidden" id="gp-f-method"         name="payment_method">
+  <input type="hidden" id="gp-f-terms"          name="payment_terms">
+  <input type="hidden" id="gp-f-amount"         name="custom_amount">
+  <input type="hidden" id="gp-f-emission-date"  name="emission_date">
+  <input type="hidden" id="gp-f-delivery-date"  name="delivery_date">
+  <input type="hidden" id="gp-f-delivery-time"  name="delivery_time">
 </form>
 
 <script>
@@ -780,6 +894,36 @@
   const _pmt_bx_tpl  = "{{ url_for('orders.baixa', pid=0) }}";
   const _gen_pmt_url = "{{ url_for('orders.generate_payments', oid=order.id) }}";
   function _pmtUrl(tpl, pid) { return tpl.replace('/0/', '/' + pid + '/'); }
+
+  function openBaixaO(pid) {
+    const td = document.getElementById('baixa-o-td-' + pid);
+    if (!td) return;
+    const url = td.dataset.url; const amt = td.dataset.amount;
+    td.innerHTML = '<div class="flex items-center gap-0.5">'
+      + '<input type="text" value="' + amt + '" id="baixa-o-inp-' + pid + '" class="fi w-16 text-right font-mono"'
+      + ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();submitBaixaO(' + pid + ');}if(event.key===\'Escape\')closeBaixaO(' + pid + ',\'' + amt + '\');">'
+      + '<button type="button" onclick="submitBaixaO(' + pid + ')" class="p-1 rounded bg-emerald-600 text-white hover:bg-emerald-700"><i class="fa-solid fa-check" style="font-size:9px"></i></button>'
+      + '<button type="button" onclick="closeBaixaO(' + pid + ',\'' + amt + '\')" class="p-1 rounded bg-slate-200 text-slate-600"><i class="fa-solid fa-xmark" style="font-size:9px"></i></button>'
+      + '</div>';
+    const inp = document.getElementById('baixa-o-inp-' + pid);
+    if (inp) { inp.focus(); inp.select(); }
+  }
+  function submitBaixaO(pid) {
+    const td  = document.getElementById('baixa-o-td-' + pid);
+    const inp = document.getElementById('baixa-o-inp-' + pid);
+    if (!td || !inp) return;
+    const val = inp.value.replace(/\./g, '').replace(',', '.');
+    const fd  = new FormData();
+    fd.append('paid_amount', val);
+    fetch(td.dataset.url, { method: 'POST', body: fd })
+      .then(() => location.reload())
+      .catch(() => alert('Erro ao comunicar com o servidor.'));
+  }
+  function closeBaixaO(pid, amt) {
+    const td = document.getElementById('baixa-o-td-' + pid);
+    if (!td) return;
+    td.innerHTML = '<button type="button" onclick="openBaixaO(' + pid + ')" class="p-1 rounded text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-900/30" title="Dar baixa"><i class="fa-solid fa-circle-check"></i></button>';
+  }
 
   function fmtBRL(v) {
     return 'R\u00a0' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -834,20 +978,10 @@
     tr.appendChild(tdAmt);
     const tdBx = document.createElement('td');
     tdBx.className = 'px-2 py-1.5 text-center';
-    tdBx.innerHTML =
-      '<div class="flex items-center justify-center gap-0.5">' +
-        '<button type="button" class="p-1 rounded text-emerald-600 hover:bg-emerald-100" title="Dar baixa"' +
-                ' onclick="var t=this,f=t.closest(\'td\').querySelector(\'.bx-form\');f.style.display=\'flex\';t.style.display=\'none\'">' +
-          '<i class="fa-solid fa-circle-check"></i>' +
-        '</button>' +
-        '<form method="post" action="' + bxUrl + '" class="bx-form flex items-center gap-0.5" style="display:none">' +
-          '<input type="text" name="paid_amount" value="' + amtVal + '" class="fi w-14 text-right font-mono"' +
-                 ' onkeydown="if(event.key===\'Escape\'){var f=this.closest(\'.bx-form\');f.style.display=\'none\';f.previousElementSibling.style.display=\'\'}">' +
-          '<button type="submit" class="p-1 rounded bg-emerald-600 text-white"><i class="fa-solid fa-check" style="font-size:9px"></i></button>' +
-          '<button type="button" class="p-1 rounded bg-slate-200 text-slate-600"' +
-                  ' onclick="var f=this.closest(\'.bx-form\');f.style.display=\'none\';f.previousElementSibling.style.display=\'\'"><i class="fa-solid fa-xmark" style="font-size:9px"></i></button>' +
-        '</form>' +
-      '</div>';
+    tdBx.id = 'baixa-o-td-' + p.id;
+    tdBx.dataset.url = bxUrl;
+    tdBx.dataset.amount = amtVal;
+    tdBx.innerHTML = '<button type="button" class="p-1 rounded text-emerald-600 hover:bg-emerald-100" title="Dar baixa" onclick="openBaixaO(' + p.id + ')"><i class="fa-solid fa-circle-check"></i></button>';
     tr.appendChild(tdBx);
     const tdDel = document.createElement('td');
     tdDel.className = 'px-2 py-1.5 text-center';
@@ -883,6 +1017,14 @@
       document.getElementById('gp-f-method').value = document.getElementById('gp-payment-method').value;
       document.getElementById('gp-f-terms').value  = document.getElementById('gp-payment-terms').value;
       document.getElementById('gp-f-amount').value = '';
+      // Preserve unsaved header date/time fields
+      const mf = document.getElementById('main-form');
+      if (mf) {
+        document.getElementById('gp-f-emission-date').value = (mf.querySelector('[name="emission_date"]')  || {}).value || '';
+        document.getElementById('gp-f-delivery-date').value = (mf.querySelector('[name="delivery_date"]')  || {}).value || '';
+        document.getElementById('gp-f-delivery-time').value = (mf.querySelector('[name="delivery_time"]')  || {}).value || '';
+      }
+      _clearDirty();
       document.getElementById('gen-payments-form').submit();
       return;
     }
@@ -924,7 +1066,11 @@
   document.querySelectorAll('[data-del-item]').forEach(btn => {
     btn.addEventListener('click', function() {
       const form = document.getElementById('del-item-' + this.dataset.delItem);
+      {% if order.status == 'novo' %}
+      if (form) { _clearDirty(); form.submit(); }
+      {% else %}
       if (form && confirm('Remover este item?')) { _clearDirty(); form.submit(); }
+      {% endif %}
     });
   });
 

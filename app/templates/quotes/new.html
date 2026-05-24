@@ -440,8 +440,9 @@ function quoteBuilder() {
           // Recompute hour_extra rate if we can look up Diária 10h in catalog
           const cat = this.catalog.find(c => c.id === item.category_id);
           if (cat) {
+            const itemState = item._svc?.state_code || '';
             const d10h = cat.services.find(s =>
-              /10\s*h/i.test(s.name) && s.driver_type === (item.driver_type || '')
+              /10\s*h/i.test(s.name) && s.driver_type === (item.driver_type || '') && s.state_code === itemState
             );
             if (d10h) item.hour_extra = Math.round(this.priceFor(d10h) * 0.10 * 100) / 100;
           }
@@ -464,7 +465,7 @@ function quoteBuilder() {
       // even when the user has a service filter applied that hides it from the accordion.
       const origCat   = this.catalog.find(c => c.id === cat.id) || cat;
       const diaria10h = origCat.services.find(s =>
-        /10\s*h/i.test(s.name) && s.driver_type === svc.driver_type
+        /10\s*h/i.test(s.name) && s.driver_type === svc.driver_type && s.state_code === (svc.state_code || '')
       );
       const d10hPrice     = diaria10h ? this.priceFor(diaria10h) : 0;
       const hourExtraRate = d10hPrice > 0 ? Math.round(d10hPrice * 0.10 * 100) / 100 : 0;

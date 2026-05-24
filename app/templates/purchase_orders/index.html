@@ -62,7 +62,11 @@
           </span>
         </td>
         <td class="px-4 py-3">
-          <a href="{{ url_for('purchase_orders.detail', po_id=po.id) }}" class="text-violet-500 hover:underline text-xs">Ver →</a>
+          <a href="{{ url_for('purchase_orders.detail', po_id=po.id) }}"
+             title="Ver PO"
+             class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-violet-50 dark:bg-violet-900/30 text-violet-500 hover:bg-violet-100 dark:hover:bg-violet-800/50 transition-colors">
+            <i class="fa-solid fa-eye text-xs"></i>
+          </a>
         </td>
       </tr>
       {% else %}

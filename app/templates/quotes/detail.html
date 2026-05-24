@@ -10,7 +10,8 @@
     align-items: center;
     justify-content: center;
     gap: 3px;
-    width: 36px;
+    flex: 1 1 0;
+    min-width: 0;
     height: 36px;
     border-radius: 8px;
     color: #fff;
@@ -20,7 +21,7 @@
     border: none;
     text-decoration: none;
   }
-  .aq-btn.aq-pdf { width: 48px; font-size: 12px; }
+  .aq-btn.aq-pdf { flex: 1.5 1 0; font-size: 12px; }
   .aq-btn span { font-weight: 700; font-size: 11px; }
   .aq-btn:hover { transform: translateY(-1px); }
   .aq-btn::after {
@@ -43,6 +44,12 @@
     box-shadow: 0 4px 12px rgba(0,0,0,.3);
   }
   .aq-btn:hover::after { opacity: 1; }
+  /* Single-row action bar — makes form/a/div children stretch equally */
+  .aq-actions { display:flex; flex-direction:row; gap:6px; }
+  .aq-actions > form,
+  .aq-actions > a,
+  .aq-actions > div.relative { flex:1 1 0; min-width:0; display:flex; }
+  .aq-actions > form > .aq-btn { flex:1; }
   [x-cloak] { display: none !important; }
 </style>
 {% endblock %}
@@ -118,9 +125,75 @@
 
   <!-- Actions -->
   <div class="space-y-4">
-    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-4">
-      <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Ações</p>
-      <div class="flex flex-wrap gap-2">
+
+    {# Card: Histórico #}
+    <div x-data="{ histOpen: {{ 'false' if audit_logs else 'true' }} }"
+         class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
+      {# Toggle header #}
+      <button type="button" @click="histOpen = !histOpen"
+              class="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-colors duration-150">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-clock-rotate-left text-slate-400 text-[11px]"></i>
+          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Histórico</span>
+          {% if audit_logs %}
+          <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400">{{ audit_logs|length }}</span>
+          {% endif %}
+        </div>
+        <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform duration-200"
+           :class="histOpen ? 'rotate-180' : ''"></i>
+      </button>
+      {# Content #}
+      <div x-show="histOpen"
+           x-transition:enter="transition ease-out duration-200"
+           x-transition:enter-start="opacity-0 -translate-y-1"
+           x-transition:enter-end="opacity-100 translate-y-0"
+           x-transition:leave="transition ease-in duration-150"
+           x-transition:leave-start="opacity-100 translate-y-0"
+           x-transition:leave-end="opacity-0 -translate-y-1"
+           class="px-4 pb-4">
+        {% if audit_logs %}
+        <ol class="relative border-l border-slate-200 dark:border-slate-600 ml-2 space-y-3">
+          {% for log in audit_logs %}
+          <li class="ml-4">
+            <span class="absolute -left-1.5 mt-1 w-3 h-3 rounded-full bg-slate-300 dark:bg-slate-500 border-2 border-white dark:border-slate-800"></span>
+            <p class="text-xs font-medium text-slate-700 dark:text-slate-200">{{ log.action }}</p>
+            <p class="text-[11px] text-slate-400">{{ log.created_at|fdatetime }}{% if log.user %} · {{ log.user.name }}{% endif %}</p>
+          </li>
+          {% endfor %}
+        </ol>
+        {% else %}
+        <dl class="space-y-1.5 text-xs">
+          <div class="flex justify-between gap-2">
+            <dt class="text-slate-500">Criado</dt>
+            <dd class="text-slate-600 dark:text-slate-300">{{ quote.created_at|fdatetime if quote.created_at else '–' }}{% if quote.creator %} <span class="text-slate-400">· {{ quote.creator.name }}</span>{% endif %}</dd>
+          </div>
+          {% if quote.approved_at %}
+          <div class="flex justify-between gap-2">
+            <dt class="text-slate-500">Aprovado</dt>
+            <dd class="text-green-500">{{ quote.approved_at|fdatetime }}{% if quote.approver %} <span class="text-green-400">· {{ quote.approver.name }}</span>{% endif %}</dd>
+          </div>
+          {% endif %}
+          {% if quote.rejected_at %}
+          <div class="flex justify-between gap-2">
+            <dt class="text-slate-500">Rejeitado</dt>
+            <dd class="text-red-500">{{ quote.rejected_at|fdatetime }}{% if quote.rejecter %} <span class="text-red-400">· {{ quote.rejecter.name }}</span>{% endif %}</dd>
+          </div>
+          {% endif %}
+        </dl>
+        {% endif %}
+        {% if quote_order %}
+        <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700">
+          <p class="lbl">SO Vinculado</p>
+          <a href="{{ url_for('orders.detail', oid=quote_order.id) }}"
+             class="text-xs font-mono text-teal-600 hover:underline">{{ quote_order.number }}</a>
+          {% if quote_order.client_name %}<p class="text-xs text-slate-400 mt-0.5">{{ quote_order.client_name }}</p>{% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-2">
+      <div class="aq-actions">
 
         {% if quote.status == 'pendente' %}
         <form method="post" action="{{ url_for('quotes.approve', qid=quote.id) }}">
@@ -137,7 +210,7 @@
 
         {% if quote.status in ('aprovado', 'pago') and not quote_order %}
         <form method="post" action="{{ url_for('orders.create', qid=quote.id) }}">
-          <button type="submit" class="aq-btn bg-teal-600 hover:bg-teal-700" data-tip="Criar Pedido">
+          <button type="submit" class="aq-btn bg-teal-600 hover:bg-teal-700" data-tip="Criar PV/SO">
             <i class="fa-solid fa-bag-shopping"></i>
           </button>
         </form>
@@ -155,7 +228,6 @@
 
         {% set _em = (quote.client.email if quote.client and quote.client.email else quote.email) %}
         {% set _ph = (quote.client.whatsapp if quote.client and quote.client.whatsapp else quote.phone) %}
-        <div class="w-full h-px bg-slate-100 dark:bg-slate-700 my-0.5"></div>
 
         {# PT dropdown: PDF + Email + WhatsApp #}
         <div class="relative" x-data="{open:false}" @click.outside="open=false">

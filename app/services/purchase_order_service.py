@@ -28,6 +28,38 @@ def create(company_id: int, data: dict, user_id: int) -> PurchaseOrder:
     return po
 
 
+def create_from_order(order, user_id: int) -> PurchaseOrder:
+    """Cria PO a partir de uma Order (SO), copiando itens e ajustes financeiros."""
+    from ..models.order import Order
+    po = PurchaseOrder(
+        number             = numbering_service.next_po(order.company_id),
+        company_id         = order.company_id,
+        created_by         = user_id,
+        order_id           = order.id,
+        status             = "rascunho",
+        discount_type      = order.discount_type or "R$",
+        discount_value     = order.discount_value or 0,
+        freight_amount     = order.freight_amount or 0,
+        other_costs_amount = order.other_costs_amount or 0,
+        other_costs_label  = order.other_costs_label or "",
+    )
+    db.session.add(po)
+    db.session.flush()
+    for idx, item in enumerate(order.items):
+        poi = POItem(
+            po_id       = po.id,
+            service_id  = item.service_id,
+            category_id = item.category_id,
+            description = item.description or "",
+            quantity    = item.quantity or 1,
+            unit_cost   = item.unit_price or 0,
+            total_cost  = item.total_price or 0,
+            sort_order  = idx,
+        )
+        db.session.add(poi)
+    return po
+
+
 def create_from_service_order(service_order, user_id: int) -> PurchaseOrder:
     """Cria PO automaticamente a partir de uma OS do Centro de Despacho."""
     po = PurchaseOrder(
@@ -85,6 +117,20 @@ def conclude(po: PurchaseOrder, user_id: int) -> PurchaseOrder:
     _assert_status(po, ["em_execucao", "aprovado"])
     po.status       = "concluido"
     po.concluded_at = now_br()
+    return po
+
+
+def faturar(po: PurchaseOrder, user_id: int) -> PurchaseOrder:
+    """Fatura a PO — nota fiscal do fornecedor recebida."""
+    if po.status in ("faturado", "cancelado", "excluido"):
+        raise ValueError(f"Não é possível faturar PO com status '{po.status}'")
+    if not po.supplier_id:
+        raise ValueError("Selecione o Fornecedor antes de faturar.")
+    if not list(po.payments):
+        raise ValueError("Gere as contas a pagar antes de faturar.")
+    po.status      = "faturado"
+    po.invoiced_at = now_br()
+    po.invoiced_by = user_id
     return po
 
 
@@ -260,6 +306,18 @@ def baixa(payment: POPayment, paid_amount: float, user_id: int) -> None:
     payment.paid_amount = paid_amount
     payment.paid_at     = now_br()
     payment.paid_by     = user_id
+    # Auto-avança PO para 'pago' quando todas as parcelas forem quitadas
+    po = payment.purchase_order
+    if po.status == "faturado":
+        all_pmts     = list(po.payments)
+        total_amount = sum(p.amount or 0 for p in all_pmts)
+        total_paid   = sum(
+            paid_amount if p.id == payment.id else (p.paid_amount or 0)
+            for p in all_pmts
+        )
+        if total_amount > 0 and total_paid >= total_amount:
+            po.status   = "pago"
+            po.paid_at  = now_br()
     db.session.commit()
 
 

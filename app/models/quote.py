@@ -39,6 +39,12 @@ class Quote(db.Model, TimestampMixin, SoftDeleteMixin):
     rejected_at      = db.Column(db.DateTime)
     rejection_reason = db.Column(db.Text)
     created_by       = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    approved_by      = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    rejected_by      = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+
+    creator    = db.relationship("User", foreign_keys=[created_by], lazy="joined")
+    approver   = db.relationship("User", foreign_keys=[approved_by], lazy="joined")
+    rejecter   = db.relationship("User", foreign_keys=[rejected_by], lazy="joined")
 
     items      = db.relationship("QuoteItem",      backref="quote", lazy="select",
                                   cascade="all, delete-orphan", order_by="QuoteItem.sort_order")

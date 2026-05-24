@@ -55,5 +55,6 @@ def status_badge_class(status: str) -> str:
         "aberto":              "bg-blue-100 text-blue-700",
         "faturado":            "bg-amber-100 text-amber-700",
         "fechado":             "bg-emerald-100 text-emerald-700",
+        "excluido":            "bg-slate-100 text-slate-500",
     }
     return classes.get(status, "bg-gray-100 text-gray-700")

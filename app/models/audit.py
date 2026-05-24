@@ -16,5 +16,7 @@ class AuditLog(db.Model, TimestampMixin):
     ip_address = db.Column(db.String(50))
     user_agent = db.Column(db.String(500))
 
+    user = db.relationship("User", foreign_keys=[user_id], lazy="joined")
+
     def __repr__(self):
         return f"<AuditLog {self.entity}:{self.entity_id} {self.action}>"

@@ -11,6 +11,7 @@ from ...models.service_order import ServiceOrder
 from ...models.order import Order, OrderItem
 from ...extensions import db
 from ...services import purchase_order_service as pos
+from ...utils.audit import log_activity
 
 
 # ─── List ────────────────────────────────────────────────────────────────────
@@ -26,6 +27,8 @@ def index():
               .filter(PurchaseOrder.deleted_at.is_(None)))
     if status:
         query = query.filter_by(status=status)
+    else:
+        query = query.filter(PurchaseOrder.status != "excluido")
     if q:
         query = query.filter(
             PurchaseOrder.number.ilike(f"%{q}%") |
@@ -59,75 +62,58 @@ def _build_context(cid):
     return suppliers, services, categories, suppliers_json, services_json
 
 
-# ─── New — auto-cria PO e redireciona para edição ────────────────────────────
+# ─── New — exibe formulário de criação de PO ────────────────────────────────
 
-@purchase_orders_bp.route("/new", methods=["GET"])
+@purchase_orders_bp.route("/new", methods=["GET", "POST"])
 @login_required
 def new():
     cid = current_user.company_id
-    order_id = request.args.get("order_id", type=int)
-    linked_order = (Order.query.filter_by(id=order_id, company_id=cid).first()
-                    if order_id else None)
 
-    # Se há SO vinculada com itens, cria uma PO por item usando price_cost
-    if linked_order and linked_order.items:
-        created_pos = []
-        for sort_idx, item in enumerate(linked_order.items):
-            # Busca o preço de custo para o serviço+categoria do item
-            unit_cost = 0.0
-            if item.service_id and item.category_id:
-                pricing = ServicePricing.query.filter_by(
-                    service_id=item.service_id,
-                    category_id=item.category_id,
-                ).filter(ServicePricing.is_active == True).first()
-                if pricing:
-                    unit_cost = pricing.price_cost or 0.0
+    if request.method == "POST":
+        data = request.form.to_dict()
 
-            qty   = item.quantity or 1
-            total = unit_cost * qty
+        # Parse pickup_datetime from separate date+time fields
+        pd = data.pop("pickup_date", "")
+        pt = data.pop("pickup_time", "")
+        if pd:
+            data["pickup_datetime"] = f"{pd}T{pt}" if pt else f"{pd}T00:00"
 
-            data = {
-                "order_id": linked_order.id,
-                # copy operational defaults from SO if present
-                "passenger_name":    getattr(linked_order, "passenger_name", None) or "",
-                "passenger_phone":   getattr(linked_order, "passenger_phone", None) or "",
-                "pickup_datetime":   getattr(linked_order, "pickup_datetime", None),
-                "pickup_location":   getattr(linked_order, "pickup_location",  None) or "",
-                "dropoff_location":  getattr(linked_order, "dropoff_location", None) or "",
-                "flight_number":     getattr(linked_order, "flight_number",    None) or "",
-                "pax_count":         qty,
-            }
-            po = pos.create(cid, data, current_user.id)
+        # Numeric conversions
+        if data.get("amount"):
+            try:
+                data["amount"] = float(data["amount"].replace(".", "").replace(",", "."))
+            except ValueError:
+                data["amount"] = 0.0
+        if data.get("pax_count"):
+            try:
+                data["pax_count"] = int(data["pax_count"])
+            except ValueError:
+                data["pax_count"] = 1
 
-            # Descrição do item: nome do serviço se não tiver descrição explícita
-            svc = db.session.get(Service, item.service_id) if item.service_id else None
-            desc = getattr(item, "description", None) or (svc.name if svc else "")
-            po_item = POItem(
-                po_id       = po.id,
-                service_id  = item.service_id,
-                category_id = item.category_id,
-                description = desc,
-                quantity    = qty,
-                unit_cost   = unit_cost,
-                total_cost  = total,
-                sort_order  = sort_idx,
-            )
-            db.session.add(po_item)
-            created_pos.append(po)
-
+        po = pos.create(cid, data, current_user.id)
+        log_activity("po", po.id, po.company_id, "Criada", current_user.id)
         db.session.commit()
+        flash(f"PO {po.number} criada com sucesso.", "success")
+        return redirect(url_for("purchase_orders.detail", po_id=po.id))
 
-        if len(created_pos) == 1:
-            return redirect(url_for("purchase_orders.detail", po_id=created_pos[0].id))
-        # Múltiplos → lista de POs
-        flash(f"{len(created_pos)} PO(s) criada(s) a partir dos itens do SO.", "success")
-        return redirect(url_for("purchase_orders.index"))
-
-    # Sem itens → PO em branco
-    data = {"order_id": linked_order.id} if linked_order else {}
-    po = pos.create(cid, data, current_user.id)
-    db.session.commit()
-    return redirect(url_for("purchase_orders.detail", po_id=po.id))
+    # GET — se order_id, auto-cria PO vinculada ao SO e redireciona para detail
+    order_id = request.args.get("order_id", type=int)
+    if order_id:
+        linked_order = Order.query.filter_by(id=order_id, company_id=cid).first_or_404()
+        po = pos.create_from_order(linked_order, current_user.id)
+        log_activity("po", po.id, po.company_id, "Criada a partir de SO", current_user.id)
+        db.session.commit()
+        flash(f"PO {po.number} criada a partir do pedido {linked_order.number}.", "success")
+        return redirect(url_for("purchase_orders.detail", po_id=po.id))
+    linked_order = None
+    suppliers, services, categories, suppliers_json, services_json = _build_context(cid)
+    return render_template("purchase_orders/detail.html",
+                           po=None,
+                           linked_order=linked_order,
+                           suppliers=suppliers, services=services, categories=categories,
+                           suppliers_json=suppliers_json, services_json=services_json,
+                           PO_STATUSES=PO_STATUSES,
+                           audit_logs=[])
 
 
 # ─── PDF ─────────────────────────────────────────────────────────────────────
@@ -136,11 +122,12 @@ def new():
 @login_required
 def pdf(po_id):
     from ...services.purchase_order_pdf import generate_po_pdf
-    po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
-    buf = generate_po_pdf(po)
+    po   = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
+    lang = request.args.get("lang", "pt")
+    buf  = generate_po_pdf(po, lang=lang)
     buf.seek(0)
     return send_file(buf, mimetype="application/pdf",
-                     download_name=f"{po.number}.pdf",
+                     download_name=f"{po.number}-{lang}.pdf",
                      as_attachment=False)
 
 
@@ -149,15 +136,18 @@ def pdf(po_id):
 @purchase_orders_bp.route("/<int:po_id>")
 @login_required
 def detail(po_id):
+    from ...models.audit import AuditLog
     po  = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
     cid = current_user.company_id
     suppliers, services, categories, suppliers_json, services_json = _build_context(cid)
+    audit_logs = AuditLog.query.filter_by(entity="po", entity_id=po.id).order_by(AuditLog.created_at.asc()).all()
     return render_template("purchase_orders/detail.html",
                            po=po,
                            suppliers=suppliers, services=services, categories=categories,
                            suppliers_json=suppliers_json, services_json=services_json,
                            linked_order=po.order,
-                           PO_STATUSES=PO_STATUSES)
+                           PO_STATUSES=PO_STATUSES,
+                           audit_logs=audit_logs)
 
 
 # ─── Save All ────────────────────────────────────────────────────────────────
@@ -166,7 +156,7 @@ def detail(po_id):
 @login_required
 def save_all(po_id):
     po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
-    if po.status in ("concluido", "cancelado"):
+    if po.status in ("concluido", "faturado", "cancelado"):
         flash("PO não pode ser editada no status atual.", "warning")
         return redirect(url_for("purchase_orders.detail", po_id=po_id))
     data = request.form.to_dict()
@@ -186,8 +176,34 @@ def save_all(po_id):
         except ValueError:
             data["pax_count"] = 1
     pos._apply_data(po, data)
+    log_activity("po", po.id, po.company_id, "Dados salvos", current_user.id)
     db.session.commit()
     flash("PO salva.", "success")
+    return redirect(url_for("purchase_orders.detail", po_id=po_id))
+
+
+# ─── Ajustes financeiros ─────────────────────────────────────────────────────
+
+@purchase_orders_bp.route("/<int:po_id>/update-adjustments", methods=["POST"])
+@login_required
+def update_adjustments(po_id):
+    po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
+    d = request.form.to_dict()
+
+    def _pf(v):
+        try:
+            return float(str(v or 0).replace(",", "."))
+        except (TypeError, ValueError):
+            return 0.0
+
+    po.discount_type      = d.get("discount_type", "R$") or "R$"
+    po.discount_value     = _pf(d.get("discount_value"))
+    po.freight_amount     = _pf(d.get("freight_amount"))
+    po.other_costs_amount = _pf(d.get("other_costs_amount"))
+    po.other_costs_label  = d.get("other_costs_label", "") or ""
+    log_activity("po", po.id, po.company_id, "Ajustes financeiros atualizados", current_user.id)
+    db.session.commit()
+    flash("Ajustes financeiros salvos.", "success")
     return redirect(url_for("purchase_orders.detail", po_id=po_id))
 
 
@@ -207,6 +223,7 @@ def send(po_id):
     po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
     try:
         pos.send(po, current_user.id)
+        log_activity("po", po.id, po.company_id, "Enviada ao fornecedor", current_user.id)
         db.session.commit()
         flash(f"PO {po.number} marcada como enviada.", "success")
     except ValueError as e:
@@ -220,6 +237,7 @@ def approve(po_id):
     po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
     try:
         pos.approve(po, current_user.id)
+        log_activity("po", po.id, po.company_id, "Aprovada", current_user.id)
         db.session.commit()
         flash(f"PO {po.number} aprovada.", "success")
     except ValueError as e:
@@ -233,6 +251,7 @@ def start_execution(po_id):
     po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
     try:
         pos.start_execution(po, current_user.id)
+        log_activity("po", po.id, po.company_id, "Em execução", current_user.id)
         db.session.commit()
         flash(f"PO {po.number} em execução.", "success")
     except ValueError as e:
@@ -246,8 +265,23 @@ def conclude(po_id):
     po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
     try:
         pos.conclude(po, current_user.id)
+        log_activity("po", po.id, po.company_id, "Concluída", current_user.id)
         db.session.commit()
         flash(f"PO {po.number} concluída.", "success")
+    except ValueError as e:
+        flash(str(e), "warning")
+    return redirect(url_for("purchase_orders.detail", po_id=po_id))
+
+
+@purchase_orders_bp.route("/<int:po_id>/faturar", methods=["POST"])
+@login_required
+def faturar(po_id):
+    po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
+    try:
+        pos.faturar(po, current_user.id)
+        log_activity("po", po.id, po.company_id, "Faturada", current_user.id)
+        db.session.commit()
+        flash(f"PO {po.number} faturada com sucesso.", "success")
     except ValueError as e:
         flash(str(e), "warning")
     return redirect(url_for("purchase_orders.detail", po_id=po_id))
@@ -260,6 +294,7 @@ def cancel(po_id):
     reason = request.form.get("reason", "")
     try:
         pos.cancel(po, current_user.id, reason)
+        log_activity("po", po.id, po.company_id, "Cancelada", current_user.id)
         db.session.commit()
         flash(f"PO {po.number} cancelada.", "info")
     except ValueError as e:
@@ -279,6 +314,9 @@ def generate_payments(po_id):
         po.payment_method = pm
     if pt:
         po.payment_terms = pt
+    supplier_id = request.form.get("supplier_id", type=int)
+    if supplier_id:
+        po.supplier_id = supplier_id
     db.session.flush()
     custom_total = None
     raw_custom = request.form.get("custom_amount", "").strip()
@@ -288,6 +326,8 @@ def generate_payments(po_id):
         except ValueError:
             pass
     pmts = pos.generate_payments(po, custom_total=custom_total)
+    log_activity("po", po.id, po.company_id, "Parcelas geradas", current_user.id)
+    db.session.commit()
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         total_scheduled = sum(p.amount or 0 for p in po.payments)
         a_pagar = max(po.computed_total - total_scheduled, 0)
@@ -304,6 +344,21 @@ def generate_payments(po_id):
             "total_count": len(list(po.payments)),
         })
     flash(f"{len(pmts)} parcela(s) gerada(s).", "success")
+    return redirect(url_for("purchase_orders.detail", po_id=po_id))
+
+
+@purchase_orders_bp.route("/<int:po_id>/recalculate-payments", methods=["POST"])
+@login_required
+def recalculate_payments(po_id):
+    """Apaga parcelas não-pagas e regera com base no total atual."""
+    po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
+    if po.status in ("concluido", "faturado", "cancelado"):
+        flash("PO não pode ser editada no status atual.", "warning")
+        return redirect(url_for("purchase_orders.detail", po_id=po_id))
+    pmts = pos.generate_payments(po)  # REGENERATE MODE
+    log_activity("po", po.id, po.company_id, "Parcelas recalculadas", current_user.id)
+    db.session.commit()
+    flash(f"Parcelas recalculadas — {len(pmts)} parcela(s) gerada(s).", "success")
     return redirect(url_for("purchase_orders.detail", po_id=po_id))
 
 
@@ -335,6 +390,8 @@ def delete_payment(pid):
             return jsonify({"ok": False, "error": str(e)}), 400
         flash(str(e), "warning")
         return redirect(url_for("purchase_orders.detail", po_id=po.id))
+    log_activity("po", po.id, po.company_id, "Parcela removida", current_user.id)
+    db.session.commit()
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         total_scheduled = sum(p.amount or 0 for p in po.payments)
         a_pagar = max(po.computed_total - total_scheduled, 0)
@@ -355,6 +412,8 @@ def baixa(pid):
         raw         = request.form.get("paid_amount", "")
         paid_amount = float(str(raw).replace(",", ".")) if raw else (pmt.amount or 0)
         pos.baixa(pmt, paid_amount, current_user.id)
+        log_activity("po", po.id, po.company_id, f"Parcela {pmt.installment_no} baixada", current_user.id)
+        db.session.commit()
         flash("Pagamento registrado.", "success")
     except Exception as e:
         flash(str(e), "warning")
@@ -368,6 +427,7 @@ def baixa(pid):
 def add_item(po_id):
     po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
     pos.add_item(po, request.form.to_dict())
+    log_activity("po", po.id, po.company_id, "Item adicionado", current_user.id)
     db.session.commit()
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         items_data = [{
@@ -391,6 +451,7 @@ def update_item(item_id):
     if po.company_id != current_user.company_id:
         return jsonify({"ok": False, "error": "Não autorizado"}), 403
     pos.update_item(item, request.form.to_dict())
+    log_activity("po", po.id, po.company_id, "Item atualizado", current_user.id)
     db.session.commit()
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return jsonify({"ok": True, "total_cost": item.total_cost, "computed_total": po.computed_total})
@@ -406,6 +467,7 @@ def delete_item(item_id):
     if po.company_id != current_user.company_id:
         return jsonify({"ok": False, "error": "Não autorizado"}), 403
     pos.delete_item(item)
+    log_activity("po", po.id, po.company_id, "Item removido", current_user.id)
     db.session.commit()
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return jsonify({"ok": True, "computed_total": po.computed_total})
@@ -418,8 +480,11 @@ def delete_item(item_id):
 @purchase_orders_bp.route("/<int:po_id>/delete", methods=["POST"])
 @login_required
 def delete(po_id):
-    po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id, deleted_at=None).first_or_404()
-    po.soft_delete()
+    po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).filter(
+        PurchaseOrder.status != "excluido"
+    ).first_or_404()
+    po.status = "excluido"
+    log_activity("po", po.id, po.company_id, "Excluída", current_user.id)
     db.session.commit()
     flash(f"PO {po.number} excluída.", "info")
     return redirect(url_for("purchase_orders.index"))
@@ -432,6 +497,7 @@ def delete(po_id):
 def update_obs(po_id):
     po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
     po.notes = request.form.get("notes", "").strip()
+    log_activity("po", po.id, po.company_id, "Observações atualizadas", current_user.id)
     db.session.commit()
     flash("Observações salvas.", "success")
     return redirect(url_for("purchase_orders.detail", po_id=po_id))

@@ -4,7 +4,7 @@ Representa a Ordem de Compra (PO) emitida para um fornecedor terceirizado
 como contraparte operacional de um Pedido de Venda (SO).
 
 Numeração: PO-AAMMDD-NNN
-Fluxo de status: rascunho → enviado → aprovado → em_execucao → concluido / cancelado
+Fluxo de status: rascunho → enviado → aprovado → em_execucao → concluido → faturado / cancelado
 Papel financeiro: despesa / contas a pagar
 """
 from ..extensions import db
@@ -16,7 +16,10 @@ PO_STATUSES = (
     "aprovado",      # Fornecedor confirmou
     "em_execucao",   # Serviço em andamento
     "concluido",     # Serviço executado e encerrado
+    "faturado",      # Nota fiscal do fornecedor recebida / faturado
+    "pago",          # Todas as parcelas quitadas (Concluído)
     "cancelado",     # Cancelada
+    "excluido",      # Excluído (soft-delete — preserva histórico)
 )
 
 
@@ -51,6 +54,7 @@ class PurchaseOrder(db.Model, TimestampMixin, SoftDeleteMixin):
 
     # ── Dados de veículo (condicional: requires_vehicle) ─────────────────────
     vehicle_category_id = db.Column(db.Integer, db.ForeignKey("vehicle_categories.id"), nullable=True)
+    vehicle_model       = db.Column(db.String(200))
     vehicle_description = db.Column(db.String(200))
     vehicle_plate       = db.Column(db.String(20))
     driver_name         = db.Column(db.String(200))
@@ -63,6 +67,13 @@ class PurchaseOrder(db.Model, TimestampMixin, SoftDeleteMixin):
     payment_due_date = db.Column(db.Date)
     paid_at          = db.Column(db.DateTime)
 
+    # Ajustes financeiros (afetam o total final)
+    discount_type      = db.Column(db.String(5),   default="R$")   # 'R$' ou '%'
+    discount_value     = db.Column(db.Float,        default=0)
+    freight_amount     = db.Column(db.Float,        default=0)
+    other_costs_amount = db.Column(db.Float,        default=0)
+    other_costs_label  = db.Column(db.String(200),  default="")
+
     # ── Status & controle ────────────────────────────────────────────────────
     status         = db.Column(db.String(50), default="rascunho")
     notes          = db.Column(db.Text)
@@ -71,12 +82,16 @@ class PurchaseOrder(db.Model, TimestampMixin, SoftDeleteMixin):
     approved_at    = db.Column(db.DateTime)
     concluded_at   = db.Column(db.DateTime)
     cancelled_at   = db.Column(db.DateTime)
+    invoiced_at    = db.Column(db.DateTime)
+    invoiced_by    = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
 
     # ── Relacionamentos ───────────────────────────────────────────────────────
+    creator          = db.relationship("User",           foreign_keys=[created_by],           lazy="joined")
     supplier         = db.relationship("Supplier",      foreign_keys=[supplier_id],         lazy="joined")
     service          = db.relationship("Service",       foreign_keys=[service_id],           lazy="joined")
     service_order    = db.relationship("ServiceOrder",  foreign_keys=[service_order_id],     lazy="joined")
-    order            = db.relationship("Order",         foreign_keys=[order_id],             lazy="joined")
+    order            = db.relationship("Order",         foreign_keys=[order_id],             lazy="joined",
+                                       backref=db.backref("purchase_orders", lazy="select"))
     vehicle_category = db.relationship("VehicleCategory", foreign_keys=[vehicle_category_id], lazy="joined")
     payments         = db.relationship("POPayment",     back_populates="purchase_order",
                                        cascade="all, delete-orphan", lazy="dynamic",
@@ -88,8 +103,15 @@ class PurchaseOrder(db.Model, TimestampMixin, SoftDeleteMixin):
     @property
     def computed_total(self) -> float:
         if self.items:
-            return sum(i.total_cost or 0 for i in self.items)
-        return self.amount or 0.0
+            base = sum(i.total_cost or 0 for i in self.items)
+        else:
+            base = self.amount or 0.0
+        disc = self.discount_value or 0
+        if (self.discount_type or "R$") == "%":
+            disc_amount = base * (disc / 100)
+        else:
+            disc_amount = disc
+        return base - disc_amount + (self.freight_amount or 0) + (self.other_costs_amount or 0)
 
     def total_paid(self) -> float:
         return sum(p.paid_amount or 0 for p in self.payments)
@@ -104,8 +126,11 @@ class PurchaseOrder(db.Model, TimestampMixin, SoftDeleteMixin):
             "enviado":     "Enviado",
             "aprovado":    "Aprovado",
             "em_execucao": "Em Execução",
-            "concluido":   "Concluído",
+            "concluido":   "Executado",
+            "faturado":    "Faturado",
+            "pago":        "Concluído",
             "cancelado":   "Cancelado",
+            "excluido":    "Excluído",
         }
         return labels.get(self.status, self.status)
 
@@ -116,8 +141,11 @@ class PurchaseOrder(db.Model, TimestampMixin, SoftDeleteMixin):
             "enviado":     "blue",
             "aprovado":    "green",
             "em_execucao": "amber",
-            "concluido":   "emerald",
+            "concluido":   "teal",
+            "faturado":    "amber",
+            "pago":        "emerald",
             "cancelado":   "red",
+            "excluido":    "slate",
         }
         return colors.get(self.status, "slate")
 

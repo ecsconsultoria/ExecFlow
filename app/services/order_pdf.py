@@ -44,7 +44,7 @@ _T: dict[str, dict[str, str]] = {
     "subtotal":         {"pt": "Subtotal",                 "en": "Subtotal"},
     "discount":         {"pt": "Desconto",                 "en": "Discount"},
     "freight":          {"pt": "Frete",                    "en": "Freight"},
-    "other_costs":      {"pt": "Outros Custos",            "en": "Other Costs"},
+    "other_costs":      {"pt": "Custos Extras",            "en": "Extra Costs"},
     "final_total":      {"pt": "TOTAL FINAL",              "en": "TOTAL AMOUNT"},
     "payment_hdr":      {"pt": "Pagamento",                "en": "Payment"},
     "installment_no":   {"pt": "Parcela",                  "en": "Installment"},
@@ -59,6 +59,19 @@ _T: dict[str, dict[str, str]] = {
     "prazo_lbl":        {"pt": "Prazo",                    "en": "Terms"},
     "page_lbl":         {"pt": "Página",                   "en": "Page"},
     "generated":        {"pt": "Gerado em",                "en": "Generated on"},
+    # Operational data
+    "op_hdr":           {"pt": "DADOS OPERACIONAIS",       "en": "OPERATIONAL DATA"},
+    "op_driver":        {"pt": "Motorista",                "en": "Driver"},
+    "op_driver_phone":  {"pt": "Fone",                     "en": "Phone"},
+    "op_modelo":        {"pt": "Modelo",                   "en": "Model"},
+    "op_plate":         {"pt": "Placa",                    "en": "Plate"},
+    "op_pickup":        {"pt": "Data / Hora Pickup",        "en": "Pickup Date/Time"},
+    "op_from":          {"pt": "Local de Embarque",          "en": "Pickup Location"},
+    "op_to":            {"pt": "Local de Desembarque",       "en": "Dropoff Location"},
+    "op_passenger":     {"pt": "Passageiro",               "en": "Passenger"},
+    "op_pax_phone":     {"pt": "Fone Passageiro",          "en": "Pax Phone"},
+    "op_flight":        {"pt": "Nº Voo",                  "en": "Flight No."},
+    "op_obs":           {"pt": "Observações",              "en": "Notes"},
 }
 
 
@@ -67,20 +80,22 @@ def _t(key: str, lang: str) -> str:
     return entry.get(lang) or entry.get("pt") or key
 
 
-def _fmt_date(d) -> str:
+def _fmt_date(d, lang: str = "pt") -> str:
     if d is None:
         return "–"
     try:
-        return d.strftime("%d/%m/%Y")
+        fmt = "%m/%d/%Y" if lang == "en" else "%d/%m/%Y"
+        return d.strftime(fmt)
     except Exception:
         return str(d)
 
 
-def _fmt_datetime(dt) -> str:
+def _fmt_datetime(dt, lang: str = "pt") -> str:
     if dt is None:
         return "–"
     try:
-        return dt.strftime("%d/%m/%Y %H:%M")
+        fmt = "%m/%d/%Y %H:%M" if lang == "en" else "%d/%m/%Y %H:%M"
+        return dt.strftime(fmt)
     except Exception:
         return str(dt)
 
@@ -238,8 +253,8 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         "STATUS",
     ]
     order_col_values = [
-        _fmt_date(order.emission_date),
-        _fmt_datetime(order.delivery_datetime),
+        _fmt_date(order.emission_date, lang),
+        _fmt_datetime(order.delivery_datetime, lang),
         _billing_label(order.billing_type or "recibo", lang),
         vendor_name or "–",
         status_val,
@@ -291,6 +306,21 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
     ]))
     story.append(client_tbl)
     story.append(Spacer(1, 4 * mm))
+
+    # ── Compute adjustments (needed before building the items table) ─────────
+    subtotal           = order.total_amount or 0
+    discount_v         = order.discount_value or 0
+    discount_type      = order.discount_type or "R$"
+    other_costs        = order.other_costs_amount or 0
+    other_costs_lbl_v  = getattr(order, "other_costs_label", "") or ""
+    computed           = order.computed_total
+
+    if discount_type == "%":
+        disc_amt = subtotal * (discount_v / 100)
+        disc_row_lbl = f"{_t('discount', lang)} ({discount_v:.2f}%)"
+    else:
+        disc_amt = discount_v
+        disc_row_lbl = f"{_t('discount', lang)} ({_fmt_brl(discount_v)})" if discount_v else ""
 
     # ── Items table (same style as quote PDF) ─────────────────────────────
     i_col_w = [W * 0.05, W * 0.52, W * 0.07, W * 0.17, W * 0.19]
@@ -346,6 +376,43 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
             Paragraph(_fmt_brl(total),                cell_body_r),
         ])
 
+    # Track where item rows end (before adjustment rows)
+    item_data_end = len(items_rows)
+
+    # Append discount row if applicable
+    _adj_style_cmds: list = []
+    if disc_amt:
+        r = len(items_rows)
+        items_rows.append([
+            Paragraph(f"<i>{disc_row_lbl}:</i>", cell_body_r),
+            "", "", "",
+            Paragraph(f'<font color="#c62828">- {_fmt_brl(disc_amt)}</font>', cell_body_r),
+        ])
+        _adj_style_cmds += [
+            ("SPAN",          (0, r), (3, r)),
+            ("BACKGROUND",    (0, r), (-1, r), colors.HexColor("#fff8e1")),
+            ("ALIGN",         (0, r), (-1, r), "RIGHT"),
+            ("TOPPADDING",    (0, r), (-1, r), 4),
+            ("BOTTOMPADDING", (0, r), (-1, r), 4),
+        ]
+
+    # Append outros custos row if applicable
+    if other_costs:
+        r = len(items_rows)
+        cost_lbl = other_costs_lbl_v or _t("other_costs", lang)
+        items_rows.append([
+            Paragraph(f"<i>{cost_lbl}:</i>", cell_body_r),
+            "", "", "",
+            Paragraph(_fmt_brl(other_costs), cell_body_r),
+        ])
+        _adj_style_cmds += [
+            ("SPAN",          (0, r), (3, r)),
+            ("BACKGROUND",    (0, r), (-1, r), colors.HexColor("#fff8e1")),
+            ("ALIGN",         (0, r), (-1, r), "RIGHT"),
+            ("TOPPADDING",    (0, r), (-1, r), 4),
+            ("BOTTOMPADDING", (0, r), (-1, r), 4),
+        ]
+
     items_tbl = Table(items_rows, colWidths=i_col_w, repeatRows=1)
     items_style = TableStyle([
         ("BACKGROUND",    (0, 0), (-1, 0),  BRAND_DARK),
@@ -360,21 +427,18 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         ("VALIGN",        (1, 1), (1, -1),  "TOP"),
         ("ALIGN",         (1, 0), (1, -1),  "LEFT"),
     ])
-    for row_idx in range(1, len(items_rows)):
+    # Alternating background for item rows only (not adjustment rows)
+    for row_idx in range(1, item_data_end):
         bg = BRAND_LIGHT if row_idx % 2 == 1 else colors.white
         items_style.add("BACKGROUND", (0, row_idx), (-1, row_idx), bg)
+    # Apply adjustment row styles
+    for cmd in _adj_style_cmds:
+        items_style.add(*cmd)
     items_tbl.setStyle(items_style)
     story.append(items_tbl)
     story.append(Spacer(1, 3 * mm))
 
     # ── Payment summary table (dark header + gold borders) ────────────────
-    subtotal      = order.total_amount or 0
-    discount_v    = order.discount_value or 0
-    discount_type = order.discount_type or "R$"
-    freight       = order.freight_amount or 0
-    other_costs   = order.other_costs_amount or 0
-    computed      = order.computed_total
-
     pay_method_raw = (order.payment_method or "").strip()
     pay_method_key = pay_method_raw.upper()
     pay_method_lbl = _t(f"pay_{pay_method_key}", lang)
@@ -411,46 +475,6 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
     ]))
     story.append(pay_sum_tbl)
-
-    # Optional adjustment rows (discount / freight / other)
-    if discount_v or freight or other_costs:
-        if discount_type == "%":
-            disc_amt = subtotal * (discount_v / 100)
-            disc_lbl = f"{discount_v:.2f}%"
-        else:
-            disc_amt = discount_v
-            disc_lbl = _fmt_brl(discount_v)
-
-        adj_rows: list = [[Paragraph(_t("subtotal", lang) + ":", cell_body_r),
-                           Paragraph(_fmt_brl(subtotal), cell_body_r)]]
-        if disc_amt:
-            adj_rows.append([Paragraph(f"{_t('discount', lang)} ({disc_lbl}):", cell_body_r),
-                              Paragraph(f"- {_fmt_brl(disc_amt)}", cell_body_r)])
-        if freight:
-            adj_rows.append([Paragraph(_t("freight",    lang) + ":", cell_body_r),
-                              Paragraph(_fmt_brl(freight), cell_body_r)])
-        if other_costs:
-            adj_rows.append([Paragraph(_t("other_costs", lang) + ":", cell_body_r),
-                              Paragraph(_fmt_brl(other_costs), cell_body_r)])
-
-        sw = W / 2
-        adj_inner = Table(adj_rows, colWidths=[sw * 1.5, sw * 0.5])
-        adj_inner.setStyle(TableStyle([
-            ("TOPPADDING",    (0, 0), (-1, -1), 3),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-            ("LEFTPADDING",   (0, 0), (-1, -1), 4),
-            ("RIGHTPADDING",  (0, 0), (-1, -1), 4),
-        ]))
-        adj_outer = Table([[adj_inner]], colWidths=[W])
-        adj_outer.setStyle(TableStyle([
-            ("ALIGN",         (0, 0), (-1, -1), "RIGHT"),
-            ("TOPPADDING",    (0, 0), (-1, -1), 0),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-            ("LEFTPADDING",   (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING",  (0, 0), (-1, -1), 0),
-        ]))
-        story.append(adj_outer)
-
     story.append(Spacer(1, 4 * mm))
 
     # ── Installments table (dark header + gold borders) ───────────────────
@@ -471,7 +495,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
                                    textColor=st_fg, alignment=TA_CENTER, leading=10)
             inst_rows.append([
                 Paragraph(f"{pmt.installment_no}/{total_pmts}", cell_body_c),
-                Paragraph(_fmt_date(pmt.due_date),              cell_body_c),
+                Paragraph(_fmt_date(pmt.due_date, lang),        cell_body_c),
                 Paragraph(_fmt_brl(pmt.amount or 0),            cell_body_r),
                 Paragraph(status_label, st_p),
             ])
@@ -515,11 +539,112 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
                 story.append(Paragraph(safe, normal))
         story.append(Spacer(1, 4 * mm))
 
+    # ── Operational Data ─────────────────────────────────────────────────────
+    op_driver  = getattr(order, "driver_name",         None) or ""
+    op_dphone  = getattr(order, "driver_phone",        None) or ""
+    op_modelo  = getattr(order, "vehicle_model",       None) or ""
+    op_obs_val = getattr(order, "vehicle_description", None) or ""
+    op_plate   = getattr(order, "vehicle_plate",       None) or ""
+    op_pickup  = _fmt_datetime(getattr(order, "delivery_datetime", None), lang)
+    op_from    = getattr(order, "pickup_location",     None) or ""
+    op_to      = getattr(order, "dropoff_location",    None) or ""
+    op_pax     = getattr(order, "passenger_name",      None) or ""
+    op_pphone  = getattr(order, "passenger_phone",     None) or ""
+    op_flight  = getattr(order, "flight_number",       None) or ""
+    op_pax_cnt = getattr(order, "pax_count",           None)
+
+    _op_has_data = any([op_driver, op_modelo, op_plate, op_from, op_to,
+                        op_pax, op_flight, op_pax_cnt])
+
+    if _op_has_data:
+        story.append(Spacer(1, 6 * mm))
+
+        lbl_st_op = ParagraphStyle(
+            "op_lbl", fontName="Helvetica-Bold", fontSize=7,
+            textColor=colors.HexColor("#64748b"), spaceAfter=1,
+        )
+        val_st_op = ParagraphStyle(
+            "op_val", fontName="Helvetica-Bold", fontSize=9.5,
+            textColor=BRAND_DARK, spaceAfter=0,
+        )
+        hdr_st_op = ParagraphStyle(
+            "op_hdr_st", fontName="Helvetica-Bold", fontSize=10,
+            textColor=colors.white, alignment=TA_CENTER,
+        )
+
+        hdr_cell = Paragraph(_t("op_hdr", lang), hdr_st_op)
+        hdr_tbl  = Table([[hdr_cell]], colWidths=[W])
+        hdr_tbl.setStyle(TableStyle([
+            ("BACKGROUND",    (0, 0), (-1, -1), BRAND_DARK),
+            ("TOPPADDING",    (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ("LEFTPADDING",   (0, 0), (-1, -1), 8),
+            ("RIGHTPADDING",  (0, 0), (-1, -1), 8),
+        ]))
+        story.append(hdr_tbl)
+
+        _op_pickup_str = op_pickup if op_pickup != "\u2013" else "\u2013"
+        if op_pax_cnt:
+            _op_pickup_str = (_op_pickup_str + f"  \u2022  {op_pax_cnt} PAX").strip(" \u2022 ")
+
+        op_rows_raw = [
+            ("op_driver",    op_driver,      "op_driver_phone", op_dphone),
+            ("op_modelo",    op_modelo,      "op_plate",        op_plate),
+            ("op_pickup",    _op_pickup_str, "op_flight",       op_flight),
+            ("op_from",      op_from,        "op_to",           op_to),
+            ("op_passenger", op_pax,         "op_pax_phone",    op_pphone),
+            ("op_obs",       op_obs_val,     "",                ""),
+        ]
+
+        CL = W * 0.18
+        CV = W * 0.32
+
+        grid_rows = []
+        span_rows = []
+        for lk1, v1, lk2, v2 in op_rows_raw:
+            if not v1 and not v2:
+                continue
+            if not lk2:
+                span_rows.append(len(grid_rows))
+                grid_rows.append([
+                    Paragraph(_t(lk1, lang).upper(), lbl_st_op),
+                    Paragraph(v1 or "\u2013", val_st_op),
+                    Paragraph("", lbl_st_op),
+                    Paragraph("", val_st_op),
+                ])
+            else:
+                grid_rows.append([
+                    Paragraph(_t(lk1, lang).upper(), lbl_st_op),
+                    Paragraph(v1 or "\u2013", val_st_op),
+                    Paragraph(_t(lk2, lang).upper(), lbl_st_op),
+                    Paragraph(v2 or "\u2013", val_st_op),
+                ])
+
+        if grid_rows:
+            span_cmds = [("SPAN", (1, r), (3, r)) for r in span_rows]
+            grid_tbl = Table(grid_rows, colWidths=[CL, CV, CL, CV])
+            grid_tbl.setStyle(TableStyle([
+                ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#f8fafc")),
+                ("GRID",          (0, 0), (-1, -1), 0.4, colors.HexColor("#e2e8f0")),
+                ("TOPPADDING",    (0, 0), (-1, -1), 7),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+                ("LEFTPADDING",   (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING",  (0, 0), (-1, -1), 8),
+                ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+                ("BOX",           (0, 0), (-1, -1), 1.5, BRAND_GOLD),
+                ("BACKGROUND",    (0, 0), (0, -1),  colors.HexColor("#f1f5f9")),
+                ("BACKGROUND",    (2, 0), (2, -1),  colors.HexColor("#f1f5f9")),
+                *span_cmds,
+            ]))
+            story.append(grid_tbl)
+
+        story.append(Spacer(1, 5 * mm))
+
     # ── Footer as page callback (like quote PDF) ───────────────────────────
     from datetime import datetime as _dt
     cnpj_lbl_footer = "CNPJ" if lang == "pt" else "TAX ID"
     tax_part     = (f"{company_name} \u2022 {cnpj_lbl_footer} {company_doc}" if company_doc else company_name)
-    now_str      = _dt.now().strftime("%d/%m/%Y %H:%M")
+    now_str      = _dt.now().strftime("%m/%d/%Y %H:%M" if lang == "en" else "%d/%m/%Y %H:%M")
     _footer_line = f"{_t('generated', lang)} {now_str}   \u2022   {tax_part}"
     _lm, _rm, _pw = 15 * mm, A4[0] - 15 * mm, A4[0]
 

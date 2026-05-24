@@ -14,7 +14,7 @@ Relacionamentos:
 from ..extensions import db
 from .base import TimestampMixin, SoftDeleteMixin
 
-ORDER_STATUSES = ("novo", "aberto", "faturado", "fechado", "cancelado")
+ORDER_STATUSES = ("novo", "aberto", "faturado", "fechado", "cancelado", "excluido")
 
 
 class Order(db.Model, TimestampMixin, SoftDeleteMixin):
@@ -47,11 +47,25 @@ class Order(db.Model, TimestampMixin, SoftDeleteMixin):
     emission_date     = db.Column(db.Date,     nullable=True)   # data de emissão
     delivery_datetime = db.Column(db.DateTime, nullable=True)   # data de entrega
 
+    # Dados operacionais (motorista, veículo, passageiro)
+    driver_name      = db.Column(db.String(200))
+    driver_phone     = db.Column(db.String(50))
+    vehicle_model    = db.Column(db.String(200))
+    vehicle_plate    = db.Column(db.String(20))
+    pickup_location  = db.Column(db.Text)
+    dropoff_location = db.Column(db.Text)
+    passenger_name   = db.Column(db.String(200))
+    passenger_phone  = db.Column(db.String(50))
+    flight_number    = db.Column(db.String(50))
+    pax_count        = db.Column(db.Integer)
+    vehicle_description = db.Column(db.String(200))  # Observações operacionais
+
     # Ajustes financeiros (afetam o total final)
     discount_type      = db.Column(db.String(5), default="R$")  # 'R$' ou '%'
     discount_value     = db.Column(db.Float,     default=0)
-    freight_amount     = db.Column(db.Float,     default=0)
+    freight_amount      = db.Column(db.Float,     default=0)
     other_costs_amount = db.Column(db.Float,     default=0)
+    other_costs_label  = db.Column(db.String(200), default="")
 
     # Faturamento
     invoice_number   = db.Column(db.String(100))
@@ -65,7 +79,12 @@ class Order(db.Model, TimestampMixin, SoftDeleteMixin):
     cancel_reason = db.Column(db.Text)
     reopened_at  = db.Column(db.DateTime, nullable=True)
 
-    created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    created_by   = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    opened_by    = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    invoiced_by  = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    closed_by    = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    cancelled_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    reopened_by  = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
 
     # Relacionamentos
     items    = db.relationship(
@@ -82,6 +101,12 @@ class Order(db.Model, TimestampMixin, SoftDeleteMixin):
         "Quote", foreign_keys=[quote_id],
         backref=db.backref("order", uselist=False),
     )
+    creator   = db.relationship("User", foreign_keys=[created_by],   lazy="joined")
+    opener    = db.relationship("User", foreign_keys=[opened_by],    lazy="joined")
+    invoicer  = db.relationship("User", foreign_keys=[invoiced_by],  lazy="joined")
+    closer    = db.relationship("User", foreign_keys=[closed_by],    lazy="joined")
+    canceller = db.relationship("User", foreign_keys=[cancelled_by], lazy="joined")
+    reopener  = db.relationship("User", foreign_keys=[reopened_by],  lazy="joined")
 
     # ──────────────────────────────────────────────────────────────
     # Helpers financeiros

@@ -13,6 +13,7 @@ from ...extensions import db
 from ...services.quote_service   import QuoteService
 from ...services.booking_service import BookingService
 from ...utils import now_br, make_client_token
+from ...utils.audit import log_activity
 from ...models.service_order import ServiceOrder
 from ...services             import service_order_service as sos
 
@@ -97,6 +98,8 @@ def new():
                 "inclusions":  [],
             }
         quote = QuoteService.create_quote(current_user.company_id, data, current_user.id)
+        log_activity("quote", quote.id, current_user.company_id, "Orçamento criado", current_user.id)
+        db.session.commit()
         if request.is_json:
             return jsonify({"id": quote.id, "number": quote.number,
                             "redirect": url_for("quotes.detail", qid=quote.id)})
@@ -124,11 +127,14 @@ def new():
 @login_required
 def detail(qid):
     from ...models.order import Order
+    from ...models.audit import AuditLog
     quote = Quote.query.filter_by(id=qid, company_id=current_user.company_id, deleted_at=None).first_or_404()
     quote_order   = Order.query.filter_by(quote_id=quote.id, deleted_at=None).first()
     service_order = ServiceOrder.query.filter_by(quote_id=quote.id).filter(ServiceOrder.deleted_at.is_(None)).first()
+    audit_logs    = AuditLog.query.filter_by(entity="quote", entity_id=quote.id).order_by(AuditLog.created_at.asc()).all()
     return render_template("quotes/detail.html", quote=quote, billing_types=BILLING_TYPES,
-                           service_order=service_order, quote_order=quote_order)
+                           service_order=service_order, quote_order=quote_order,
+                           audit_logs=audit_logs)
 
 
 @quotes_bp.route("/<int:qid>/edit", methods=["GET", "POST"])
@@ -149,9 +155,11 @@ def edit(qid):
         data = request.get_json(silent=True) or request.form.to_dict()
         was_approved = quote.status == "aprovado"
         QuoteService.update_quote(quote, data)
+        log_activity("quote", quote.id, current_user.company_id, "Orçamento editado", current_user.id)
         if was_approved:
             quote.status = "pendente"
-            db.session.commit()
+        db.session.commit()
+        if was_approved:
             flash("Orçamento editado — status revertido para Pendente. O cliente precisará aprovar novamente.", "warning")
         if request.is_json:
             return jsonify({"id": quote.id, "number": quote.number,
@@ -212,6 +220,8 @@ def approve(qid):
     quote = Quote.query.filter_by(id=qid, company_id=current_user.company_id, deleted_at=None).first_or_404()
     quote.status      = "aprovado"
     quote.approved_at = now_br()
+    quote.approved_by = current_user.id
+    log_activity("quote", quote.id, current_user.company_id, "Aprovado", current_user.id)
     db.session.commit()
     flash("Orçamento aprovado.", "success")
     return redirect(url_for("quotes.detail", qid=qid))
@@ -223,7 +233,9 @@ def reject(qid):
     quote = Quote.query.filter_by(id=qid, company_id=current_user.company_id, deleted_at=None).first_or_404()
     quote.status           = "reprovado"
     quote.rejected_at      = now_br()
+    quote.rejected_by      = current_user.id
     quote.rejection_reason = request.form.get("reason", "")
+    log_activity("quote", quote.id, current_user.company_id, "Reprovado", current_user.id)
     db.session.commit()
     flash("Orçamento reprovado.", "info")
     return redirect(url_for("quotes.index"))
@@ -275,6 +287,7 @@ def create_os(qid):
         "flight_number":    f.get("flight_number",    "").strip() or None,
         "notes":            f.get("notes",            "").strip() or None,
     })
+    log_activity("quote", quote.id, current_user.company_id, f"OS {os_obj.code} criada", current_user.id)
     db.session.commit()
     flash(f"OS {os_obj.code} criada com sucesso.", "success")
     return redirect(url_for("quotes.detail", qid=quote.id))
@@ -285,6 +298,7 @@ def create_os(qid):
 def delete(qid):
     quote = Quote.query.filter_by(id=qid, company_id=current_user.company_id, deleted_at=None).first_or_404()
     quote.soft_delete()
+    log_activity("quote", quote.id, current_user.company_id, "Excluído", current_user.id)
     db.session.commit()
     flash("Orçamento removido.", "info")
     return redirect(url_for("quotes.index"))
