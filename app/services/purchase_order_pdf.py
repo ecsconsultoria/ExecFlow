@@ -502,10 +502,16 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
 
     # ── Notes ────────────────────────────────────────────────────────────────
     obs = getattr(po, "notes", None) or ""
+    story.append(Paragraph(_t("notes_hdr", lang), sec_hdr))
+    story.append(HRFlowable(width=W, thickness=1, color=BRAND_GOLD, spaceAfter=3))
+    bullet_st = ParagraphStyle("obs_bullet", parent=normal, leftIndent=12, firstLineIndent=-8)
+    hora_extra_txt = (
+        "Hora Extra: 10% sobre o valor total da diária, a partir de 30 minutos de despera."
+        if lang == "pt" else
+        "Overtime: 10% of the total daily rate, after 30 minutes of waiting."
+    )
+    story.append(Paragraph(f"• {hora_extra_txt}", bullet_st))
     if obs:
-        story.append(Paragraph(_t("notes_hdr", lang), sec_hdr))
-        story.append(HRFlowable(width=W, thickness=1, color=BRAND_GOLD, spaceAfter=3))
-        bullet_st = ParagraphStyle("obs_bullet", parent=normal, leftIndent=12, firstLineIndent=-8)
         for line in obs.splitlines():
             safe = line.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
             if not safe.strip():
@@ -515,18 +521,6 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
                 story.append(Paragraph(f"\u2022 {text}", bullet_st))
             else:
                 story.append(Paragraph(safe, normal))
-        story.append(Spacer(1, 4 * mm))
-
-    # ── Informações Importantes ──────────────────────────────────────────────
-    info_hdr_lbl = "Informações Importantes" if lang == "pt" else "Important Information"
-    info_items = [
-        ("Hora Extra: 10% sobre o valor total da diária, a partir de 30 minutos de despera." if lang == "pt" else "Overtime: 10% of the total daily rate, after 30 minutes of waiting."),
-    ]
-    info_bullet_st = ParagraphStyle("info_bullet", parent=normal, leftIndent=12, firstLineIndent=-8)
-    story.append(Paragraph(info_hdr_lbl, sec_hdr))
-    story.append(HRFlowable(width=W, thickness=1, color=BRAND_GOLD, spaceAfter=3))
-    for txt in info_items:
-        story.append(Paragraph(f"• {txt}", info_bullet_st))
     story.append(Spacer(1, 4 * mm))
 
     # ── Operational Data ─────────────────────────────────────────────────────

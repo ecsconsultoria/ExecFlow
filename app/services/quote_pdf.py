@@ -611,39 +611,21 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
     story.append(summary_tbl)
     story.append(Spacer(1, 5 * mm))
 
-    # ── Two-column: Included Services | Important Information ─────────────
+    # ── Included Services ───────────────────────────────────────────────────
     incluso_list = _INCLUSO.get(lang, _INCLUSO["pt"])
-    info_list    = list(_INFO_ADICIONAL.get(lang, _INFO_ADICIONAL["pt"]))
-
-    def _make_col(header: str, items: list, st=None) -> list:
-        col = [Paragraph(f"<b>{header}</b>", sec_hdr)]
-        for item in items:
-            col.append(Paragraph(f"• {item}", st or bullet_st))
-        return col
-
-    left_col  = _make_col(_t("incluso_hdr", lang), incluso_list)
-    right_col = _make_col(_t("info_hdr",    lang), info_list, st=bullet_tight_st)
-
-    # Pad to equal row count
-    max_rows = max(len(left_col), len(right_col))
-    while len(left_col)  < max_rows: left_col.append(Spacer(1, 1))
-    while len(right_col) < max_rows: right_col.append(Spacer(1, 1))
-
-    two_col_rows = [[left_col[i], right_col[i]] for i in range(max_rows)]
-    two_col_tbl = Table(two_col_rows,
-                        colWidths=[W * 0.44, W * 0.56],
-                        style=TableStyle([
-                            ("VALIGN",       (0, 0), (-1, -1), "TOP"),
-                            ("TOPPADDING",   (0, 0), (-1, -1), 1),
-                            ("BOTTOMPADDING",(0, 0), (-1, -1), 1),
-                            ("LEFTPADDING",  (0, 0), (-1, -1), 0),
-                            ("RIGHTPADDING", (0, 0), (-1, -1), 5),
-                        ]))
-    story.append(two_col_tbl)
+    story.append(Paragraph(f"<b>{_t('incluso_hdr', lang)}</b>", sec_hdr))
+    for item in incluso_list:
+        story.append(Paragraph(f"• {item}", bullet_st))
     story.append(Spacer(1, 4 * mm))
 
     # ── Additional info (obs) ─────────────────────────────────────────────
     story.append(Paragraph(f"<b>{_t('add_info', lang)}:</b>", sec_hdr))
+    hora_extra_txt = (
+        "Hora Extra: 10% sobre o valor total da diária, a partir de 30 minutos de despera."
+        if lang == "pt" else
+        "Overtime: 10% of the total daily rate, after 30 minutes of waiting."
+    )
+    story.append(Paragraph(f"• {hora_extra_txt}", bullet_st))
     obs = quote.obs or getattr(quote, "notes", None)
     if obs:
         for line in obs.splitlines():
