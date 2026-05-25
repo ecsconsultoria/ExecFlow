@@ -216,11 +216,6 @@
   <div class="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 dark:border-slate-700">
     <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Itens do Pedido</p>
     <div class="flex items-center gap-3">
-      <label class="flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer hover:text-violet-500 transition-colors select-none">
-        <input type="checkbox" x-model="showOpSO"
-               class="rounded text-violet-600 cursor-pointer">
-        Dados Operacionais
-      </label>
       {% if not locked %}
       <button type="button" @click="showAddItemModal=true"
               class="flex items-center gap-1 text-xs bg-teal-50 hover:bg-teal-100 text-teal-700
@@ -338,120 +333,7 @@
     </div>
   </div>
 
-  {# ── Dados Operacionais (SO) ── #}
-  <div x-show="showOpSO" x-cloak
-       class="border-t-2 border-violet-100 dark:border-violet-900/30 bg-violet-50/30 dark:bg-violet-900/10">
-    <div class="px-4 py-2 border-b border-violet-100 dark:border-violet-900/20">
-      <p class="text-xs font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wider">
-        <i class="fa-solid fa-car mr-1"></i> Dados Operacionais
-      </p>
-    </div>
-    <div class="px-4 py-3 space-y-3">
 
-      {# Linha 1: Motorista | Fone | Modelo | Placa #}
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div>
-          <label class="lbl">Motorista</label>
-          <input name="driver_name" type="text" class="fi"
-                 value="{{ order.driver_name or '' }}"
-                 {% if locked %}disabled{% endif %}>
-        </div>
-        <div>
-          <label class="lbl">Fone</label>
-          <input name="driver_phone" type="text" class="fi"
-                 value="{{ order.driver_phone or '' }}"
-                 {% if locked %}disabled{% endif %}>
-        </div>
-        <div>
-          <label class="lbl">Modelo</label>
-          <input name="vehicle_model" type="text" class="fi"
-                 placeholder="Ex: Toyota Corolla"
-                 value="{{ order.vehicle_model or '' }}"
-                 {% if locked %}disabled{% endif %}>
-        </div>
-        <div>
-          <label class="lbl">Placa</label>
-          <input name="vehicle_plate" type="text" class="fi"
-                 placeholder="ABC-1D23"
-                 value="{{ order.vehicle_plate or '' }}"
-                 {% if locked %}disabled{% endif %}>
-        </div>
-      </div>
-
-      {# Linha 2: Data Pickup | Hora | Local de Embarque | Local de Desembarque #}
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div>
-          <label class="lbl">Data Pickup</label>
-          <input type="date" name="delivery_date"
-                 value="{{ order.delivery_datetime.strftime('%Y-%m-%d') if order.delivery_datetime else '' }}"
-                 class="fi" :disabled="!showOpSO{{ ' || true' if locked else '' }}">
-        </div>
-        <div>
-          <label class="lbl flex items-center gap-1.5">
-            Hora
-            <input type="checkbox" x-model="usarHora"
-                   class="rounded text-violet-600 cursor-pointer ml-1"
-                   {% if locked %}disabled{% endif %}>
-          </label>
-          <input type="time" name="delivery_time"
-                 value="{{ order.delivery_datetime.strftime('%H:%M') if order.delivery_datetime else '' }}"
-                 class="fi" :disabled="!usarHora || !showOpSO{{ ' || true' if locked else '' }}"
-                 :class="usarHora ? '' : 'opacity-30'">
-        </div>
-        <div>
-          <label class="lbl">Local de Embarque</label>
-          <input name="pickup_location" type="text" class="fi"
-                 value="{{ order.pickup_location or '' }}"
-                 {% if locked %}disabled{% endif %}>
-        </div>
-        <div>
-          <label class="lbl">Local de Desembarque</label>
-          <input name="dropoff_location" type="text" class="fi"
-                 value="{{ order.dropoff_location or '' }}"
-                 {% if locked %}disabled{% endif %}>
-        </div>
-      </div>
-
-      {# Linha 3: Passageiro | Fone Passageiro | Nº Voo | PAX #}
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div>
-          <label class="lbl">Passageiro</label>
-          <input name="passenger_name" type="text" class="fi"
-                 value="{{ order.passenger_name or '' }}"
-                 {% if locked %}disabled{% endif %}>
-        </div>
-        <div>
-          <label class="lbl">Fone Passageiro</label>
-          <input name="passenger_phone" type="text" class="fi"
-                 value="{{ order.passenger_phone or '' }}"
-                 {% if locked %}disabled{% endif %}>
-        </div>
-        <div>
-          <label class="lbl">Nº Voo</label>
-          <input name="flight_number" type="text" class="fi"
-                 value="{{ order.flight_number or '' }}"
-                 {% if locked %}disabled{% endif %}>
-        </div>
-        <div>
-          <label class="lbl">PAX</label>
-          <input name="pax_count" type="number" min="1" step="1"
-                 value="{{ order.pax_count or 1 }}"
-                 class="fi text-right font-mono"
-                 {% if locked %}disabled{% endif %}>
-        </div>
-      </div>
-
-      {# Observações Operacionais #}
-      <div>
-        <label class="lbl">Observações</label>
-        <input name="vehicle_description" type="text" class="fi"
-               placeholder="Observações adicionais…"
-               value="{{ order.vehicle_description or '' }}"
-               {% if locked %}disabled{% endif %}>
-      </div>
-
-    </div>
-  </div>
 
 </div>
 {# /Card 2 #}
@@ -648,6 +530,126 @@
   </div>
 </div>
 {# /Card 3 #}
+
+{# ────────────────────────────────
+   Card 4 — Dados Operacionais
+──────────────────────────────── #}
+<div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
+  <div class="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 dark:border-slate-700 cursor-pointer select-none"
+       @click="showOpSO=!showOpSO">
+    <p class="text-xs font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wider">
+      <i class="fa-solid fa-car mr-1"></i> Dados Operacionais
+    </p>
+    <i class="fa-solid fa-chevron-down text-slate-400 transition-transform duration-200"
+       :class="showOpSO ? 'rotate-180' : ''"></i>
+  </div>
+  <div x-show="showOpSO" x-cloak class="px-4 py-3 space-y-3">
+
+    {# Linha 1: Motorista | Fone | Modelo | Placa #}
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div>
+        <label class="lbl">Motorista</label>
+        <input name="driver_name" type="text" class="fi"
+               value="{{ order.driver_name or '' }}"
+               {% if locked %}disabled{% endif %}>
+      </div>
+      <div>
+        <label class="lbl">Fone</label>
+        <input name="driver_phone" type="text" class="fi"
+               value="{{ order.driver_phone or '' }}"
+               {% if locked %}disabled{% endif %}>
+      </div>
+      <div>
+        <label class="lbl">Modelo</label>
+        <input name="vehicle_model" type="text" class="fi"
+               placeholder="Ex: Toyota Corolla"
+               value="{{ order.vehicle_model or '' }}"
+               {% if locked %}disabled{% endif %}>
+      </div>
+      <div>
+        <label class="lbl">Placa</label>
+        <input name="vehicle_plate" type="text" class="fi"
+               placeholder="ABC-1D23"
+               value="{{ order.vehicle_plate or '' }}"
+               {% if locked %}disabled{% endif %}>
+      </div>
+    </div>
+
+    {# Linha 2: Data Pickup | Hora | Local de Embarque | Local de Desembarque #}
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div>
+        <label class="lbl">Data Pickup</label>
+        <input type="date" name="delivery_date"
+               value="{{ order.delivery_datetime.strftime('%Y-%m-%d') if order.delivery_datetime else '' }}"
+               class="fi" {% if locked %}disabled{% endif %}>
+      </div>
+      <div>
+        <label class="lbl flex items-center gap-1.5">
+          Hora
+          <input type="checkbox" x-model="usarHora"
+                 class="rounded text-violet-600 cursor-pointer ml-1"
+                 {% if locked %}disabled{% endif %}>
+        </label>
+        <input type="time" name="delivery_time"
+               value="{{ order.delivery_datetime.strftime('%H:%M') if order.delivery_datetime else '' }}"
+               class="fi" :disabled="!usarHora{{ ' || true' if locked else '' }}"
+               :class="usarHora ? '' : 'opacity-30'">
+      </div>
+      <div>
+        <label class="lbl">Local de Embarque</label>
+        <input name="pickup_location" type="text" class="fi"
+               value="{{ order.pickup_location or '' }}"
+               {% if locked %}disabled{% endif %}>
+      </div>
+      <div>
+        <label class="lbl">Local de Desembarque</label>
+        <input name="dropoff_location" type="text" class="fi"
+               value="{{ order.dropoff_location or '' }}"
+               {% if locked %}disabled{% endif %}>
+      </div>
+    </div>
+
+    {# Linha 3: Passageiro | Fone Passageiro | Nº Voo | PAX #}
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div>
+        <label class="lbl">Passageiro</label>
+        <input name="passenger_name" type="text" class="fi"
+               value="{{ order.passenger_name or '' }}"
+               {% if locked %}disabled{% endif %}>
+      </div>
+      <div>
+        <label class="lbl">Fone Passageiro</label>
+        <input name="passenger_phone" type="text" class="fi"
+               value="{{ order.passenger_phone or '' }}"
+               {% if locked %}disabled{% endif %}>
+      </div>
+      <div>
+        <label class="lbl">Nº Voo</label>
+        <input name="flight_number" type="text" class="fi"
+               value="{{ order.flight_number or '' }}"
+               {% if locked %}disabled{% endif %}>
+      </div>
+      <div>
+        <label class="lbl">PAX</label>
+        <input name="pax_count" type="number" min="1" step="1"
+               value="{{ order.pax_count or 1 }}"
+               class="fi text-right font-mono"
+               {% if locked %}disabled{% endif %}>
+      </div>
+    </div>
+
+    {# Observações Operacionais #}
+    <div>
+      <label class="lbl">Observações</label>
+      <input name="vehicle_description" type="text" class="fi"
+             placeholder="Observações adicionais…"
+             value="{{ order.vehicle_description or '' }}"
+             {% if locked %}disabled{% endif %}>
+    </div>
+
+  </div>
+</div>
+{# /Card 4 #}
 
 
 
