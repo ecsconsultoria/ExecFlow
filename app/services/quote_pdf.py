@@ -631,7 +631,7 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
 
     two_col_rows = [[left_col[i], right_col[i]] for i in range(max_rows)]
     two_col_tbl = Table(two_col_rows,
-                        colWidths=[W * 0.5 - 2 * mm, W * 0.5 - 2 * mm],
+                        colWidths=[W * 0.44, W * 0.56],
                         style=TableStyle([
                             ("VALIGN",       (0, 0), (-1, -1), "TOP"),
                             ("TOPPADDING",   (0, 0), (-1, -1), 1),
