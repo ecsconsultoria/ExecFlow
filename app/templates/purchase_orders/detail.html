@@ -581,32 +581,31 @@
   </div>
   <div x-show="showOperational" x-cloak class="px-4 py-3 space-y-3">
 
-    {# Linha 1: Motorista | Fone | Modelo | Placa #}
+    {# Linha 1: Passageiro | Fone Passageiro | Nº Voo | PAX #}
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
       <div>
-        <label class="lbl">Motorista</label>
-        <input name="driver_name" type="text" class="fi"
-               value="{{ po.driver_name or '' }}"
+        <label class="lbl">Passageiro</label>
+        <input name="passenger_name" type="text" class="fi"
+               value="{{ po.passenger_name or '' }}"
                {% if locked %}disabled{% endif %}>
       </div>
       <div>
-        <label class="lbl">Fone</label>
-        <input name="driver_phone" type="text" class="fi"
-               value="{{ po.driver_phone or '' }}"
+        <label class="lbl">Fone Passageiro</label>
+        <input name="passenger_phone" type="text" class="fi"
+               value="{{ po.passenger_phone or '' }}"
                {% if locked %}disabled{% endif %}>
       </div>
       <div>
-        <label class="lbl">Modelo</label>
-        <input name="vehicle_model" type="text" class="fi"
-               placeholder="Ex: Toyota Corolla"
-               value="{{ po.vehicle_model or '' }}"
+        <label class="lbl">Nº Voo</label>
+        <input name="flight_number" type="text" class="fi"
+               value="{{ po.flight_number or '' }}"
                {% if locked %}disabled{% endif %}>
       </div>
       <div>
-        <label class="lbl">Placa</label>
-        <input name="vehicle_plate" type="text" class="fi"
-               placeholder="ABC-1D23"
-               value="{{ po.vehicle_plate or '' }}"
+        <label class="lbl">PAX</label>
+        <input name="pax_count" type="number" min="1" step="1"
+               value="{{ po.pax_count or 1 }}"
+               class="fi text-right font-mono"
                {% if locked %}disabled{% endif %}>
       </div>
     </div>
@@ -641,35 +640,6 @@
         <label class="lbl">Local de Desembarque</label>
         <input name="dropoff_location" type="text" class="fi"
                value="{{ po.dropoff_location or '' }}"
-               {% if locked %}disabled{% endif %}>
-      </div>
-    </div>
-
-    {# Linha 3: Passageiro | Fone Passageiro | Nº Voo | PAX #}
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      <div>
-        <label class="lbl">Passageiro</label>
-        <input name="passenger_name" type="text" class="fi"
-               value="{{ po.passenger_name or '' }}"
-               {% if locked %}disabled{% endif %}>
-      </div>
-      <div>
-        <label class="lbl">Fone Passageiro</label>
-        <input name="passenger_phone" type="text" class="fi"
-               value="{{ po.passenger_phone or '' }}"
-               {% if locked %}disabled{% endif %}>
-      </div>
-      <div>
-        <label class="lbl">Nº Voo</label>
-        <input name="flight_number" type="text" class="fi"
-               value="{{ po.flight_number or '' }}"
-               {% if locked %}disabled{% endif %}>
-      </div>
-      <div>
-        <label class="lbl">PAX</label>
-        <input name="pax_count" type="number" min="1" step="1"
-               value="{{ po.pax_count or 1 }}"
-               class="fi text-right font-mono"
                {% if locked %}disabled{% endif %}>
       </div>
     </div>
