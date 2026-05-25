@@ -119,12 +119,10 @@ _INCLUSO = {
 
 _INFO_ADICIONAL = {
     "pt": [
-        "Hora Extra: 10% sobre o valor total da diária.",
-        "Hora Extra Adicional é cobrada a partir de 30 minutos de espera.",
+        "Hora Extra: 10% sobre o valor total da diária, a partir de 30 minutos de despera.",
     ],
     "en": [
-        "Overtime: 10% of the total daily rate.",
-        "Additional Overtime is charged after 30 minutes of waiting.",
+        "Overtime: 10% of the total daily rate, after 30 minutes of waiting.",
     ],
 }
 

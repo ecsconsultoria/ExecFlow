@@ -520,8 +520,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
     # ── Informações Importantes ──────────────────────────────────────────────
     info_hdr_lbl = "Informações Importantes" if lang == "pt" else "Important Information"
     info_items = [
-        ("Hora Extra: 10% sobre o valor total da diária."   if lang == "pt" else "Overtime: 10% of the total daily rate."),
-        ("Hora Extra Adicional é cobrada a partir de 30 minutos de espera." if lang == "pt" else "Additional Overtime is charged after 30 minutes of waiting."),
+        ("Hora Extra: 10% sobre o valor total da diária, a partir de 30 minutos de despera." if lang == "pt" else "Overtime: 10% of the total daily rate, after 30 minutes of waiting."),
     ]
     info_bullet_st = ParagraphStyle("info_bullet", parent=normal, leftIndent=12, firstLineIndent=-8)
     story.append(Paragraph(info_hdr_lbl, sec_hdr))
