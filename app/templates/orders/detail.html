@@ -584,16 +584,10 @@
                class="fi" {% if locked %}disabled{% endif %}>
       </div>
       <div>
-        <label class="lbl flex items-center gap-1.5">
-          Hora
-          <input type="checkbox" x-model="usarHora"
-                 class="rounded text-violet-600 cursor-pointer ml-1"
-                 {% if locked %}disabled{% endif %}>
-        </label>
+        <label class="lbl">Hora</label>
         <input type="time" name="delivery_time"
                value="{{ order.delivery_datetime.strftime('%H:%M') if order.delivery_datetime else '' }}"
-               class="fi" :disabled="!usarHora{{ ' || true' if locked else '' }}"
-               :class="usarHora ? '' : 'opacity-30'">
+               class="fi" {% if locked %}disabled{% endif %}>
       </div>
       <div>
         <label class="lbl">Local de Embarque</label>
