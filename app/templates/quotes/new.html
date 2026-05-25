@@ -213,6 +213,7 @@
                       <p class="text-xs text-slate-400 mt-0.5" x-show="svc.km_included > 0"
                          x-text="svc.km_included + ' km incl.'"></p>
                       <input type="text"
+                             :id="'refnote-' + svc.id"
                              placeholder="Ref / Data (opcional)"
                              :value="getRefNote(svc.id)"
                              @input="setRefNote(svc.id, $event.target.value)"
@@ -222,6 +223,7 @@
                       <span class="text-sm font-bold text-blue-600 min-w-[64px] text-right"
                             x-text="fmtBRL(priceFor(svc))"></span>
                       <input type="number" min="1" step="1"
+                             :id="'qty-' + svc.id"
                              :value="getQty(svc.id)"
                              @input="setQty(svc.id, $event.target.value)"
                              class="w-10 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded px-1 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-blue-400">
@@ -456,9 +458,12 @@ function quoteBuilder() {
     setRefNote(pricingId, val) { this.refNoteMap[pricingId] = val; },
 
     addToCart(cat, svc) {
-      const qty     = this.getQty(svc.id);
+      // Lê diretamente do DOM para garantir valor atual (evita problema de reatividade do Alpine.js)
+      const refEl  = document.getElementById('refnote-' + svc.id);
+      const qtyEl  = document.getElementById('qty-' + svc.id);
+      const refNote = refEl ? refEl.value.trim() : '';
+      const qty     = qtyEl ? Math.max(1, parseInt(qtyEl.value) || 1) : (this.getQty(svc.id));
       const price   = this.priceFor(svc);
-      const refNote = this.getRefNote(svc.id);
 
       // Compute hour_extra rate = 10 % of the Diária-10h price for same category + driver_type
       // Use the ORIGINAL (unfiltered) catalog so that Diária 10h is always found
@@ -494,6 +499,9 @@ function quoteBuilder() {
         for (let i = 0; i < qty; i++) {
           this.cart.push({ ...itemBase, pricing_id: svc.id + '_s' + Date.now() + i, quantity: 1 });
         }
+        // Limpa inputs após adicionar
+        if (refEl)  { refEl.value  = ''; this.refNoteMap[svc.id] = ''; }
+        if (qtyEl)  { qtyEl.value  = '1'; this.qtyMap[svc.id]    =  1; }
         return;
       }
 
