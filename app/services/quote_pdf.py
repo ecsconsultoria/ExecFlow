@@ -363,7 +363,8 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
                                 textColor=colors.HexColor("#666"), leading=10)
     sec_hdr   = ParagraphStyle("sh", fontSize=9, fontName="Helvetica-Bold",
                                 textColor=BRAND_DARK, leading=12, spaceBefore=3, spaceAfter=3)
-    bullet_st = ParagraphStyle("bs", fontSize=8, textColor=BRAND_DARK, leading=12, leftIndent=8)
+    bullet_st       = ParagraphStyle("bs",       fontSize=8, textColor=BRAND_DARK, leading=12, leftIndent=8)
+    bullet_tight_st = ParagraphStyle("bs_tight", fontSize=8, textColor=BRAND_DARK, leading=12, leftIndent=0)
     ctr_sm    = ParagraphStyle("cs", fontSize=8, textColor=colors.HexColor("#666"),
                                 alignment=TA_CENTER, leading=12)
     footer_st = ParagraphStyle("fs", fontSize=7.5, textColor=colors.HexColor("#666"),
@@ -614,14 +615,14 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
     incluso_list = _INCLUSO.get(lang, _INCLUSO["pt"])
     info_list    = list(_INFO_ADICIONAL.get(lang, _INFO_ADICIONAL["pt"]))
 
-    def _make_col(header: str, items: list) -> list:
+    def _make_col(header: str, items: list, st=None) -> list:
         col = [Paragraph(f"<b>{header}</b>", sec_hdr)]
         for item in items:
-            col.append(Paragraph(f"• {item}", bullet_st))
+            col.append(Paragraph(f"• {item}", st or bullet_st))
         return col
 
     left_col  = _make_col(_t("incluso_hdr", lang), incluso_list)
-    right_col = _make_col(_t("info_hdr",    lang), info_list)
+    right_col = _make_col(_t("info_hdr",    lang), info_list, st=bullet_tight_st)
 
     # Pad to equal row count
     max_rows = max(len(left_col), len(right_col))
@@ -661,25 +662,28 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
     story.append(Spacer(1, 4 * mm))
 
     # ── Approve / Questions / Decline ─────────────────────────────────────
-    act_tbl = Table([[
-        Paragraph(f'<font color="#2e7d32"><b>{_t("approve",    lang)}</b></font>',
-                  ParagraphStyle("a1", fontSize=11, alignment=TA_CENTER, leading=14)),
-        Paragraph(f'<font color="#1565c0"><b>{_t("questions",  lang)}</b></font>',
-                  ParagraphStyle("a2", fontSize=11, alignment=TA_CENTER, leading=14)),
-        Paragraph(f'<font color="#c62828"><b>{_t("decline",    lang)}</b></font>',
-                  ParagraphStyle("a3", fontSize=11, alignment=TA_CENTER, leading=14)),
-    ]], colWidths=[W / 3, W / 3, W / 3])
-    act_tbl.setStyle(TableStyle([
-        ("ALIGN",       (0, 0), (-1, -1), "CENTER"),
-        ("VALIGN",      (0, 0), (-1, -1), "MIDDLE"),
-        ("TOPPADDING",  (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING",(0, 0), (-1, -1), 4),
-    ]))
-    story.append(act_tbl)
-    story.append(Spacer(1, 4 * mm))
+    is_approved = (quote.status or "").lower() in ("aprovado", "approved", "pago")
 
-    # ── Validity (below action buttons) ─────────────────────────────────────
-    story.append(Paragraph(_t("validity", lang), ctr_sm))
+    if not is_approved:
+        act_tbl = Table([[
+            Paragraph(f'<font color="#2e7d32"><b>{_t("approve",    lang)}</b></font>',
+                      ParagraphStyle("a1", fontSize=11, alignment=TA_CENTER, leading=14)),
+            Paragraph(f'<font color="#1565c0"><b>{_t("questions",  lang)}</b></font>',
+                      ParagraphStyle("a2", fontSize=11, alignment=TA_CENTER, leading=14)),
+            Paragraph(f'<font color="#c62828"><b>{_t("decline",    lang)}</b></font>',
+                      ParagraphStyle("a3", fontSize=11, alignment=TA_CENTER, leading=14)),
+        ]], colWidths=[W / 3, W / 3, W / 3])
+        act_tbl.setStyle(TableStyle([
+            ("ALIGN",       (0, 0), (-1, -1), "CENTER"),
+            ("VALIGN",      (0, 0), (-1, -1), "MIDDLE"),
+            ("TOPPADDING",  (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING",(0, 0), (-1, -1), 4),
+        ]))
+        story.append(act_tbl)
+        story.append(Spacer(1, 4 * mm))
+
+        # ── Validity (below action buttons) ─────────────────────────────────
+        story.append(Paragraph(_t("validity", lang), ctr_sm))
 
     # ── Footer as page callback (always at physical bottom) ───────────────
     now_str  = datetime.now().strftime("%m/%d/%Y %H:%M" if lang == "en" else "%d/%m/%Y %H:%M")
