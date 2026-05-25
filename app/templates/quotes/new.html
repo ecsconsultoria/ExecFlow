@@ -263,9 +263,16 @@
               </div>
               <div class="flex items-center gap-1 flex-shrink-0">
                 <input type="number" min="1" step="1" x-model.number="item.quantity"
-                       class="w-10 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded px-1 py-0.5 text-xs text-center">
-                <span class="text-xs font-bold text-blue-600 min-w-[70px] text-right"
-                      x-text="fmtBRL(item.unit_price * item.quantity)"></span>
+                       class="w-10 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded px-1 py-0.5 text-xs text-center"
+                       title="Quantidade">
+                <span class="text-xs text-slate-400">×</span>
+                <input type="number" min="0" step="0.01"
+                       x-model.number="item.unit_price"
+                       @click="$event.target.select()"
+                       class="w-20 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded px-1 py-0.5 text-xs text-right font-bold text-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                       title="Preço unitário">
+                <span class="text-xs text-slate-500 dark:text-slate-400 min-w-[64px] text-right"
+                      x-text="'= ' + fmtBRL(item.unit_price * item.quantity)"></span>
                 <button @click="cart.splice(idx, 1)" class="text-red-400 hover:text-red-600 p-0.5 ml-1">
                   <i class="fa-solid fa-trash text-xs"></i>
                 </button>
