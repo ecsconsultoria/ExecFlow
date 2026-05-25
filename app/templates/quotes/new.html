@@ -470,10 +470,7 @@ function quoteBuilder() {
       const d10hPrice     = diaria10h ? this.priceFor(diaria10h) : 0;
       const hourExtraRate = d10hPrice > 0 ? Math.round(d10hPrice * 0.10 * 100) / 100 : 0;
 
-      const existing = this.cart.find(i => i.pricing_id === svc.id);
-      if (existing) { existing.quantity += qty; existing.unit_price = price; return; }
-      this.cart.push({
-        pricing_id:          svc.id,
+      const itemBase = {
         service_id:          svc.service_id,
         category_id:         cat.id,
         category_name:       cat.name,
@@ -481,7 +478,6 @@ function quoteBuilder() {
         name:                svc.name,
         driver_type:         svc.driver_type || '',
         ref_note:            refNote,
-        quantity:            qty,
         unit_price:          price,
         hour_extra:          hourExtraRate,
         price_base:          svc.price_base,
@@ -490,7 +486,21 @@ function quoteBuilder() {
         price_nf_cartao:     svc.price_nf_cartao,
         km_extra_rate:       svc.km_extra_rate,
         _svc:                svc,
-      });
+      };
+
+      // Se ref_note preenchida E qty > 1 → adiciona um item separado por unidade
+      // (cada item com qty=1 para permitir rastreamento individual)
+      if (refNote && qty > 1) {
+        for (let i = 0; i < qty; i++) {
+          this.cart.push({ ...itemBase, pricing_id: svc.id + '_s' + Date.now() + i, quantity: 1 });
+        }
+        return;
+      }
+
+      // Comportamento padrão: mescla com item existente de mesmo pricing_id
+      const existing = this.cart.find(i => i.pricing_id === svc.id);
+      if (existing) { existing.quantity += qty; existing.unit_price = price; return; }
+      this.cart.push({ ...itemBase, pricing_id: svc.id, quantity: qty });
     },
 
     cartTotal() { return this.cart.reduce((s, i) => s + (i.unit_price * i.quantity), 0); },
