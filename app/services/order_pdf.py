@@ -237,11 +237,12 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
 
     # ── Order data table (dark header + gold borders) ─────────────────────
     _STATUS_LABELS_ORD: dict[str, dict[str, str]] = {
-        "novo":      {"pt": "Novo",      "en": "New"},
-        "aberto":    {"pt": "Aberto",    "en": "Open"},
-        "faturado":  {"pt": "Faturado",  "en": "Invoiced"},
-        "fechado":   {"pt": "Fechado",   "en": "Closed"},
-        "cancelado": {"pt": "Cancelado", "en": "Cancelled"},
+        "novo":      {"pt": "Novo",        "en": "New"},
+        "aberto":    {"pt": "Aberto",      "en": "Open"},
+        "faturado":  {"pt": "Faturado",    "en": "Invoiced"},
+        "concluido": {"pt": "Conclu\u00eddo",  "en": "Completed"},
+        "fechado":   {"pt": "Conclu\u00eddo",  "en": "Completed"},
+        "cancelado": {"pt": "Cancelado",   "en": "Cancelled"},
     }
     status_val = _STATUS_LABELS_ORD.get(order.status or "novo", {}).get(lang, order.status or "–")
 
@@ -539,7 +540,18 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
                 story.append(Paragraph(safe, normal))
         story.append(Spacer(1, 4 * mm))
 
-    # ── Operational Data ─────────────────────────────────────────────────────
+    # ── Informações Importantes ────────────────────────────────────
+    info_hdr_lbl = "Informações Importantes" if lang == "pt" else "Important Information"
+    info_items = [
+        ("Hora Extra: 10% sobre o valor total da diária."   if lang == "pt" else "Overtime: 10% of the total daily rate."),
+        ("Hora Extra Adicional é cobrada a partir de 30 minutos de espera." if lang == "pt" else "Additional Overtime is charged after 30 minutes of waiting."),
+    ]
+    info_bullet_st = ParagraphStyle("info_bullet", parent=normal, leftIndent=12, firstLineIndent=-8)
+    story.append(Paragraph(info_hdr_lbl, sec_hdr))
+    story.append(HRFlowable(width=W, thickness=1, color=BRAND_GOLD, spaceAfter=3))
+    for txt in info_items:
+        story.append(Paragraph(f"• {txt}", info_bullet_st))
+    story.append(Spacer(1, 4 * mm))
     op_driver  = getattr(order, "driver_name",         None) or ""
     op_dphone  = getattr(order, "driver_phone",        None) or ""
     op_modelo  = getattr(order, "vehicle_model",       None) or ""

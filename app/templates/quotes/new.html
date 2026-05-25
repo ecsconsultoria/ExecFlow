@@ -257,9 +257,6 @@
                 <p class="text-xs font-medium text-slate-700 dark:text-slate-200 truncate" x-text="item.name"></p>
                 <p class="text-xs text-slate-400 truncate"
                    x-text="item.category_name + (item.driver_type ? ' – ' + item.driver_type : '')"></p>
-                <template x-if="item.hour_extra > 0">
-                  <p class="text-xs text-amber-500" x-text="'Hora Extra: ' + fmtBRL(item.hour_extra) + '/hr'"></p>
-                </template>
               </div>
               <div class="flex items-center gap-1 flex-shrink-0">
                 <input type="number" min="1" step="1" x-model.number="item.quantity"

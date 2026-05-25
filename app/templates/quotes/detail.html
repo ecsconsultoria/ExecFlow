@@ -93,7 +93,6 @@
             <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Motorista</th>
             <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Qtd</th>
             <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Unit.</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Hora Extra</th>
             <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Total</th>
           </tr>
         </thead>
@@ -108,14 +107,11 @@
             <td class="px-4 py-3 text-slate-500 text-xs">{% if item.driver_name %}Motorista {{ item.driver_name }}{% else %}–{% endif %}</td>
             <td class="px-4 py-3 text-right text-slate-500">{{ item.quantity }}</td>
             <td class="px-4 py-3 text-right text-slate-500 whitespace-nowrap">{{ item.unit_price|currency }}</td>
-            <td class="px-4 py-3 text-right text-slate-500 text-xs whitespace-nowrap">
-              {% if item.hour_extra %}{{ item.hour_extra|currency }}/hr{% else %}–{% endif %}
-            </td>
             <td class="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">{{ item.total_price|currency }}</td>
           </tr>
           {% endfor %}
           <tr class="bg-slate-50 dark:bg-slate-700">
-            <td colspan="6" class="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200">Total</td>
+            <td colspan="5" class="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200">Total</td>
             <td class="px-4 py-3 text-right font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">{{ quote.total_amount|currency }}</td>
           </tr>
         </tbody>

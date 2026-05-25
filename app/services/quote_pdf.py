@@ -119,9 +119,11 @@ _INCLUSO = {
 
 _INFO_ADICIONAL = {
     "pt": [
+        "Hora Extra: 10% sobre o valor total da diária.",
         "Hora Extra Adicional é cobrada a partir de 30 minutos de espera.",
     ],
     "en": [
+        "Overtime: 10% of the total daily rate.",
         "Additional Overtime is charged after 30 minutes of waiting.",
     ],
 }
@@ -477,13 +479,12 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
     story.append(Spacer(1, 4 * mm))
 
     # ── Items table ───────────────────────────────────────────────────────
-    i_col_w = [W * 0.05, W * 0.46, W * 0.07, W * 0.14, W * 0.13, W * 0.15]
+    i_col_w = [W * 0.05, W * 0.51, W * 0.08, W * 0.17, W * 0.19]
     items_rows = [[
         Paragraph(_t("hash_col",     lang), cell_hdr_l),
         Paragraph(_t("service_col",  lang), cell_hdr),
         Paragraph(_t("qty_col",      lang), cell_hdr),
         Paragraph(_t("unit_col",     lang), cell_hdr),
-        Paragraph(_t("overtime_col", lang), cell_hdr),
         Paragraph(_t("total_col",    lang), cell_hdr),
     ]]
 
@@ -538,8 +539,6 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
 
         qty     = it.quantity or 1
         price   = it.unit_price or 0
-        # hour_extra stored as rate per hour (10% of Diária 10h price)
-        overtime = it.hour_extra or 0
         total    = it.total_price or round(price * qty, 2)
         grand_total += total
 
@@ -548,7 +547,6 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
             svc_para,
             Paragraph(str(qty),                  cell_body_c),
             Paragraph(_fmt_brl(price),           cell_body_r),
-            Paragraph(_fmt_brl(overtime) if overtime else "–", cell_body_r),
             Paragraph(_fmt_brl(total),           cell_body_r),
         ])
 

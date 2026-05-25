@@ -517,6 +517,19 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
                 story.append(Paragraph(safe, normal))
         story.append(Spacer(1, 4 * mm))
 
+    # ── Informações Importantes ──────────────────────────────────────────────
+    info_hdr_lbl = "Informações Importantes" if lang == "pt" else "Important Information"
+    info_items = [
+        ("Hora Extra: 10% sobre o valor total da diária."   if lang == "pt" else "Overtime: 10% of the total daily rate."),
+        ("Hora Extra Adicional é cobrada a partir de 30 minutos de espera." if lang == "pt" else "Additional Overtime is charged after 30 minutes of waiting."),
+    ]
+    info_bullet_st = ParagraphStyle("info_bullet", parent=normal, leftIndent=12, firstLineIndent=-8)
+    story.append(Paragraph(info_hdr_lbl, sec_hdr))
+    story.append(HRFlowable(width=W, thickness=1, color=BRAND_GOLD, spaceAfter=3))
+    for txt in info_items:
+        story.append(Paragraph(f"• {txt}", info_bullet_st))
+    story.append(Spacer(1, 4 * mm))
+
     # ── Operational Data ─────────────────────────────────────────────────────
     op_driver   = getattr(po, "driver_name",        None) or ""
     op_dphone   = getattr(po, "driver_phone",       None) or ""
