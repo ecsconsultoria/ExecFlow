@@ -1,8 +1,8 @@
 """models/order.py — Pedido (Order): camada comercial entre Orçamento e OS.
 
 Fluxo de status:
-  novo → aberto → faturado → fechado
-                ↘ cancelado (de qualquer status exceto fechado)
+  novo → aberto → faturado → concluido
+                ↘ cancelado (de qualquer status exceto concluido)
 
 Relacionamentos:
   Order → OrderItem[]  (cópia dos itens do Orçamento)
@@ -14,7 +14,7 @@ Relacionamentos:
 from ..extensions import db
 from .base import TimestampMixin, SoftDeleteMixin
 
-ORDER_STATUSES = ("novo", "aberto", "faturado", "fechado", "cancelado", "excluido")
+ORDER_STATUSES = ("novo", "aberto", "faturado", "concluido", "cancelado", "excluido")
 
 
 class Order(db.Model, TimestampMixin, SoftDeleteMixin):
@@ -66,6 +66,19 @@ class Order(db.Model, TimestampMixin, SoftDeleteMixin):
     freight_amount      = db.Column(db.Float,     default=0)
     other_costs_amount = db.Column(db.Float,     default=0)
     other_costs_label  = db.Column(db.String(200), default="")
+
+    # Margem operacional (SO vs POs vinculadas)
+    total_po_cost = db.Column(db.Float, default=0.0, nullable=True)   # soma das POs não-canceladas
+    margin_amount = db.Column(db.Float, default=0.0, nullable=True)   # receita − custo PO
+
+    @property
+    def margin_pct(self) -> float:
+        """Percentual de margem sobre a receita."""
+        revenue = self.computed_total or 0.0
+        if not revenue:
+            return 0.0
+        cost = self.total_po_cost or 0.0
+        return round((revenue - cost) / revenue * 100, 1)
 
     # Faturamento
     invoice_number   = db.Column(db.String(100))
@@ -128,6 +141,30 @@ class Order(db.Model, TimestampMixin, SoftDeleteMixin):
 
     def total_pending(self) -> float:
         return self.computed_total - self.total_paid()
+
+    @property
+    def status_label(self) -> str:
+        labels = {
+            "novo":      "Novo",
+            "aberto":    "Aberto",
+            "faturado":  "Faturado",
+            "concluido": "Conclu\u00eddo",
+            "cancelado": "Cancelado",
+            "excluido":  "Exclu\u00eddo",
+        }
+        return labels.get(self.status, self.status)
+
+    @property
+    def status_color(self) -> str:
+        colors = {
+            "novo":      "sky",
+            "aberto":    "blue",
+            "faturado":  "amber",
+            "concluido": "emerald",
+            "cancelado": "red",
+            "excluido":  "slate",
+        }
+        return colors.get(self.status, "slate")
 
     def __repr__(self):
         return f"<Order {self.number}>"

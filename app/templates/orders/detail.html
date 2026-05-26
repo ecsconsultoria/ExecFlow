@@ -65,7 +65,7 @@
     <i class="fa-solid fa-arrow-left"></i>
   </a>
   Sales Order <span class="font-mono font-bold">{{ order.number }}</span>
-  <span class="ml-2 text-xs px-2 py-0.5 rounded-full {{ order.status|status_badge }}">{{ order.status }}</span>
+  <span class="ml-2 text-xs px-2 py-0.5 rounded-full {{ order.status|status_badge }}">{{ order.status_label }}</span>
 {% endblock %}
 
 {% block content %}
@@ -96,7 +96,7 @@
   }
 }" x-cloak>
 
-{% set locked = order.status in ('fechado', 'faturado') %}
+{% set locked = order.status in ('concluido', 'faturado', 'cancelado', 'excluido') %}
 
 {# ══════════════════════════════════════════
    MAIN FORM — cabeçalho + ajustes + faturar modal
@@ -227,6 +227,7 @@
   </div>
 
   {# Tabela de itens #}
+  <div class="overflow-x-auto">
   <table class="w-full text-xs">
     <thead class="bg-slate-50 dark:bg-slate-700/70">
       <tr>
@@ -301,6 +302,7 @@
       </tr>
     </tbody>
   </table>
+  </div>
 
   {# ── Ajustes financeiros (campos dentro do main-form) ── #}
   <div class="px-4 py-3 border-t-2 border-slate-100 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-700/20">
@@ -430,10 +432,10 @@
           <tr>
             <th class="px-2 py-1.5 text-center w-8">#</th>
             <th class="px-2 py-1.5 text-left">Vencimento</th>
-            <th class="px-2 py-1.5 text-left">Obs</th>
+            <th class="px-2 py-1.5 text-left hidden sm:table-cell">Obs</th>
             <th class="px-2 py-1.5 text-right">Valor</th>
             <th class="px-2 py-1.5 text-center w-20">Baixa</th>
-            <th class="px-2 py-1.5 text-center">Pago em</th>
+            <th class="px-2 py-1.5 text-center">Recebido</th>
             <th class="px-2 py-1.5 w-6"></th>
           </tr>
         </thead>
@@ -451,7 +453,7 @@
                        value="{{ pmt.due_date.isoformat() if pmt.due_date else '' }}"
                        class="fi" style="min-width:120px">
               </td>
-              <td class="px-2 py-1.5">
+              <td class="px-2 py-1.5 hidden sm:table-cell">
                 <input type="text" name="notes" value="{{ pmt.notes or '' }}"
                        placeholder="nota..." class="fi" style="min-width:80px">
               </td>
@@ -465,7 +467,7 @@
                 id="baixa-o-td-{{ pmt.id }}"
                 data-url="{{ url_for('orders.baixa', pid=pmt.id) }}"
                 data-amount="{{ '%.2f'|format(pmt.amount or 0)|replace('.', ',') }}">
-              {% if order.status not in ('fechado', 'cancelado') %}
+              {% if order.status not in ('concluido', 'cancelado') %}
               <button type="button" onclick="openBaixaO({{ pmt.id }})"
                       class="p-1 rounded text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-900/30"
                       title="Dar baixa">
@@ -485,7 +487,7 @@
 
             {% else %}
             <td class="px-2 py-1.5 text-slate-500">{{ pmt.due_date.strftime('%d/%m/%Y') if pmt.due_date else '–' }}</td>
-            <td class="px-2 py-1.5 text-slate-400 italic">{{ pmt.notes or '–' }}</td>
+            <td class="px-2 py-1.5 text-slate-400 italic hidden sm:table-cell">{{ pmt.notes or '–' }}</td>
             <td class="px-2 py-1.5 text-right font-semibold text-emerald-600 font-mono">{{ pmt.paid_amount|currency }}</td>
             <td class="px-2 py-1.5 text-center">
               <span class="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded text-xs font-semibold">
@@ -713,7 +715,7 @@
       {% endif %}
       {% if order.closed_at %}
       <div class="flex justify-between gap-2">
-        <dt>Fechado</dt><dd class="text-right text-emerald-500">{{ order.closed_at|fdatetime }}{% if order.closer %} <span class="text-slate-400">· {{ order.closer.name }}</span>{% endif %}</dd>
+        <dt>Concluído</dt><dd class="text-right text-emerald-500">{{ order.closed_at|fdatetime }}{% if order.closer %} <span class="text-slate-400">· {{ order.closer.name }}</span>{% endif %}</dd>
       </div>
       {% endif %}
       {% if order.cancelled_at %}
@@ -757,7 +759,7 @@
   <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-2">
     <div class="flex flex-row gap-1.5">
 
-      {% if order.status not in ('cancelado', 'fechado', 'faturado') %}
+      {% if order.status not in ('cancelado', 'concluido', 'faturado') %}
       <button type="submit" form="main-form" name="action" value="save"
               data-tip="Salvar"
               class="act-btn bg-teal-600 hover:bg-teal-700">
@@ -791,7 +793,7 @@
       </button>
       {% endif %}
 
-      {% if order.status in ('aberto','faturado') %}
+      {% if order.status in ('aberto','faturado','concluido') %}
       <a href="{{ url_for('purchase_orders.new', order_id=order.id) }}"
          data-tip="Criar PC/PO"
          class="act-btn bg-violet-600 hover:bg-violet-700">
@@ -811,7 +813,7 @@
         <i class="fa-solid fa-file-pdf"></i><span style="font-size:10px;margin-left:3px">EN</span>
       </a>
 
-      {% if order.status not in ('fechado','cancelado') %}
+      {% if order.status not in ('concluido','cancelado') %}
       <button type="button" @click="showCancelModal=true"
               data-tip="Cancelar SO"
               class="act-btn bg-red-500 hover:bg-red-600">

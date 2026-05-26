@@ -1,7 +1,7 @@
 ﻿"""order_service.py — Lógica de negócio para Pedidos (Orders).
 
 Fluxo de status:
-  novo → aberto → faturado → fechado
+  novo → aberto → faturado → concluido
                 ↘ cancelado
 """
 from datetime import date, datetime, timedelta
@@ -9,6 +9,7 @@ from datetime import date, datetime, timedelta
 from ..extensions import db
 from ..models.order import Order, OrderItem, OrderPayment, ORDER_STATUSES  # noqa: F401
 from ..utils import now_br
+from . import margin_service
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -148,15 +149,17 @@ def faturar(order: Order, data: dict, user_id: int) -> None:
             order.invoice_due_date = date.fromisoformat(str(data["invoice_due_date"]))
         except (ValueError, TypeError):
             pass
+    margin_service.recalculate_order(order)
     db.session.commit()
 
 
 def fechar(order: Order, user_id: int) -> None:
     if order.status not in ("faturado", "aberto"):
         raise ValueError(f"Não é possível fechar pedido com status '{order.status}'")
-    order.status    = "fechado"
+    order.status    = "concluido"
     order.closed_at = now_br()
     order.closed_by = user_id
+    margin_service.recalculate_order(order)
     db.session.commit()
 
 
@@ -300,11 +303,40 @@ def baixa(payment: OrderPayment, paid_amount: float, user_id: int) -> None:
     payment.paid_by     = user_id
 
     order = payment.order
-    if all(p.is_paid for p in order.payments) and order.status not in ("fechado", "cancelado"):
-        order.status    = "fechado"
+
+    if all(p.is_paid for p in order.payments) and order.status not in ("concluido", "cancelado"):
+        order.status    = "concluido"
         order.closed_at = now_br()
+        margin_service.recalculate_order(order)
 
     db.session.commit()
+
+    # Lançamento de receita no módulo financeiro (best-effort)
+    try:
+        from ..models.financial import FinancialRecord
+        _ref  = f"order_payment:{payment.id}"
+        fr = FinancialRecord.query.filter_by(company_id=order.company_id, reference=_ref).first()
+        if fr:
+            fr.amount    = paid_amount
+            fr.paid_date = now_br().date()
+            fr.status    = "pago"
+        else:
+            total_inst = len(order.payments)
+            fr = FinancialRecord(
+                company_id     = order.company_id,
+                type           = "revenue",
+                category       = "receita_servico",
+                description    = f"SO {order.number} — parcela {payment.installment_no}/{total_inst}",
+                amount         = paid_amount,
+                status         = "pago",
+                payment_method = order.payment_method or "",
+                paid_date      = now_br().date(),
+                reference      = _ref,
+            )
+            db.session.add(fr)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
 
 
 # ─────────────────────────────────────────────────────────────────────────────

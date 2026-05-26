@@ -2,7 +2,7 @@ from ..extensions import db
 from .base import TimestampMixin, SoftDeleteMixin
 
 BILLING_TYPES  = ("recibo", "nf", "cartao", "nf_cartao")
-QUOTE_STATUSES = ("pendente", "aprovado", "reprovado", "pago", "reserva_confirmada", "cancelado")
+QUOTE_STATUSES = ("pendente", "aprovado", "reprovado", "pago", "reserva_confirmada", "cancelado", "excluido")
 
 
 class Quote(db.Model, TimestampMixin, SoftDeleteMixin):
@@ -54,6 +54,32 @@ class Quote(db.Model, TimestampMixin, SoftDeleteMixin):
 
     def recalculate_total(self):
         self.total_amount = sum(i.total_price or 0 for i in self.items)
+
+    @property
+    def status_label(self) -> str:
+        labels = {
+            "pendente":           "Pendente",
+            "aprovado":           "Aprovado",
+            "reprovado":          "Reprovado",
+            "pago":               "Pago",
+            "reserva_confirmada": "Reserva Confirmada",
+            "cancelado":          "Cancelado",
+            "excluido":           "Exclu\u00eddo",
+        }
+        return labels.get(self.status, self.status)
+
+    @property
+    def status_color(self) -> str:
+        colors = {
+            "pendente":           "amber",
+            "aprovado":           "green",
+            "reprovado":          "red",
+            "pago":               "emerald",
+            "reserva_confirmada": "blue",
+            "cancelado":          "slate",
+            "excluido":           "slate",
+        }
+        return colors.get(self.status, "slate")
 
     def __repr__(self):
         return f"<Quote {self.number}>"

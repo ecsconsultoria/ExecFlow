@@ -74,9 +74,6 @@ _T: dict[str, dict[str, str]] = {
                          "en": "24 hours before the event, a fee of 100% will be charged."},
     "validity":         {"pt": "Esta proposta é válida por 15 dias a partir da data de emissão. Preços sujeitos a alteração sem aviso prévio.",
                          "en": "This quotation is valid for 15 days from the date of issue. Prices subject to change without notice."},
-    "approve":          {"pt": "[ Aprovar ]",              "en": "[ Approve ]"},
-    "questions":        {"pt": "[ Perguntas ]",            "en": "[ Questions ]"},
-    "decline":          {"pt": "[ Recusar ]",              "en": "[ Decline ]"},
     "generated":        {"pt": "Gerado em",                "en": "Generated on"},
     "tax_id":           {"pt": "CNPJ",                     "en": "Tax ID"},
     "vehicle_lbl":      {"pt": "Veículo:",                 "en": "Vehicle:"},
@@ -643,29 +640,8 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
         story.append(Paragraph(f"  • {_t(k, lang)}", bullet_st))
     story.append(Spacer(1, 4 * mm))
 
-    # ── Approve / Questions / Decline ─────────────────────────────────────
-    is_approved = (quote.status or "").lower() in ("aprovado", "approved", "pago")
-
-    if not is_approved:
-        act_tbl = Table([[
-            Paragraph(f'<font color="#2e7d32"><b>{_t("approve",    lang)}</b></font>',
-                      ParagraphStyle("a1", fontSize=11, alignment=TA_CENTER, leading=14)),
-            Paragraph(f'<font color="#1565c0"><b>{_t("questions",  lang)}</b></font>',
-                      ParagraphStyle("a2", fontSize=11, alignment=TA_CENTER, leading=14)),
-            Paragraph(f'<font color="#c62828"><b>{_t("decline",    lang)}</b></font>',
-                      ParagraphStyle("a3", fontSize=11, alignment=TA_CENTER, leading=14)),
-        ]], colWidths=[W / 3, W / 3, W / 3])
-        act_tbl.setStyle(TableStyle([
-            ("ALIGN",       (0, 0), (-1, -1), "CENTER"),
-            ("VALIGN",      (0, 0), (-1, -1), "MIDDLE"),
-            ("TOPPADDING",  (0, 0), (-1, -1), 4),
-            ("BOTTOMPADDING",(0, 0), (-1, -1), 4),
-        ]))
-        story.append(act_tbl)
-        story.append(Spacer(1, 4 * mm))
-
-        # ── Validity (below action buttons) ─────────────────────────────────
-        story.append(Paragraph(_t("validity", lang), ctr_sm))
+    # ── Validity ──────────────────────────────────────────────────────────
+    story.append(Paragraph(_t("validity", lang), ctr_sm))
 
     # ── Footer as page callback (always at physical bottom) ───────────────
     now_str  = datetime.now().strftime("%m/%d/%Y %H:%M" if lang == "en" else "%d/%m/%Y %H:%M")

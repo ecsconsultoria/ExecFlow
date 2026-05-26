@@ -10,7 +10,7 @@
 
 {% block content %}
 <!-- ── KPI Strip ─────────────────────────────────────────────────────────── -->
-<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
   <a href="{{ url_for('clients.index') }}"
      class="group bg-white dark:bg-slate-800 rounded-xl p-4 flex items-center gap-3 shadow-sm hover:shadow-md hover:ring-1 hover:ring-blue-200 dark:hover:ring-blue-700 transition-all">
     <div class="w-10 h-10 bg-blue-50 dark:bg-blue-900/30 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50 transition-colors">
@@ -47,10 +47,44 @@
       <i class="fa-solid fa-coins text-green-600 dark:text-green-400 text-sm"></i>
     </div>
     <div>
-      <p class="text-lg font-bold text-green-700 dark:text-green-400 leading-none">{{ revenue|currency }}</p>
-      <p class="text-xs text-slate-500 mt-0.5">Receita mês</p>
+      <p class="text-lg font-bold text-green-700 dark:text-green-400 leading-none">{{ so_revenue_month|currency }}</p>
+      <p class="text-xs text-slate-500 mt-0.5">Receita SO (mês)</p>
     </div>
   </a>
+</div>
+
+<!-- ── Margem Operacional Strip ──────────────────────────────────────────── -->
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+  <!-- PO Custo -->
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 flex items-center gap-3 shadow-sm">
+    <div class="w-10 h-10 bg-red-50 dark:bg-red-900/30 rounded-lg flex items-center justify-center shrink-0">
+      <i class="fa-solid fa-file-invoice text-red-500 dark:text-red-400 text-sm"></i>
+    </div>
+    <div>
+      <p class="text-lg font-bold text-red-600 dark:text-red-400 leading-none">{{ po_cost_month|currency }}</p>
+      <p class="text-xs text-slate-500 mt-0.5">Custo PO (mês)</p>
+    </div>
+  </div>
+  <!-- Margem R$ -->
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 flex items-center gap-3 shadow-sm">
+    <div class="w-10 h-10 {% if margin_month >= 0 %}bg-emerald-50 dark:bg-emerald-900/30{% else %}bg-orange-50 dark:bg-orange-900/30{% endif %} rounded-lg flex items-center justify-center shrink-0">
+      <i class="fa-solid fa-chart-line {% if margin_month >= 0 %}text-emerald-600 dark:text-emerald-400{% else %}text-orange-500 dark:text-orange-400{% endif %} text-sm"></i>
+    </div>
+    <div>
+      <p class="text-lg font-bold {% if margin_month >= 0 %}text-emerald-700 dark:text-emerald-400{% else %}text-orange-600 dark:text-orange-400{% endif %} leading-none">{{ margin_month|currency }}</p>
+      <p class="text-xs text-slate-500 mt-0.5">Margem Operacional (mês)</p>
+    </div>
+  </div>
+  <!-- Margem % -->
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 flex items-center gap-3 shadow-sm">
+    <div class="w-10 h-10 {% if margin_pct >= 20 %}bg-emerald-50 dark:bg-emerald-900/30{% elif margin_pct >= 0 %}bg-amber-50 dark:bg-amber-900/30{% else %}bg-red-50 dark:bg-red-900/30{% endif %} rounded-lg flex items-center justify-center shrink-0">
+      <i class="fa-solid fa-percent {% if margin_pct >= 20 %}text-emerald-600{% elif margin_pct >= 0 %}text-amber-600{% else %}text-red-500{% endif %} text-sm"></i>
+    </div>
+    <div>
+      <p class="text-lg font-bold {% if margin_pct >= 20 %}text-emerald-700 dark:text-emerald-400{% elif margin_pct >= 0 %}text-amber-700 dark:text-amber-400{% else %}text-red-600 dark:text-red-400{% endif %} leading-none">{{ margin_pct }}%</p>
+      <p class="text-xs text-slate-500 mt-0.5">Margem % (mês)</p>
+    </div>
+  </div>
 </div>
 
 <!-- ── Main Grid ─────────────────────────────────────────────────────────── -->

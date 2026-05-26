@@ -100,5 +100,87 @@
     </form>
   </div>
 
+  <!-- Zona de Risco -->
+  <div x-data="{
+    action: null,
+    actions: {
+      transactional: {
+        label: 'Limpar SO, PO e Or\u00e7amentos',
+        url:   '{{ url_for("dashboard.reset_transactional") }}',
+        color: 'bg-orange-600 hover:bg-orange-700',
+        items: ['Ordens de Servi\u00e7o (SO) \u2014 itens e parcelas','Purchase Orders (PO) \u2014 itens e parcelas','Or\u00e7amentos e seus itens','Reservas (bookings)'],
+        note:  'Financeiro, cadastros e usu\u00e1rios preservados.'
+      },
+      financial: {
+        label: 'Limpar Financeiro',
+        url:   '{{ url_for("dashboard.reset_financial") }}',
+        color: 'bg-red-500 hover:bg-red-600',
+        items: ['Registros financeiros e contas a receber','Lan\u00e7amentos financeiros','Entradas de receita','Custos operacionais','Pagamentos a fornecedores'],
+        note:  'SO, PO, Or\u00e7amentos e cadastros preservados.'
+      },
+      all: {
+        label: 'Zerar Sistema Completo',
+        url:   '{{ url_for("dashboard.reset_all") }}',
+        color: 'bg-red-700 hover:bg-red-800',
+        items: ['Tudo acima +','Ordens de Despacho (service_orders)','Eventos e atribui\u00e7\u00f5es de despacho','Logs de auditoria'],
+        note:  'Preserva apenas: empresa, usu\u00e1rios, clientes, motoristas, ve\u00edculos, fornecedores e tabela de pre\u00e7os.'
+      }
+    }
+  }" class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-red-200 dark:border-red-900 p-6">
+    <h2 class="font-semibold text-red-600 dark:text-red-400 mb-1">
+      <i class="fa-solid fa-triangle-exclamation mr-2"></i>Zona de Risco
+    </h2>
+    <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
+      A\u00e7\u00f5es irrevers\u00edveis. Os cadastros base (clientes, servi\u00e7os, ve\u00edculos, motoristas) s\u00e3o preservados.
+    </p>
+
+    <div class="flex flex-wrap gap-3">
+      <button type="button" @click="action='transactional'"
+              class="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+        <i class="fa-solid fa-file-circle-xmark"></i> Limpar SO / PO / Or\u00e7amentos
+      </button>
+      <button type="button" @click="action='financial'"
+              class="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+        <i class="fa-solid fa-coins"></i> Limpar Financeiro
+      </button>
+      <button type="button" @click="action='all'"
+              class="flex items-center gap-2 bg-red-700 hover:bg-red-800 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+        <i class="fa-solid fa-skull"></i> Zerar Sistema Completo
+      </button>
+    </div>
+
+    <!-- Modal din\u00e2mico -->
+    <div x-show="action !== null" x-cloak
+         class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      <div @click.outside="action=null"
+           class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md p-6">
+        <h3 class="text-lg font-bold text-red-600 mb-2">
+          <i class="fa-solid fa-triangle-exclamation mr-2"></i>
+          <span x-text="action ? actions[action].label : ''"></span>
+        </h3>
+        <p class="text-sm text-slate-600 dark:text-slate-300 mb-3">Ser\u00e3o apagados <strong>todos</strong> os registros de:</p>
+        <ul class="text-sm text-slate-500 dark:text-slate-400 list-disc list-inside mb-3 space-y-0.5">
+          <template x-for="item in (action ? actions[action].items : [])" :key="item">
+            <li x-text="item"></li>
+          </template>
+        </ul>
+        <p class="text-xs text-amber-600 dark:text-amber-400 mb-5" x-text="action ? actions[action].note : ''"></p>
+        <div class="flex justify-end gap-3">
+          <button type="button" @click="action=null"
+                  class="px-4 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">
+            Cancelar
+          </button>
+          <form :action="action ? actions[action].url : '#'" method="post">
+            <button type="submit"
+                    :class="action ? actions[action].color : 'bg-red-600'"
+                    class="px-5 py-2 text-sm font-semibold rounded-lg text-white transition-colors">
+              <i class="fa-solid fa-trash-can mr-1"></i> Confirmar
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 {% endblock %}

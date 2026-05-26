@@ -83,6 +83,7 @@
   showOperational:   {{ 'true' if po and (po.pickup_location or po.dropoff_location or po.passenger_name or po.driver_name or po.flight_number or po.vehicle_description or po.driver_phone or po.vehicle_plate or po.pickup_datetime) else 'false' }},
   usarHora:          {{ 'true' if po and po.pickup_datetime and (po.pickup_datetime.hour or po.pickup_datetime.minute) else 'false' }},
   discType:          '{{ po.discount_type or 'R$' if po else 'R$' }}',
+  isExpensePO:       {{ 'true' if po and po.items and po.items|map(attribute='category')|select('ne', None)|map(attribute='category_type')|list|unique|list == ['expense'] else 'false' }},
   showCancelModal:   false,
   showDeleteModal:   false,
   showObsModal:      false,
@@ -94,7 +95,7 @@
   editUnit:          '0,00',
 }" x-cloak>
 
-{% set locked = po and po.status in ('concluido', 'faturado', 'pago', 'cancelado') %}
+{% set locked = po and po.status in ('concluido', 'faturado', 'pago', 'cancelado', 'excluido') %}
 
 {# ══════════════════════════════════════════
    MAIN FORM
@@ -245,6 +246,7 @@
   </div>
 
   {# Tabela de itens #}
+  <div class="overflow-x-auto">
   <table class="w-full text-xs">
     <thead class="bg-slate-50 dark:bg-slate-700/70">
       <tr>
@@ -324,6 +326,7 @@
       </tr>
     </tfoot>
   </table>
+  </div>
 
   {# ── Ajustes financeiros (somente PO existente) ── #}
   {% if po %}
@@ -465,7 +468,7 @@
           <tr>
             <th class="px-2 py-1.5 text-center w-8">#</th>
             <th class="px-2 py-1.5 text-left">Vencimento</th>
-            <th class="px-2 py-1.5 text-left">Obs</th>
+            <th class="px-2 py-1.5 text-left hidden sm:table-cell">Obs</th>
             <th class="px-2 py-1.5 text-right">Valor</th>
             <th class="px-2 py-1.5 text-center w-20">Baixa</th>
             <th class="px-2 py-1.5 text-center">Pago em</th>
@@ -487,7 +490,7 @@
                        class="fi" style="min-width:120px"
                        onchange="this.form.requestSubmit()">
               </td>
-              <td class="px-2 py-1.5">
+              <td class="px-2 py-1.5 hidden sm:table-cell">
                 <input type="text" name="notes" value="{{ pmt.notes or '' }}"
                        placeholder="nota..." class="fi" style="min-width:80px"
                        onblur="savePmtNotes({{ pmt.id }}, this.value)">
@@ -519,7 +522,7 @@
 
             {% else %}
             <td class="px-2 py-1.5 text-slate-500">{{ pmt.due_date.strftime('%d/%m/%Y') if pmt.due_date else '–' }}</td>
-            <td class="px-2 py-1.5 text-slate-400 italic">{{ pmt.notes or '–' }}</td>
+            <td class="px-2 py-1.5 text-slate-400 italic hidden sm:table-cell">{{ pmt.notes or '–' }}</td>
             <td class="px-2 py-1.5 text-right font-semibold text-emerald-600 font-mono">{{ pmt.paid_amount|currency }}</td>
             <td class="px-2 py-1.5 text-center">
               <span class="px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 rounded text-xs font-semibold">
@@ -570,7 +573,8 @@
 {# ────────────────────────────────
    Card 4 — Dados Operacionais
 ──────────────────────────────── #}
-<div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
+<div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden"
+     x-show="!isExpensePO" x-cloak>
   <div class="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 dark:border-slate-700 cursor-pointer select-none"
        @click="showOperational=!showOperational">
     <p class="text-xs font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wider">
@@ -829,6 +833,7 @@
                   alert('Gere as contas a pagar antes de faturar.');
                   return;
                 }
+                document.getElementById('faturar-supplier-id').value = sid.value;
                 document.getElementById('po-faturar-form').submit();
               "
               class="act-btn bg-amber-500 hover:bg-amber-600">
@@ -898,7 +903,9 @@
 <form id="po-approve-form" method="post" action="{{ url_for('purchase_orders.approve', po_id=po.id) }}" class="hidden"></form>
 <form id="po-start-form"   method="post" action="{{ url_for('purchase_orders.start_execution', po_id=po.id) }}" class="hidden"></form>
 <form id="po-conclude-form" method="post" action="{{ url_for('purchase_orders.conclude', po_id=po.id) }}" class="hidden"></form>
-<form id="po-faturar-form" method="post" action="{{ url_for('purchase_orders.faturar', po_id=po.id) }}" class="hidden"></form>
+<form id="po-faturar-form" method="post" action="{{ url_for('purchase_orders.faturar', po_id=po.id) }}" class="hidden">
+  <input type="hidden" id="faturar-supplier-id" name="supplier_id" value="">
+</form>
 {% endif %}
 
 {# ══════════════════════════════════════════
@@ -965,11 +972,25 @@
           </div>
           <div>
             <label class="lbl">Categoria</label>
-            <select name="category_id" id="ai-category" class="fi">
+            <select name="category_id" id="ai-category" class="fi"
+                    @change="isExpensePO = $el.options[$el.selectedIndex]?.dataset?.ctype === 'expense'">
               <option value="">– Categoria –</option>
-              {% for cat in categories %}
-              <option value="{{ cat.id }}">{{ cat.name }}</option>
-              {% endfor %}
+              {% set transport_cats = categories|selectattr('category_type', 'ne', 'expense')|selectattr('category_type', 'ne', 'financial_expense')|list %}
+              {% set expense_cats   = categories|selectattr('category_type', 'in', ['expense', 'financial_expense'])|list %}
+              {% if transport_cats %}
+              <optgroup label="🚗 Transporte / Serviço">
+                {% for cat in transport_cats %}
+                <option value="{{ cat.id }}" data-ctype="{{ cat.category_type }}">{{ cat.name }}</option>
+                {% endfor %}
+              </optgroup>
+              {% endif %}
+              {% if expense_cats %}
+              <optgroup label="💰 Despesas">
+                {% for cat in expense_cats %}
+                <option value="{{ cat.id }}" data-ctype="{{ cat.category_type }}">{{ cat.name }}</option>
+                {% endfor %}
+              </optgroup>
+              {% endif %}
             </select>
           </div>
         </div>

@@ -1,6 +1,8 @@
 from ..extensions import db
 from .base import TimestampMixin, SoftDeleteMixin
 
+CATEGORY_TYPES = ('transport', 'vehicle', 'logistics', 'expense', 'financial_expense', 'supplier_service')
+
 CATEGORIES = [
     "Motorista Free Lance",
     "Sedan Executivo",
@@ -32,6 +34,7 @@ class VehicleCategory(db.Model, TimestampMixin):
     sort_order    = db.Column(db.Integer, default=0)
     is_active     = db.Column(db.Boolean, default=True)
     km_extra_rate = db.Column(db.Float, default=0.0)
+    category_type = db.Column(db.String(50), nullable=False, default='transport')
 
     vehicles        = db.relationship("Vehicle",        backref="category", lazy="dynamic")
     service_pricing = db.relationship("ServicePricing", backref="category", lazy="dynamic")

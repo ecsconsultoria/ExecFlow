@@ -55,7 +55,7 @@
           {% endif %}
         </td>
         <td class="px-4 py-3 text-slate-500">{{ po.created_at|fdate }}</td>
-        <td class="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">{{ po.amount|currency }}</td>
+        <td class="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">{{ po.computed_total|currency }}</td>
         <td class="px-4 py-3">
           <span class="text-xs px-2 py-0.5 rounded-full bg-{{ po.status_color }}-100 text-{{ po.status_color }}-700 dark:bg-{{ po.status_color }}-900 dark:text-{{ po.status_color }}-300">
             {{ po.status_label }}

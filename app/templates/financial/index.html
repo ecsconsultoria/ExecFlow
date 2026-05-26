@@ -3,62 +3,295 @@
 {% block page_title %}<i class="fa-solid fa-coins mr-2 text-amber-500"></i>Financeiro{% endblock %}
 
 {% block content %}
-<!-- Monthly P&L -->
-{% if revenue is defined %}
-<div class="grid grid-cols-3 gap-4 mb-6">
-  <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm">
-    <p class="text-xs text-slate-500 mb-1">Receita (mês)</p>
-    <p class="text-2xl font-bold text-green-600">{{ revenue|currency }}</p>
+
+{# ── Mapeamentos de rótulos ───────────────────────────────────────────────── #}
+{% set CAT_LABELS = {
+  'receita_servico': 'Serviço', 'receita_adicional': 'Adicional',
+  'custo_motorista': 'Motorista', 'custo_fornecedor': 'Fornecedor',
+  'custo_operacional': 'Operacional', 'comissao': 'Comissão',
+  'imposto': 'Imposto', 'outro': 'Outro'
+} %}
+{% set ST_LABELS = {'pago':'Pago','pendente':'Pendente','vencido':'Vencido','cancelado':'Cancelado','parcial':'Parcial','aprovado':'Aprovado'} %}
+{% set ST_CLS    = {
+  'pago':      'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+  'pendente':  'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  'vencido':   'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+  'cancelado': 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400',
+  'parcial':   'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  'aprovado':  'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
+} %}
+
+{# ── Cards de resumo ─────────────────────────────────────────────────────── #}
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 border-emerald-500">
+    <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Receita (mês)</p>
+    <p class="text-xl font-bold text-emerald-600">{{ revenue|currency }}</p>
+    <p class="text-xs text-slate-400 mt-1">Pago no período</p>
   </div>
-  <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm">
-    <p class="text-xs text-slate-500 mb-1">Custos (mês)</p>
-    <p class="text-2xl font-bold text-red-500">{{ costs|currency }}</p>
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 border-red-400">
+    <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Custos (mês)</p>
+    <p class="text-xl font-bold text-red-500">{{ costs|currency }}</p>
+    <p class="text-xs text-slate-400 mt-1">Pago no período</p>
   </div>
-  <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm">
-    <p class="text-xs text-slate-500 mb-1">Margem (mês)</p>
-    <p class="text-2xl font-bold {% if profit >= 0 %}text-blue-600{% else %}text-red-600{% endif %}">{{ profit|currency }}</p>
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 {% if profit >= 0 %}border-blue-500{% else %}border-orange-500{% endif %}">
+    <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Margem (mês)</p>
+    <p class="text-xl font-bold {% if profit >= 0 %}text-blue-600{% else %}text-orange-600{% endif %}">{{ profit|currency }}</p>
+    <p class="text-xs text-slate-400 mt-1">Receita – Custos</p>
+  </div>
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 border-amber-400">
+    <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">A Receber</p>
+    <p class="text-xl font-bold text-amber-600">{{ pending_revenue|currency }}</p>
+    <p class="text-xs text-red-400 mt-1">A Pagar: {{ pending_costs|currency }}</p>
   </div>
 </div>
-{% endif %}
 
-<div class="flex justify-between items-center mb-4">
-  <h2 class="font-semibold text-slate-700 dark:text-slate-200">Registros Financeiros</h2>
-  <a href="{{ url_for('financial.new_record') }}"
-     class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg flex items-center gap-2">
-    <i class="fa-solid fa-plus"></i> Novo Registro
-  </a>
+{# ── Barra de filtros ────────────────────────────────────────────────────── #}
+{% set parts    = month.split('-') %}
+{% set yr       = parts[0]|int %}
+{% set mn       = parts[1]|int %}
+{% set prev_yr  = yr if mn > 1  else yr - 1 %}
+{% set prev_mn  = (mn - 1) if mn > 1  else 12 %}
+{% set next_yr  = yr if mn < 12 else yr + 1 %}
+{% set next_mn  = (mn + 1) if mn < 12 else 1 %}
+{% set prev_str = '%04d-%02d' | format(prev_yr, prev_mn) %}
+{% set next_str = '%04d-%02d' | format(next_yr, next_mn) %}
+
+<div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm px-4 py-3 mb-4 flex flex-wrap items-center gap-3 justify-between">
+
+  {# Navegação de mês #}
+  <div class="flex items-center gap-1">
+    <a href="{{ url_for('financial.index', month=prev_str, type=ftype, status=fstat) }}"
+       class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500">
+      <i class="fa-solid fa-chevron-left text-xs"></i>
+    </a>
+    <form method="get" class="flex items-center">
+      <input type="month" name="month" value="{{ month }}"
+             onchange="this.form.submit()"
+             class="border border-slate-200 dark:border-slate-600 bg-transparent rounded px-2 py-1 text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-400">
+      {% if ftype %}<input type="hidden" name="type"   value="{{ ftype }}">{% endif %}
+      {% if fstat %}<input type="hidden" name="status" value="{{ fstat }}">{% endif %}
+    </form>
+    <a href="{{ url_for('financial.index', month=next_str, type=ftype, status=fstat) }}"
+       class="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500">
+      <i class="fa-solid fa-chevron-right text-xs"></i>
+    </a>
+  </div>
+
+  {# Filtro tipo #}
+  <div class="flex items-center gap-1 text-sm">
+    {% for lbl, val in [('Todos',''), ('Receita','revenue'), ('Custo','cost')] %}
+    <a href="{{ url_for('financial.index', month=month, type=val, status=fstat) }}"
+       class="px-3 py-1 rounded-full transition-colors
+              {% if ftype == val %}bg-blue-600 text-white{% else %}text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700{% endif %}">
+      {{ lbl }}
+    </a>
+    {% endfor %}
+  </div>
+
+  {# Filtro status + botão Novo #}
+  <div class="flex items-center gap-2">
+    <select onchange="location.href=this.value"
+            class="border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded px-2 py-1 text-sm text-slate-700 dark:text-slate-200 focus:outline-none">
+      {% for lbl, val in [('Todos os status',''),('Pendente','pendente'),('Pago','pago'),('Parcial','parcial'),('Vencido','vencido'),('Cancelado','cancelado')] %}
+      <option value="{{ url_for('financial.index', month=month, type=ftype, status=val) }}"
+              {{ 'selected' if fstat == val }}>{{ lbl }}</option>
+      {% endfor %}
+    </select>
+    <a href="{{ url_for('financial.new_record') }}"
+       class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-1.5 rounded-lg flex items-center gap-1.5 whitespace-nowrap transition-colors">
+      <i class="fa-solid fa-plus text-xs"></i> Novo
+    </a>
+  </div>
 </div>
 
-<div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
+{# ── Tabela de registros ─────────────────────────────────────────────────── #}
+<div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-x-auto">
   <table class="w-full text-sm">
     <thead class="bg-slate-50 dark:bg-slate-700">
-      <tr>
-        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Data</th>
-        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Descrição</th>
-        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Tipo</th>
-        <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Valor</th>
-        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Status</th>
+      <tr class="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+        <th class="px-4 py-3 text-left">Data</th>
+        <th class="px-4 py-3 text-left">Tipo</th>
+        <th class="px-4 py-3 text-left">Descrição</th>
+        <th class="px-4 py-3 text-left hidden md:table-cell">Categoria</th>
+        <th class="px-4 py-3 text-left hidden lg:table-cell">Vencimento</th>
+        <th class="px-4 py-3 text-right">Valor</th>
+        <th class="px-4 py-3 text-left hidden sm:table-cell">Forma Pag.</th>
+        <th class="px-4 py-3 text-center">Status</th>
+        <th class="px-4 py-3 text-center w-28">Ações</th>
       </tr>
     </thead>
     <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
       {% for r in records %}
-      <tr class="hover:bg-slate-50 dark:hover:bg-slate-700">
-        <td class="px-4 py-3 text-slate-500">{{ r.created_at|fdate }}</td>
-        <td class="px-4 py-3 text-slate-700 dark:text-slate-200">{{ r.description or '–' }}</td>
-        <td class="px-4 py-3">
-          <span class="text-xs px-2 py-0.5 rounded-full {% if r.type == 'revenue' %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %}">
-            {{ r.type }}
-          </span>
+      {% set is_paid   = r.status == 'pago' %}
+      {% set is_overdue = r.due_date and r.due_date < today and not is_paid %}
+      <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 {{ 'opacity-60' if is_paid }}">
+
+        {# Data #}
+        <td class="px-4 py-2.5 text-slate-500 whitespace-nowrap text-xs">
+          {{ (r.paid_date or r.due_date or r.created_at)|fdate }}
         </td>
-        <td class="px-4 py-3 text-right font-semibold {% if r.type == 'revenue' %}text-green-600{% else %}text-red-500{% endif %}">
+
+        {# Tipo #}
+        <td class="px-4 py-2.5">
+          {% if r.type == 'revenue' %}
+          <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 font-medium whitespace-nowrap">
+            <i class="fa-solid fa-arrow-down-to-line text-[9px]"></i> Receita
+          </span>
+          {% else %}
+          <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 font-medium whitespace-nowrap">
+            <i class="fa-solid fa-arrow-up-from-line text-[9px]"></i> Custo
+          </span>
+          {% endif %}
+        </td>
+
+        {# Descrição #}
+        <td class="px-4 py-2.5 text-slate-700 dark:text-slate-200 max-w-[220px]">
+          <span class="block truncate" title="{{ r.description or '' }}">{{ r.description or '–' }}</span>
+          {% if r.reference %}
+          <span class="text-xs text-slate-400">{{ r.reference }}</span>
+          {% endif %}
+        </td>
+
+        {# Categoria #}
+        <td class="px-4 py-2.5 hidden md:table-cell">
+          <span class="text-xs text-slate-500">{{ CAT_LABELS.get(r.category, r.category or '–') }}</span>
+        </td>
+
+        {# Vencimento #}
+        <td class="px-4 py-2.5 hidden lg:table-cell whitespace-nowrap text-xs
+                   {{ 'text-red-500 font-semibold' if is_overdue else 'text-slate-500' }}">
+          {% if r.due_date %}
+            {{ r.due_date|fdate }}
+            {% if is_overdue %}<i class="fa-solid fa-triangle-exclamation ml-1 text-[9px]"></i>{% endif %}
+          {% else %}–{% endif %}
+        </td>
+
+        {# Valor #}
+        <td class="px-4 py-2.5 text-right font-semibold font-mono whitespace-nowrap
+                   {{ 'text-emerald-600' if r.type == 'revenue' else 'text-red-500' }}">
           {{ r.amount|currency }}
         </td>
-        <td class="px-4 py-3 text-xs text-slate-500">{{ r.status or '–' }}</td>
+
+        {# Forma de pagamento #}
+        <td class="px-4 py-2.5 hidden sm:table-cell text-xs text-slate-500">
+          {{ r.payment_method or '–' }}
+        </td>
+
+        {# Status #}
+        <td class="px-4 py-2.5 text-center">
+          {% set st = r.status or 'pendente' %}
+          <span class="text-xs px-2 py-0.5 rounded-full font-medium {{ ST_CLS.get(st, 'bg-slate-100 text-slate-500') }}">
+            {{ ST_LABELS.get(st, st) }}
+          </span>
+        </td>
+
+        {# Ações #}
+        <td class="px-4 py-2.5">
+          <div class="flex items-center justify-center gap-0.5">
+
+            {# Baixa — somente se não pago #}
+            {% if not is_paid %}
+            <button type="button" onclick="openBaixaFR({{ r.id }})"
+                    class="p-1.5 rounded text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors"
+                    title="Dar baixa (registrar pagamento)">
+              <i class="fa-solid fa-circle-check"></i>
+            </button>
+            {% endif %}
+
+            {# Editar #}
+            <a href="{{ url_for('financial.edit_record', rid=r.id) }}"
+               class="p-1.5 rounded text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+               title="Editar">
+              <i class="fa-solid fa-pen-to-square"></i>
+            </a>
+
+            {# Excluir #}
+            <form method="post" action="{{ url_for('financial.delete_record', rid=r.id) }}"
+                  onsubmit="return confirm('Excluir este lançamento permanentemente?')">
+              <button type="submit"
+                      class="p-1.5 rounded text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                      title="Excluir">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </form>
+          </div>
+        </td>
       </tr>
       {% else %}
-      <tr><td colspan="5" class="px-4 py-10 text-center text-slate-400">Nenhum registro.</td></tr>
+      <tr>
+        <td colspan="9" class="px-4 py-14 text-center text-slate-400">
+          <i class="fa-solid fa-inbox text-3xl mb-3 block opacity-40"></i>
+          Nenhum registro encontrado para os filtros selecionados.
+        </td>
+      </tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
+
+{# ── Modal de baixa ──────────────────────────────────────────────────────── #}
+<div id="fr-baixa-modal"
+     class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50"
+     style="display:none">
+  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-sm mx-4">
+    <h3 class="text-base font-semibold text-slate-700 dark:text-slate-200 mb-5">
+      <i class="fa-solid fa-circle-check text-emerald-500 mr-2"></i>Registrar Baixa
+    </h3>
+    <form id="fr-baixa-form" method="post" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Data do pagamento</label>
+        <input type="date" name="paid_date" id="fr-paid-date"
+               value="{{ today.isoformat() }}"
+               class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Forma de pagamento</label>
+        <select name="payment_method"
+                class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400">
+          <option value="">– Selecione –</option>
+          {% for m in payment_methods %}
+          <option value="{{ m }}">{{ m }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="flex justify-end gap-2 pt-1">
+        <button type="button" onclick="closeBaixaFR()"
+                class="px-4 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700">
+          Cancelar
+        </button>
+        <button type="submit"
+                class="px-5 py-2 text-sm rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-colors">
+          <i class="fa-solid fa-check mr-1"></i>Confirmar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const _baixaBase = '{{ url_for("financial.baixa_record", rid=0) }}';
+
+function openBaixaFR(rid) {
+  const form = document.getElementById('fr-baixa-form');
+  form.action = _baixaBase.replace('/0/', '/' + rid + '/');
+  const modal = document.getElementById('fr-baixa-modal');
+  modal.style.display = 'flex';
+  document.getElementById('fr-paid-date').focus();
+}
+
+function closeBaixaFR() {
+  document.getElementById('fr-baixa-modal').style.display = 'none';
+}
+
+document.getElementById('fr-baixa-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeBaixaFR();
+});
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeBaixaFR();
+});
+</script>
 {% endblock %}

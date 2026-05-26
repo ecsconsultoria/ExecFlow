@@ -277,6 +277,10 @@ def conclude(po_id):
 @login_required
 def faturar(po_id):
     po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
+    # Salva supplier_id se enviado pelo form (usuário selecionou mas não salvou antes)
+    sid = request.form.get("supplier_id", type=int)
+    if sid and not po.supplier_id:
+        po.supplier_id = sid
     try:
         pos.faturar(po, current_user.id)
         log_activity("po", po.id, po.company_id, "Faturada", current_user.id)

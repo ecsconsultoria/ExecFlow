@@ -75,6 +75,8 @@ def index():
     query  = Quote.query.filter_by(company_id=current_user.company_id, deleted_at=None)
     if status:
         query = query.filter_by(status=status)
+    else:
+        query = query.filter(Quote.status != "excluido")
     if q:
         query = query.filter(Quote.client_name.ilike(f"%{q}%") | Quote.number.ilike(f"%{q}%"))
     quotes = query.order_by(Quote.created_at.desc()).all()
@@ -296,8 +298,10 @@ def create_os(qid):
 @quotes_bp.route("/<int:qid>/delete", methods=["POST"])
 @login_required
 def delete(qid):
-    quote = Quote.query.filter_by(id=qid, company_id=current_user.company_id, deleted_at=None).first_or_404()
-    quote.soft_delete()
+    quote = Quote.query.filter_by(id=qid, company_id=current_user.company_id, deleted_at=None).filter(
+        Quote.status != "excluido"
+    ).first_or_404()
+    quote.status = "excluido"
     log_activity("quote", quote.id, current_user.company_id, "Excluído", current_user.id)
     db.session.commit()
     flash("Orçamento removido.", "info")

@@ -8,6 +8,7 @@ from ..extensions import db
 from ..models.purchase_order import PurchaseOrder, POPayment, POItem, PO_STATUSES
 from ..utils import now_br
 from . import numbering_service
+from . import margin_service
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -117,6 +118,8 @@ def conclude(po: PurchaseOrder, user_id: int) -> PurchaseOrder:
     _assert_status(po, ["em_execucao", "aprovado"])
     po.status       = "concluido"
     po.concluded_at = now_br()
+    if po.order_id and po.order:
+        margin_service.recalculate_order(po.order)
     return po
 
 
@@ -131,6 +134,8 @@ def faturar(po: PurchaseOrder, user_id: int) -> PurchaseOrder:
     po.status      = "faturado"
     po.invoiced_at = now_br()
     po.invoiced_by = user_id
+    if po.order_id and po.order:
+        margin_service.recalculate_order(po.order)
     return po
 
 
@@ -306,8 +311,10 @@ def baixa(payment: POPayment, paid_amount: float, user_id: int) -> None:
     payment.paid_amount = paid_amount
     payment.paid_at     = now_br()
     payment.paid_by     = user_id
-    # Auto-avança PO para 'pago' quando todas as parcelas forem quitadas
+
     po = payment.purchase_order
+
+    # Auto-avança PO para 'pago' quando todas as parcelas forem quitadas
     if po.status == "faturado":
         all_pmts     = list(po.payments)
         total_amount = sum(p.amount or 0 for p in all_pmts)
@@ -318,7 +325,40 @@ def baixa(payment: POPayment, paid_amount: float, user_id: int) -> None:
         if total_amount > 0 and total_paid >= total_amount:
             po.status   = "pago"
             po.paid_at  = now_br()
+
     db.session.commit()
+
+    # Lançamento de custo no módulo financeiro (best-effort)
+    try:
+        from ..models.financial import FinancialRecord
+        _ref  = f"po_payment:{payment.id}"
+        fr = FinancialRecord.query.filter_by(company_id=po.company_id, reference=_ref).first()
+        if fr:
+            fr.amount    = paid_amount
+            fr.paid_date = now_br().date()
+            fr.status    = "pago"
+        else:
+            total_inst    = po.payments.count()
+            supplier_name = (po.supplier.name if po.supplier else "") or ""
+            desc = f"PO {po.number}"
+            if supplier_name:
+                desc += f" — {supplier_name}"
+            desc += f" — parcela {payment.installment_no}/{total_inst}"
+            fr = FinancialRecord(
+                company_id     = po.company_id,
+                type           = "cost",
+                category       = "custo_fornecedor",
+                description    = desc,
+                amount         = paid_amount,
+                status         = "pago",
+                payment_method = getattr(po, "payment_method", "") or "",
+                paid_date      = now_br().date(),
+                reference      = _ref,
+            )
+            db.session.add(fr)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
