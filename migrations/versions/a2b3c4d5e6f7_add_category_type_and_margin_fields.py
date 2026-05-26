@@ -65,7 +65,7 @@ def upgrade():
                          created_at, updated_at)
                     VALUES
                         (:name, :slug, :cat_type, 1, 99, 0,
-                         datetime('now'), datetime('now'))
+                         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 """),
                 {'name': name, 'slug': slug, 'cat_type': cat_type}
             )
