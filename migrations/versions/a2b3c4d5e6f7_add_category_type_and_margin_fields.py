@@ -64,7 +64,7 @@ def upgrade():
                         (name, slug, category_type, is_active, sort_order, km_extra_rate,
                          created_at, updated_at)
                     VALUES
-                        (:name, :slug, :cat_type, 1, 99, 0,
+                        (:name, :slug, :cat_type, TRUE, 99, 0,
                          CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 """),
                 {'name': name, 'slug': slug, 'cat_type': cat_type}
