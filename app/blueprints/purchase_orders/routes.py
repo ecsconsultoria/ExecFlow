@@ -487,6 +487,28 @@ def update_item(item_id):
     return redirect(url_for("purchase_orders.detail", po_id=po.id))
 
 
+@purchase_orders_bp.route("/items/<int:item_id>/update-operational", methods=["POST"])
+@login_required
+def update_item_operational(item_id):
+    item = POItem.query.get_or_404(item_id)
+    po   = item.purchase_order
+    if po.company_id != current_user.company_id:
+        return jsonify({"ok": False, "error": "Não autorizado"}), 403
+    apply_all = request.form.get("apply_to_all") in ("1", "true", "on")
+    pos.update_item_operational(item, request.form.to_dict(), apply_to_all=apply_all)
+    log_activity(
+        "po", po.id, po.company_id,
+        "Dados operacionais do item atualizados (todos)" if apply_all
+        else f"Dados operacionais do item #{item.sort_order + 1 if item.sort_order is not None else item.id} atualizados",
+        current_user.id,
+    )
+    db.session.commit()
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({"ok": True})
+    flash("Dados operacionais salvos.", "success")
+    return redirect(url_for("purchase_orders.detail", po_id=po.id))
+
+
 @purchase_orders_bp.route("/items/<int:item_id>/delete", methods=["POST"])
 @login_required
 def delete_item(item_id):
