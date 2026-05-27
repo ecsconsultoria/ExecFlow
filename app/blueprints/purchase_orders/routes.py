@@ -166,16 +166,29 @@ def save_all(po_id):
         pt = data.pop("pickup_time", "")
         if pd:
             data["pickup_datetime"] = f"{pd}T{pt}" if pt else f"{pd}T00:00"
-        if data.get("amount"):
+
+        # Normalize numeric fields coming from the form (empty -> 0.0 / 1)
+        for f in ("amount", "discount_value", "freight_amount", "other_costs_amount"):
+            raw = data.get(f, None)
+            if raw in (None, ""):
+                data[f] = 0.0
+                continue
             try:
-                data["amount"] = float(str(data["amount"]).replace(".", "").replace(",", "."))
+                data[f] = float(str(raw).replace(".", "").replace(",", "."))
             except ValueError:
-                data["amount"] = 0.0
-        if data.get("pax_count"):
+                data[f] = 0.0
+
+        raw_pax = data.get("pax_count", None)
+        if raw_pax in (None, ""):
+            data["pax_count"] = 1
+        else:
             try:
-                data["pax_count"] = int(data["pax_count"])
+                data["pax_count"] = int(raw_pax)
             except ValueError:
                 data["pax_count"] = 1
+
+        data["discount_type"] = (data.get("discount_type") or "R$")
+
         pos._apply_data(po, data)
         log_activity("po", po.id, po.company_id, "Dados salvos", current_user.id)
         db.session.commit()

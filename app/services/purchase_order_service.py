@@ -164,6 +164,27 @@ def _apply_data(po: PurchaseOrder, data: dict):
     from datetime import datetime, date as date_type
     safe = {k: v for k, v in data.items() if hasattr(PurchaseOrder, k)}
 
+    def _to_float(v, default=0.0):
+        if v in (None, ""):
+            return default
+        try:
+            return float(str(v).replace(".", "").replace(",", "."))
+        except (ValueError, TypeError):
+            return default
+
+    for f in ("amount", "discount_value", "freight_amount", "other_costs_amount"):
+        if f in safe:
+            safe[f] = _to_float(safe[f], 0.0)
+
+    if "pax_count" in safe:
+        try:
+            safe["pax_count"] = int(safe["pax_count"]) if safe["pax_count"] not in (None, "") else 1
+        except (ValueError, TypeError):
+            safe["pax_count"] = 1
+
+    if "discount_type" in safe:
+        safe["discount_type"] = safe["discount_type"] or "R$"
+
     # Parse de tipos especiais
     if "pickup_datetime" in safe and safe["pickup_datetime"]:
         if isinstance(safe["pickup_datetime"], str):
