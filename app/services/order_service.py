@@ -150,6 +150,7 @@ def faturar(order: Order, data: dict, user_id: int) -> None:
         except (ValueError, TypeError):
             pass
     margin_service.recalculate_order(order)
+    _sync_order_pending_financials(order)
     db.session.commit()
 
 
@@ -326,7 +327,7 @@ def baixa(payment: OrderPayment, paid_amount: float, user_id: int) -> None:
                 company_id     = order.company_id,
                 type           = "revenue",
                 category       = "receita_servico",
-                description    = f"SO {order.number} — parcela {payment.installment_no}/{total_inst}",
+                description    = f"{order.number} — parcela {payment.installment_no}/{total_inst}",
                 amount         = paid_amount,
                 status         = "pago",
                 payment_method = order.payment_method or "",
@@ -336,6 +337,42 @@ def baixa(payment: OrderPayment, paid_amount: float, user_id: int) -> None:
             db.session.add(fr)
         db.session.commit()
     except Exception:
+        db.session.rollback()
+
+
+def _sync_order_pending_financials(order: Order) -> None:
+    """Cria/atualiza lançamentos pendentes de receita para parcelas em aberto do SO."""
+    try:
+        from ..models.financial import FinancialRecord
+        total_inst = len(order.payments)
+        for p in order.payments:
+            if p.is_paid:
+                continue
+            _ref = f"order_payment:{p.id}"
+            fr = FinancialRecord.query.filter_by(company_id=order.company_id, reference=_ref).first()
+            if fr:
+                fr.type           = "revenue"
+                fr.category       = "receita_servico"
+                fr.description    = f"{order.number} — parcela {p.installment_no}/{total_inst}"
+                fr.amount         = p.amount or 0
+                fr.status         = "pendente"
+                fr.payment_method = order.payment_method or ""
+                fr.due_date       = p.due_date
+                fr.paid_date      = None
+            else:
+                db.session.add(FinancialRecord(
+                    company_id     = order.company_id,
+                    type           = "revenue",
+                    category       = "receita_servico",
+                    description    = f"{order.number} — parcela {p.installment_no}/{total_inst}",
+                    amount         = p.amount or 0,
+                    status         = "pendente",
+                    payment_method = order.payment_method or "",
+                    due_date       = p.due_date,
+                    reference      = _ref,
+                ))
+    except Exception:
+        # Não bloqueia faturamento por falha do espelho financeiro.
         db.session.rollback()
 
 

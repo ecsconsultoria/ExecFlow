@@ -136,6 +136,7 @@ def faturar(po: PurchaseOrder, user_id: int) -> PurchaseOrder:
     po.invoiced_by = user_id
     if po.order_id and po.order:
         margin_service.recalculate_order(po.order)
+    _sync_po_pending_financials(po)
     return po
 
 
@@ -340,7 +341,7 @@ def baixa(payment: POPayment, paid_amount: float, user_id: int) -> None:
         else:
             total_inst    = po.payments.count()
             supplier_name = (po.supplier.name if po.supplier else "") or ""
-            desc = f"PO {po.number}"
+            desc = f"{po.number}"
             if supplier_name:
                 desc += f" — {supplier_name}"
             desc += f" — parcela {payment.installment_no}/{total_inst}"
@@ -358,6 +359,47 @@ def baixa(payment: POPayment, paid_amount: float, user_id: int) -> None:
             db.session.add(fr)
         db.session.commit()
     except Exception:
+        db.session.rollback()
+
+
+def _sync_po_pending_financials(po: PurchaseOrder) -> None:
+    """Cria/atualiza lançamentos pendentes de custo para parcelas em aberto da PO."""
+    try:
+        from ..models.financial import FinancialRecord
+        total_inst    = po.payments.count()
+        supplier_name = (po.supplier.name if po.supplier else "") or ""
+        for p in po.payments:
+            if p.is_paid:
+                continue
+            _ref = f"po_payment:{p.id}"
+            desc = f"{po.number}"
+            if supplier_name:
+                desc += f" — {supplier_name}"
+            desc += f" — parcela {p.installment_no}/{total_inst}"
+            fr = FinancialRecord.query.filter_by(company_id=po.company_id, reference=_ref).first()
+            if fr:
+                fr.type           = "cost"
+                fr.category       = "custo_fornecedor"
+                fr.description    = desc
+                fr.amount         = p.amount or 0
+                fr.status         = "pendente"
+                fr.payment_method = getattr(po, "payment_method", "") or ""
+                fr.due_date       = p.due_date
+                fr.paid_date      = None
+            else:
+                db.session.add(FinancialRecord(
+                    company_id     = po.company_id,
+                    type           = "cost",
+                    category       = "custo_fornecedor",
+                    description    = desc,
+                    amount         = p.amount or 0,
+                    status         = "pendente",
+                    payment_method = getattr(po, "payment_method", "") or "",
+                    due_date       = p.due_date,
+                    reference      = _ref,
+                ))
+    except Exception:
+        # Não bloqueia faturamento por falha do espelho financeiro.
         db.session.rollback()
 
 
