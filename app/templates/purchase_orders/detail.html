@@ -291,14 +291,12 @@
                     title="Editar">
               <i class="fa-solid fa-pencil text-xs"></i>
             </button>
-            <form method="post" action="{{ url_for('purchase_orders.delete_item', item_id=item.id) }}"
-                  onsubmit="return confirm('Remover este item?')">
-              <button type="submit"
-                      class="p-1.5 rounded text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
-                      title="Remover">
-                <i class="fa-solid fa-trash-can text-xs"></i>
-              </button>
-            </form>
+            <button type="button"
+                    onclick="deletePoItem('{{ url_for('purchase_orders.delete_item', item_id=item.id) }}')"
+                    class="p-1.5 rounded text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    title="Remover">
+              <i class="fa-solid fa-trash-can text-xs"></i>
+            </button>
           </div>
           {% endif %}
         </td>
@@ -710,7 +708,7 @@
     </div>
     {% if po.sent_at %}
     <div class="flex justify-between gap-2">
-      <dt class="text-slate-500">Enviado</dt>
+      <dt class="text-slate-500">Aberto</dt>
       <dd class="text-blue-500">{{ po.sent_at|fdatetime }}</dd>
     </div>
     {% endif %}
@@ -778,18 +776,18 @@
     {% endif %}
 
     {% if po %}
-      {# Enviar ao fornecedor #}
+      {# Abrir PO #}
       {% if po.status == 'rascunho' %}
       <button type="button"
-              data-tip="Enviar ao Fornecedor"
+          data-tip="Abrir PO"
               onclick="document.getElementById('po-send-form').submit()"
               class="act-btn bg-blue-600 hover:bg-blue-700">
-        <i class="fa-solid fa-paper-plane"></i>
+        <i class="fa-solid fa-folder-open"></i>
       </button>
       {% endif %}
 
       {# Aprovar #}
-      {% if po.status == 'enviado' %}
+      {% if po.status in ('aberto', 'enviado') %}
       <button type="button"
               data-tip="Confirmar / Aprovar"
               onclick="document.getElementById('po-approve-form').submit()"
@@ -1169,6 +1167,15 @@ const _svcNames = {
 function fillAddItemDesc(svcId) {
   const desc = document.getElementById('ai-description');
   if (desc && !desc.value && svcId && _svcNames[svcId]) desc.value = _svcNames[svcId];
+}
+
+function deletePoItem(url) {
+  if (!confirm('Remover este item?')) return;
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = url;
+  document.body.appendChild(form);
+  form.submit();
 }
 
 {% if po %}

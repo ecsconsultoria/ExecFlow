@@ -4,7 +4,7 @@ Representa a Ordem de Compra (PO) emitida para um fornecedor terceirizado
 como contraparte operacional de um Pedido de Venda (SO).
 
 Numeração: PO-AAMMDD-NNN
-Fluxo de status: rascunho → enviado → aprovado → em_execucao → concluido → faturado / cancelado
+Fluxo de status: rascunho → aberto → aprovado → em_execucao → concluido → faturado / cancelado
 Papel financeiro: despesa / contas a pagar
 """
 from ..extensions import db
@@ -12,7 +12,8 @@ from .base import TimestampMixin, SoftDeleteMixin
 
 PO_STATUSES = (
     "rascunho",      # PO criada, ainda não enviada ao fornecedor
-    "enviado",       # Enviada ao fornecedor aguardando confirmação
+    "aberto",        # PO aberta para processamento
+    "enviado",       # LEGACY: manter compatibilidade com registros antigos
     "aprovado",      # Fornecedor confirmou
     "em_execucao",   # Serviço em andamento
     "concluido",     # Serviço executado e encerrado
@@ -123,7 +124,8 @@ class PurchaseOrder(db.Model, TimestampMixin, SoftDeleteMixin):
     def status_label(self):
         labels = {
             "rascunho":    "Rascunho",
-            "enviado":     "Enviado",
+            "aberto":      "Aberto",
+            "enviado":     "Aberto",
             "aprovado":    "Aprovado",
             "em_execucao": "Em Execução",
             "concluido":   "Executado",
@@ -138,6 +140,7 @@ class PurchaseOrder(db.Model, TimestampMixin, SoftDeleteMixin):
     def status_color(self):
         colors = {
             "rascunho":    "slate",
+            "aberto":      "blue",
             "enviado":     "blue",
             "aprovado":    "green",
             "em_execucao": "amber",

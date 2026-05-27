@@ -223,9 +223,9 @@ def send(po_id):
     po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
     try:
         pos.send(po, current_user.id)
-        log_activity("po", po.id, po.company_id, "Enviada ao fornecedor", current_user.id)
+        log_activity("po", po.id, po.company_id, "PO aberta", current_user.id)
         db.session.commit()
-        flash(f"PO {po.number} marcada como enviada.", "success")
+        flash(f"PO {po.number} aberta com sucesso.", "success")
     except ValueError as e:
         flash(str(e), "warning")
     return redirect(url_for("purchase_orders.detail", po_id=po_id))

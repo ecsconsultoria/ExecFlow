@@ -1,7 +1,7 @@
 """purchase_order_service.py — Lógica de negócio para Purchase Orders (PO).
 
 PO = despesa / contas a pagar (contraparte de custo do Pedido SO).
-Fluxo: rascunho → enviado → aprovado → em_execucao → concluido
+Fluxo: rascunho → aberto → aprovado → em_execucao → concluido
 """
 from datetime import timedelta
 from ..extensions import db
@@ -91,16 +91,16 @@ def create_from_service_order(service_order, user_id: int) -> PurchaseOrder:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def send(po: PurchaseOrder, user_id: int) -> PurchaseOrder:
-    """Marca PO como enviada ao fornecedor."""
+    """Abre a PO para processamento."""
     _assert_status(po, ["rascunho"])
-    po.status  = "enviado"
+    po.status  = "aberto"
     po.sent_at = now_br()
     return po
 
 
 def approve(po: PurchaseOrder, user_id: int) -> PurchaseOrder:
     """Fornecedor confirmou a PO."""
-    _assert_status(po, ["enviado"])
+    _assert_status(po, ["aberto", "enviado"])
     po.status      = "aprovado"
     po.approved_at = now_br()
     return po
@@ -142,7 +142,7 @@ def faturar(po: PurchaseOrder, user_id: int) -> PurchaseOrder:
 
 def cancel(po: PurchaseOrder, user_id: int, reason: str = "") -> PurchaseOrder:
     """Cancela a PO."""
-    _assert_status(po, ["rascunho", "enviado", "aprovado"])
+    _assert_status(po, ["rascunho", "aberto", "enviado", "aprovado"])
     po.status       = "cancelado"
     po.cancelled_at = now_br()
     if reason:

@@ -221,7 +221,8 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
     # ── PO meta table ────────────────────────────────────────────────────────
     _STATUS_LABELS: dict[str, dict[str, str]] = {
         "rascunho":    {"pt": "Rascunho",    "en": "Draft"},
-        "enviado":     {"pt": "Enviado",      "en": "Sent"},
+        "aberto":      {"pt": "Aberto",      "en": "Open"},
+        "enviado":     {"pt": "Aberto",      "en": "Open"},
         "aprovado":    {"pt": "Aprovado",     "en": "Approved"},
         "em_execucao": {"pt": "Em Execução",  "en": "In Execution"},
         "concluido":   {"pt": "Concluído",    "en": "Concluded"},
