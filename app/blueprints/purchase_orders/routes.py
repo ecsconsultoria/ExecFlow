@@ -159,26 +159,30 @@ def save_all(po_id):
     if po.status in ("concluido", "faturado", "cancelado"):
         flash("PO não pode ser editada no status atual.", "warning")
         return redirect(url_for("purchase_orders.detail", po_id=po_id))
-    data = request.form.to_dict()
-    data.pop("order_id", None)   # never change linked order via save
-    pd = data.pop("pickup_date", "")
-    pt = data.pop("pickup_time", "")
-    if pd:
-        data["pickup_datetime"] = f"{pd}T{pt}" if pt else f"{pd}T00:00"
-    if data.get("amount"):
-        try:
-            data["amount"] = float(data["amount"].replace(".", "").replace(",", "."))
-        except ValueError:
-            data["amount"] = 0.0
-    if data.get("pax_count"):
-        try:
-            data["pax_count"] = int(data["pax_count"])
-        except ValueError:
-            data["pax_count"] = 1
-    pos._apply_data(po, data)
-    log_activity("po", po.id, po.company_id, "Dados salvos", current_user.id)
-    db.session.commit()
-    flash("PO salva.", "success")
+    try:
+        data = request.form.to_dict()
+        data.pop("order_id", None)   # never change linked order via save
+        pd = data.pop("pickup_date", "")
+        pt = data.pop("pickup_time", "")
+        if pd:
+            data["pickup_datetime"] = f"{pd}T{pt}" if pt else f"{pd}T00:00"
+        if data.get("amount"):
+            try:
+                data["amount"] = float(str(data["amount"]).replace(".", "").replace(",", "."))
+            except ValueError:
+                data["amount"] = 0.0
+        if data.get("pax_count"):
+            try:
+                data["pax_count"] = int(data["pax_count"])
+            except ValueError:
+                data["pax_count"] = 1
+        pos._apply_data(po, data)
+        log_activity("po", po.id, po.company_id, "Dados salvos", current_user.id)
+        db.session.commit()
+        flash("PO salva.", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Erro ao salvar PO: {e}", "warning")
     return redirect(url_for("purchase_orders.detail", po_id=po_id))
 
 
@@ -217,18 +221,25 @@ def edit(po_id):
 
 # ─── Transições de status ────────────────────────────────────────────────────
 
-@purchase_orders_bp.route("/<int:po_id>/send", methods=["POST"])
+@purchase_orders_bp.route("/<int:po_id>/open", methods=["POST"])
 @login_required
-def send(po_id):
+def open_po(po_id):
     po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
     try:
-        pos.send(po, current_user.id)
+        pos.open_po(po, current_user.id)
         log_activity("po", po.id, po.company_id, "PO aberta", current_user.id)
         db.session.commit()
         flash(f"PO {po.number} aberta com sucesso.", "success")
     except ValueError as e:
         flash(str(e), "warning")
     return redirect(url_for("purchase_orders.detail", po_id=po_id))
+
+
+@purchase_orders_bp.route("/<int:po_id>/send", methods=["POST"])
+@login_required
+def send(po_id):
+    """Compat backward para links/ações antigas."""
+    return open_po(po_id)
 
 
 @purchase_orders_bp.route("/<int:po_id>/approve", methods=["POST"])

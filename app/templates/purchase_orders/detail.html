@@ -780,7 +780,7 @@
       {% if po.status == 'rascunho' %}
       <button type="button"
           data-tip="Abrir PO"
-              onclick="document.getElementById('po-send-form').submit()"
+              onclick="document.getElementById('po-open-form').submit()"
               class="act-btn bg-blue-600 hover:bg-blue-700">
         <i class="fa-solid fa-folder-open"></i>
       </button>
@@ -897,7 +897,7 @@
    Formulários independentes (fora do main-form)
 ══════════════════════════════════════════ #}
 {% if po %}
-<form id="po-send-form"    method="post" action="{{ url_for('purchase_orders.send',    po_id=po.id) }}" class="hidden"></form>
+<form id="po-open-form"    method="post" action="{{ url_for('purchase_orders.open_po', po_id=po.id) }}" class="hidden"></form>
 <form id="po-approve-form" method="post" action="{{ url_for('purchase_orders.approve', po_id=po.id) }}" class="hidden"></form>
 <form id="po-start-form"   method="post" action="{{ url_for('purchase_orders.start_execution', po_id=po.id) }}" class="hidden"></form>
 <form id="po-conclude-form" method="post" action="{{ url_for('purchase_orders.conclude', po_id=po.id) }}" class="hidden"></form>

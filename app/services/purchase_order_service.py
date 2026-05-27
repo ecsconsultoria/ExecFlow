@@ -90,12 +90,17 @@ def create_from_service_order(service_order, user_id: int) -> PurchaseOrder:
 # Transições de status
 # ─────────────────────────────────────────────────────────────────────────────
 
-def send(po: PurchaseOrder, user_id: int) -> PurchaseOrder:
+def open_po(po: PurchaseOrder, user_id: int) -> PurchaseOrder:
     """Abre a PO para processamento."""
     _assert_status(po, ["rascunho"])
     po.status  = "aberto"
     po.sent_at = now_br()
     return po
+
+
+def send(po: PurchaseOrder, user_id: int) -> PurchaseOrder:
+    """Compat backward — mantém chamadas antigas para abrir a PO."""
+    return open_po(po, user_id)
 
 
 def approve(po: PurchaseOrder, user_id: int) -> PurchaseOrder:
