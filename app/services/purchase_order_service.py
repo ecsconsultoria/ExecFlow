@@ -506,17 +506,20 @@ def update_item_operational(item: POItem, data: dict, apply_to_all: bool = False
     """Atualiza dados operacionais por item de PO; opcionalmente replica para todos os itens."""
     pickup_dt = _parse_item_pickup_datetime(data)
 
+    raw_pax = (data.get("op_pax_count") or "").strip() if isinstance(data.get("op_pax_count"), str) else data.get("op_pax_count")
+    try:
+        pax_count = int(raw_pax) if raw_pax not in (None, "") else None
+    except (TypeError, ValueError):
+        pax_count = None
+
     base_payload = {
-        "op_driver_name": data.get("op_driver_name", "") or "",
-        "op_driver_phone": data.get("op_driver_phone", "") or "",
-        "op_vehicle_model": data.get("op_vehicle_model", "") or "",
-        "op_vehicle_plate": data.get("op_vehicle_plate", "") or "",
         "op_pickup_datetime": pickup_dt,
         "op_pickup_location": data.get("op_pickup_location", "") or "",
         "op_dropoff_location": data.get("op_dropoff_location", "") or "",
         "op_passenger_name": data.get("op_passenger_name", "") or "",
         "op_passenger_phone": data.get("op_passenger_phone", "") or "",
         "op_flight_number": data.get("op_flight_number", "") or "",
+        "op_pax_count": pax_count,
         "op_notes": data.get("op_notes", "") or "",
     }
 

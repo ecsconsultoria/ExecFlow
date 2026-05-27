@@ -97,10 +97,6 @@
   opItemUrl:         '',
   opItemNo:          '',
   opItemService:     '',
-  opDriverName:      '',
-  opDriverPhone:     '',
-  opVehicleModel:    '',
-  opVehiclePlate:    '',
   opPickupDate:      '',
   opPickupTime:      '',
   opPickupLocation:  '',
@@ -108,16 +104,13 @@
   opPassengerName:   '',
   opPassengerPhone:  '',
   opFlightNumber:    '',
+  opPaxCount:        '',
   opNotes:           '',
   openOpItem(el) {
     const d = el.dataset;
     this.opItemUrl         = d.opUrl || '';
     this.opItemNo          = d.opNo || '';
     this.opItemService     = d.opService || '';
-    this.opDriverName      = d.opDriverName || '';
-    this.opDriverPhone     = d.opDriverPhone || '';
-    this.opVehicleModel    = d.opVehicleModel || '';
-    this.opVehiclePlate    = d.opVehiclePlate || '';
     this.opPickupDate      = d.opPickupDate || '';
     this.opPickupTime      = d.opPickupTime || '';
     this.opPickupLocation  = d.opPickupLocation || '';
@@ -125,6 +118,7 @@
     this.opPassengerName   = d.opPassengerName || '';
     this.opPassengerPhone  = d.opPassengerPhone || '';
     this.opFlightNumber    = d.opFlightNumber || '';
+    this.opPaxCount        = d.opPaxCount || '';
     this.opNotes           = d.opNotes || '';
     this.showOpItemModal = true;
   },
@@ -316,10 +310,6 @@
                     data-op-url="{{ url_for('purchase_orders.update_item_operational', item_id=item.id) }}"
                     data-op-no="{{ loop.index }}"
                     data-op-service="{{ (item.service.name if item.service else item.description or '')|e }}"
-                    data-op-driver-name="{{ (item.op_driver_name or '')|e }}"
-                    data-op-driver-phone="{{ (item.op_driver_phone or '')|e }}"
-                    data-op-vehicle-model="{{ (item.op_vehicle_model or '')|e }}"
-                    data-op-vehicle-plate="{{ (item.op_vehicle_plate or '')|e }}"
                     data-op-pickup-date="{{ item.op_pickup_datetime.strftime('%Y-%m-%d') if item.op_pickup_datetime else '' }}"
                     data-op-pickup-time="{{ item.op_pickup_datetime.strftime('%H:%M') if item.op_pickup_datetime else '' }}"
                     data-op-pickup-location="{{ (item.op_pickup_location or '')|e }}"
@@ -327,13 +317,14 @@
                     data-op-passenger-name="{{ (item.op_passenger_name or '')|e }}"
                     data-op-passenger-phone="{{ (item.op_passenger_phone or '')|e }}"
                     data-op-flight-number="{{ (item.op_flight_number or '')|e }}"
+                    data-op-pax-count="{{ item.op_pax_count or '' }}"
                     data-op-notes="{{ (item.op_notes or '')|e }}"
                     @click="openOpItem($el)"
                     x-show="!isExpensePO"
                     class="p-1.5 rounded text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/20 relative"
-                    title="Dados operacionais do item">
-              <i class="fa-solid fa-car-side text-xs"></i>
-              {% if item.op_passenger_name or item.op_pickup_location or item.op_driver_name %}
+                    title="Dados do cliente / operacionais do item">
+              <i class="fa-solid fa-user-tie text-xs"></i>
+              {% if item.op_passenger_name or item.op_pickup_location %}
               <span class="absolute top-0.5 right-0.5 block w-1.5 h-1.5 rounded-full bg-violet-500"></span>
               {% endif %}
             </button>
@@ -1066,8 +1057,8 @@
   <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-3xl" @click.stop>
     <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 dark:border-slate-700">
       <h3 class="font-semibold text-slate-700 dark:text-slate-200 text-sm">
-        <i class="fa-solid fa-car-side mr-2 text-violet-500"></i>
-        Dados Operacionais do Item <span class="font-mono" x-text="opItemNo"></span>
+        <i class="fa-solid fa-user-tie mr-2 text-violet-500"></i>
+        Dados do Cliente — Item <span class="font-mono" x-text="opItemNo"></span>
       </h3>
       <button type="button" @click="showOpItemModal=false"
               class="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
@@ -1081,44 +1072,7 @@
                     bg-slate-50 dark:bg-slate-700 rounded-lg" x-text="opItemService"></p>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
-          <div>
-            <label class="lbl">Motorista</label>
-            <input type="text" name="op_driver_name" class="fi text-sm" x-model="opDriverName">
-          </div>
-          <div>
-            <label class="lbl">Fone Motorista</label>
-            <input type="text" name="op_driver_phone" class="fi text-sm" x-model="opDriverPhone">
-          </div>
-          <div>
-            <label class="lbl">Modelo Veículo</label>
-            <input type="text" name="op_vehicle_model" class="fi text-sm" x-model="opVehicleModel">
-          </div>
-          <div>
-            <label class="lbl">Placa</label>
-            <input type="text" name="op_vehicle_plate" class="fi text-sm" x-model="opVehiclePlate">
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
-          <div>
-            <label class="lbl">Data Pickup</label>
-            <input type="date" name="op_pickup_date" class="fi text-sm" x-model="opPickupDate">
-          </div>
-          <div>
-            <label class="lbl">Hora Pickup</label>
-            <input type="time" name="op_pickup_time" class="fi text-sm" x-model="opPickupTime">
-          </div>
-          <div>
-            <label class="lbl">Local Embarque</label>
-            <input type="text" name="op_pickup_location" class="fi text-sm" x-model="opPickupLocation">
-          </div>
-          <div>
-            <label class="lbl">Local Desembarque</label>
-            <input type="text" name="op_dropoff_location" class="fi text-sm" x-model="opDropoffLocation">
-          </div>
-        </div>
-
+        {# Linha 1: Passageiro | Fone Passageiro | Nº Voo | PAX #}
         <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
           <div>
             <label class="lbl">Passageiro</label>
@@ -1132,17 +1086,44 @@
             <label class="lbl">Nº Voo</label>
             <input type="text" name="op_flight_number" class="fi text-sm" x-model="opFlightNumber">
           </div>
-          <div class="flex items-end">
-            <label class="inline-flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
-              <input type="checkbox" name="apply_to_all" value="1" class="rounded border-slate-300 text-violet-600 focus:ring-violet-500">
-              Aplicar para todos os itens
-            </label>
+          <div>
+            <label class="lbl">PAX</label>
+            <input type="number" name="op_pax_count" min="1" step="1"
+                   class="fi text-sm text-right font-mono" x-model="opPaxCount">
           </div>
         </div>
 
+        {# Linha 2: Data Pickup | Hora | Embarque | Desembarque #}
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <div>
+            <label class="lbl">Data Pickup</label>
+            <input type="date" name="op_pickup_date" class="fi text-sm" x-model="opPickupDate">
+          </div>
+          <div>
+            <label class="lbl">Hora</label>
+            <input type="time" name="op_pickup_time" class="fi text-sm" x-model="opPickupTime">
+          </div>
+          <div>
+            <label class="lbl">Local de Embarque</label>
+            <input type="text" name="op_pickup_location" class="fi text-sm" x-model="opPickupLocation">
+          </div>
+          <div>
+            <label class="lbl">Local de Desembarque</label>
+            <input type="text" name="op_dropoff_location" class="fi text-sm" x-model="opDropoffLocation">
+          </div>
+        </div>
+
+        {# Linha 3: Observações + checkbox aplicar para todos #}
         <div>
-          <label class="lbl">Observações Operacionais</label>
-          <input type="text" name="op_notes" class="fi text-sm" x-model="opNotes" placeholder="Detalhes adicionais deste item...">
+          <label class="lbl">Observações</label>
+          <input type="text" name="op_notes" class="fi text-sm" x-model="opNotes" placeholder="Observações adicionais…">
+        </div>
+
+        <div class="pt-1">
+          <label class="inline-flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+            <input type="checkbox" name="apply_to_all" value="1" class="rounded border-slate-300 text-violet-600 focus:ring-violet-500">
+            Aplicar para todos os itens
+          </label>
         </div>
       </div>
 

@@ -542,17 +542,15 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
     op_groups: list[tuple[tuple, list]] = []  # [(key_tuple, [items])]
     for it in items_sorted:
         op_pickup_dt = getattr(it, "op_pickup_datetime", None)
+        pax_cnt      = getattr(it, "op_pax_count", None)
         key = (
-            (getattr(it, "op_driver_name", "") or "").strip(),
-            (getattr(it, "op_driver_phone", "") or "").strip(),
-            (getattr(it, "op_vehicle_model", "") or "").strip(),
-            (getattr(it, "op_vehicle_plate", "") or "").strip(),
             op_pickup_dt.isoformat() if op_pickup_dt else "",
             (getattr(it, "op_pickup_location", "") or "").strip(),
             (getattr(it, "op_dropoff_location", "") or "").strip(),
             (getattr(it, "op_passenger_name", "") or "").strip(),
             (getattr(it, "op_passenger_phone", "") or "").strip(),
             (getattr(it, "op_flight_number", "") or "").strip(),
+            str(pax_cnt) if pax_cnt else "",
             (getattr(it, "op_notes", "") or "").strip(),
         )
         if not any(key):
@@ -580,18 +578,15 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
         pickup_time_str = pickup_dt.strftime("%H:%M") if pickup_dt else ""
 
         fields = [
-            ("op_driver",       key[0]),
-            ("op_driver_phone", key[1]),
-            ("op_modelo",       key[2]),
-            ("op_plate",        key[3]),
+            ("op_passenger",    key[3]),
+            ("op_pax_phone",    key[4]),
+            ("op_flight",       key[5]),
+            ("op_pax",          key[6]),
             ("op_pickup_date",  pickup_date_str),
             ("op_pickup_time",  pickup_time_str),
-            ("op_from",         key[5]),
-            ("op_to",           key[6]),
-            ("op_flight",       key[9]),
-            ("op_passenger",    key[7]),
-            ("op_pax_phone",    key[8]),
-            ("op_obs",          key[10]),
+            ("op_from",         key[1]),
+            ("op_to",           key[2]),
+            ("op_obs",          key[7]),
         ]
         filled = [(lk, v) for lk, v in fields if v]
         if not filled:

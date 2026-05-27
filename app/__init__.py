@@ -154,6 +154,7 @@ def _ensure_schema_columns():
                 ('op_passenger_name', 'VARCHAR(200)'),
                 ('op_passenger_phone', 'VARCHAR(50)'),
                 ('op_flight_number', 'VARCHAR(50)'),
+                ('op_pax_count', 'INTEGER'),
                 ('op_notes', 'VARCHAR(500)'),
             ]
             with db.engine.begin() as conn:
