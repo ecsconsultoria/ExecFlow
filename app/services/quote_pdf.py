@@ -5,6 +5,7 @@ import io
 import os
 import re
 from datetime import datetime
+from xml.sax.saxutils import escape
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
@@ -626,7 +627,9 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
     obs = quote.obs or getattr(quote, "notes", None)
     if obs:
         for line in obs.splitlines():
-            story.append(Paragraph(line if line.strip() else "&nbsp;", normal))
+            # Escape user-provided text so it cannot override PDF font/size via markup.
+            safe_line = escape(line.strip())
+            story.append(Paragraph(safe_line if safe_line else "&nbsp;", bullet_st))
     else:
         story.append(Spacer(1, 3 * mm))
 
