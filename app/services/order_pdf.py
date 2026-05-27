@@ -66,8 +66,10 @@ _T: dict[str, dict[str, str]] = {
     "op_modelo":        {"pt": "Modelo",                   "en": "Model"},
     "op_plate":         {"pt": "Placa",                    "en": "Plate"},
     "op_pickup":        {"pt": "Data / Hora Pickup",        "en": "Pickup Date/Time"},
-    "op_from":          {"pt": "Local de Embarque",          "en": "Pickup Location"},
-    "op_to":            {"pt": "Local de Desembarque",       "en": "Dropoff Location"},
+    "op_pickup_date":   {"pt": "Data Pickup",               "en": "Pickup Date"},
+    "op_pickup_time":   {"pt": "Hora Pickup",               "en": "Pickup Time"},
+    "op_from":          {"pt": "Embarque",                  "en": "Pickup"},
+    "op_to":            {"pt": "Desembarque",               "en": "Dropoff"},
     "op_passenger":     {"pt": "Passageiro",               "en": "Passenger"},
     "op_pax_phone":     {"pt": "Fone Passageiro",          "en": "Pax Phone"},
     "op_flight":        {"pt": "Nº Voo",                  "en": "Flight No."},
@@ -545,105 +547,131 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
             else:
                 story.append(Paragraph(safe, normal))
     story.append(Spacer(1, 4 * mm))
-    op_driver  = getattr(order, "driver_name",         None) or ""
-    op_dphone  = getattr(order, "driver_phone",        None) or ""
-    op_modelo  = getattr(order, "vehicle_model",       None) or ""
-    op_obs_val = getattr(order, "vehicle_description", None) or ""
-    op_plate   = getattr(order, "vehicle_plate",       None) or ""
-    op_pickup  = _fmt_datetime(getattr(order, "delivery_datetime", None), lang)
-    op_from    = getattr(order, "pickup_location",     None) or ""
-    op_to      = getattr(order, "dropoff_location",    None) or ""
-    op_pax     = getattr(order, "passenger_name",      None) or ""
-    op_pphone  = getattr(order, "passenger_phone",     None) or ""
-    op_flight  = getattr(order, "flight_number",       None) or ""
-    op_pax_cnt = getattr(order, "pax_count",           None)
 
-    _op_has_data = any([op_driver, op_modelo, op_plate, op_from, op_to,
-                        op_pax, op_flight, op_pax_cnt])
+    # ── Dados operacionais por item — formato compacto, agrupados ──────────
+    op_label_st = ParagraphStyle(
+        "op_label_c", fontName="Helvetica-Bold", fontSize=7,
+        textColor=colors.HexColor("#64748b"), leading=9, spaceAfter=0,
+    )
+    op_value_st = ParagraphStyle(
+        "op_value_c", fontName="Helvetica", fontSize=7.5,
+        textColor=BRAND_DARK, leading=10, spaceAfter=0,
+    )
+    op_title_st = ParagraphStyle(
+        "op_title_c", fontName="Helvetica-Bold", fontSize=8,
+        textColor=colors.white, alignment=TA_LEFT, leading=10,
+    )
 
-    if _op_has_data:
-        story.append(Spacer(1, 6 * mm))
+    items_sorted = sorted(order.items, key=lambda it: (it.sort_order or 0, it.id))
+    item_index = {it.id: i + 1 for i, it in enumerate(items_sorted)}
 
-        lbl_st_op = ParagraphStyle(
-            "op_lbl", fontName="Helvetica-Bold", fontSize=7,
-            textColor=colors.HexColor("#64748b"), spaceAfter=1,
+    op_groups: list[tuple[tuple, list]] = []  # [(key_tuple, [items])]
+    for it in items_sorted:
+        op_pickup_dt = getattr(it, "op_pickup_datetime", None)
+        key = (
+            (getattr(it, "op_driver_name", "") or "").strip(),
+            (getattr(it, "op_driver_phone", "") or "").strip(),
+            (getattr(it, "op_vehicle_model", "") or "").strip(),
+            (getattr(it, "op_vehicle_plate", "") or "").strip(),
+            op_pickup_dt.isoformat() if op_pickup_dt else "",
+            (getattr(it, "op_pickup_location", "") or "").strip(),
+            (getattr(it, "op_dropoff_location", "") or "").strip(),
+            (getattr(it, "op_passenger_name", "") or "").strip(),
+            (getattr(it, "op_passenger_phone", "") or "").strip(),
+            (getattr(it, "op_flight_number", "") or "").strip(),
+            (getattr(it, "op_notes", "") or "").strip(),
         )
-        val_st_op = ParagraphStyle(
-            "op_val", fontName="Helvetica-Bold", fontSize=9.5,
-            textColor=BRAND_DARK, spaceAfter=0,
-        )
-        hdr_st_op = ParagraphStyle(
-            "op_hdr_st", fontName="Helvetica-Bold", fontSize=10,
-            textColor=colors.white, alignment=TA_CENTER,
-        )
+        if not any(key):
+            continue
+        matched = False
+        for k, lst in op_groups:
+            if k == key:
+                lst.append(it)
+                matched = True
+                break
+        if not matched:
+            op_groups.append((key, [it]))
 
-        hdr_cell = Paragraph(_t("op_hdr", lang), hdr_st_op)
-        hdr_tbl  = Table([[hdr_cell]], colWidths=[W])
+    total_items = len(items_sorted)
+
+    for key, items in op_groups:
+        sample = items[0]
+        pickup_dt = getattr(sample, "op_pickup_datetime", None)
+        pickup_date_str = _fmt_date(pickup_dt.date() if pickup_dt else None, lang) if pickup_dt else ""
+        if pickup_date_str == "\u2013":
+            pickup_date_str = ""
+        pickup_time_str = pickup_dt.strftime("%H:%M") if pickup_dt else ""
+
+        fields = [
+            ("op_driver",       key[0]),
+            ("op_driver_phone", key[1]),
+            ("op_modelo",       key[2]),
+            ("op_plate",        key[3]),
+            ("op_pickup_date",  pickup_date_str),
+            ("op_pickup_time",  pickup_time_str),
+            ("op_from",         key[5]),
+            ("op_to",           key[6]),
+            ("op_flight",       key[9]),
+            ("op_passenger",    key[7]),
+            ("op_pax_phone",    key[8]),
+            ("op_obs",          key[10]),
+        ]
+        filled = [(lk, v) for lk, v in fields if v]
+        if not filled:
+            continue
+
+        # Header com subtítulo (quais itens)
+        if len(items) == total_items and total_items > 1:
+            sub = "Todos os itens" if lang == "pt" else "All items"
+        else:
+            nums = ", ".join(f"#{item_index[it.id]}" for it in items)
+            sub = (f"Item {nums}" if len(items) == 1 else
+                   (f"Itens {nums}" if lang == "pt" else f"Items {nums}"))
+        hdr_text = f"{_t('op_hdr', lang)} \u2014 {sub}"
+
+        hdr_tbl = Table(
+            [[Paragraph(hdr_text, op_title_st)]],
+            colWidths=[W],
+        )
         hdr_tbl.setStyle(TableStyle([
             ("BACKGROUND",    (0, 0), (-1, -1), BRAND_DARK),
-            ("TOPPADDING",    (0, 0), (-1, -1), 6),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-            ("LEFTPADDING",   (0, 0), (-1, -1), 8),
-            ("RIGHTPADDING",  (0, 0), (-1, -1), 8),
+            ("TOPPADDING",    (0, 0), (-1, -1), 2),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+            ("LEFTPADDING",   (0, 0), (-1, -1), 6),
+            ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
         ]))
         story.append(hdr_tbl)
 
-        _op_pickup_str = op_pickup if op_pickup != "\u2013" else "\u2013"
-        if op_pax_cnt:
-            _op_pickup_str = (_op_pickup_str + f"  \u2022  {op_pax_cnt} PAX").strip(" \u2022 ")
+        # Tabela compacta — 4 colunas (label: valor) por linha
+        COLS = 4
+        cells = []
+        for lk, v in filled:
+            label = _t(lk, lang)
+            safe = (v or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            cells.append(Paragraph(f"<b>{label}:</b> {safe}", op_value_st))
 
-        op_rows_raw = [
-            ("op_driver",    op_driver,      "op_driver_phone", op_dphone),
-            ("op_modelo",    op_modelo,      "op_plate",        op_plate),
-            ("op_pickup",    _op_pickup_str, "op_flight",       op_flight),
-            ("op_from",      op_from,        "op_to",           op_to),
-            ("op_passenger", op_pax,         "op_pax_phone",    op_pphone),
-            ("op_obs",       op_obs_val,     "",                ""),
-        ]
+        # Preenche para múltiplo de COLS
+        while len(cells) % COLS != 0:
+            cells.append(Paragraph("", op_value_st))
+        rows = [cells[i:i + COLS] for i in range(0, len(cells), COLS)]
 
-        CL = W * 0.18
-        CV = W * 0.32
+        cw = W / COLS
+        info_tbl = Table(rows, colWidths=[cw] * COLS)
+        info_tbl.setStyle(TableStyle([
+            ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#f8fafc")),
+            ("BOX",           (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
+            ("INNERGRID",     (0, 0), (-1, -1), 0.3, colors.HexColor("#e2e8f0")),
+            ("TOPPADDING",    (0, 0), (-1, -1), 3),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+            ("LEFTPADDING",   (0, 0), (-1, -1), 5),
+            ("RIGHTPADDING",  (0, 0), (-1, -1), 5),
+            ("VALIGN",        (0, 0), (-1, -1), "TOP"),
+        ]))
+        story.append(info_tbl)
+        story.append(Spacer(1, 2 * mm))
 
-        grid_rows = []
-        span_rows = []
-        for lk1, v1, lk2, v2 in op_rows_raw:
-            if not v1 and not v2:
-                continue
-            if not lk2:
-                span_rows.append(len(grid_rows))
-                grid_rows.append([
-                    Paragraph(_t(lk1, lang).upper(), lbl_st_op),
-                    Paragraph(v1 or "\u2013", val_st_op),
-                    Paragraph("", lbl_st_op),
-                    Paragraph("", val_st_op),
-                ])
-            else:
-                grid_rows.append([
-                    Paragraph(_t(lk1, lang).upper(), lbl_st_op),
-                    Paragraph(v1 or "\u2013", val_st_op),
-                    Paragraph(_t(lk2, lang).upper(), lbl_st_op),
-                    Paragraph(v2 or "\u2013", val_st_op),
-                ])
-
-        if grid_rows:
-            span_cmds = [("SPAN", (1, r), (3, r)) for r in span_rows]
-            grid_tbl = Table(grid_rows, colWidths=[CL, CV, CL, CV])
-            grid_tbl.setStyle(TableStyle([
-                ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#f8fafc")),
-                ("GRID",          (0, 0), (-1, -1), 0.4, colors.HexColor("#e2e8f0")),
-                ("TOPPADDING",    (0, 0), (-1, -1), 7),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
-                ("LEFTPADDING",   (0, 0), (-1, -1), 8),
-                ("RIGHTPADDING",  (0, 0), (-1, -1), 8),
-                ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
-                ("BOX",           (0, 0), (-1, -1), 1.5, BRAND_GOLD),
-                ("BACKGROUND",    (0, 0), (0, -1),  colors.HexColor("#f1f5f9")),
-                ("BACKGROUND",    (2, 0), (2, -1),  colors.HexColor("#f1f5f9")),
-                *span_cmds,
-            ]))
-            story.append(grid_tbl)
-
-        story.append(Spacer(1, 5 * mm))
+    if op_groups:
+        story.append(Spacer(1, 2 * mm))
 
     # ── Footer as page callback (like quote PDF) ───────────────────────────
     from datetime import datetime as _dt

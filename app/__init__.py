@@ -116,6 +116,30 @@ def _ensure_schema_columns():
                     ))
                 log.info('Schema patch applied: orders.other_costs_label')
 
+        # ── order_items: operational item columns (SO por item) ──────────────
+        if 'order_items' in table_names:
+            existing_oi = {c['name'] for c in insp.get_columns('order_items')}
+            new_item_cols = [
+                ('op_driver_name', 'VARCHAR(200)'),
+                ('op_driver_phone', 'VARCHAR(50)'),
+                ('op_vehicle_model', 'VARCHAR(200)'),
+                ('op_vehicle_plate', 'VARCHAR(20)'),
+                ('op_pickup_datetime', 'TIMESTAMP'),
+                ('op_pickup_location', 'TEXT'),
+                ('op_dropoff_location', 'TEXT'),
+                ('op_passenger_name', 'VARCHAR(200)'),
+                ('op_passenger_phone', 'VARCHAR(50)'),
+                ('op_flight_number', 'VARCHAR(50)'),
+                ('op_notes', 'VARCHAR(500)'),
+            ]
+            with db.engine.begin() as conn:
+                for col_name, col_type in new_item_cols:
+                    if col_name not in existing_oi:
+                        conn.execute(_text(
+                            f'ALTER TABLE order_items ADD COLUMN {col_name} {col_type}'
+                        ))
+                        log.info('Schema patch applied: order_items.%s', col_name)
+
         # ── service_pricing: fix driver_type typo 'Bilingue' → 'Bilíngue' ────
         if 'service_pricing' in table_names:
             with db.engine.begin() as conn:

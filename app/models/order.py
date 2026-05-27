@@ -190,6 +190,19 @@ class OrderItem(db.Model, TimestampMixin):
     state_code          = db.Column(db.String(10))
     ref_note            = db.Column(db.String(500))
 
+    # Dados operacionais por item (SO)
+    op_driver_name      = db.Column(db.String(200))
+    op_driver_phone     = db.Column(db.String(50))
+    op_vehicle_model    = db.Column(db.String(200))
+    op_vehicle_plate    = db.Column(db.String(20))
+    op_pickup_datetime  = db.Column(db.DateTime, nullable=True)
+    op_pickup_location  = db.Column(db.Text)
+    op_dropoff_location = db.Column(db.Text)
+    op_passenger_name   = db.Column(db.String(200))
+    op_passenger_phone  = db.Column(db.String(50))
+    op_flight_number    = db.Column(db.String(50))
+    op_notes            = db.Column(db.String(500))
+
     category = db.relationship("VehicleCategory", foreign_keys=[category_id], lazy="select")
 
     def __repr__(self):

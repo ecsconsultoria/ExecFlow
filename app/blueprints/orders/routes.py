@@ -519,6 +519,28 @@ def update_item(iid):
     return redirect(url_for("orders.detail", oid=order.id))
 
 
+@orders_bp.route("/items/<int:iid>/update-operational", methods=["POST"])
+@login_required
+def update_item_operational(iid):
+    item  = OrderItem.query.get_or_404(iid)
+    order = item.order
+    _check_company(order)
+    if order.status in ("concluido", "faturado", "cancelado"):
+        flash("Não é possível editar itens neste status.", "warning")
+        return redirect(url_for("orders.detail", oid=order.id))
+
+    apply_to_all = (request.form.get("apply_to_all", "") or "").lower() in ("1", "true", "on", "yes")
+    order_service.update_item_operational(item, request.form.to_dict(), apply_to_all=apply_to_all)
+    if apply_to_all:
+        log_activity("order", order.id, order.company_id, "Dados operacionais aplicados a todos os itens", current_user.id)
+        flash("Dados operacionais aplicados em todos os itens.", "success")
+    else:
+        log_activity("order", order.id, order.company_id, "Dados operacionais de item atualizados", current_user.id)
+        flash("Dados operacionais do item salvos.", "success")
+    db.session.commit()
+    return redirect(url_for("orders.detail", oid=order.id))
+
+
 @orders_bp.route("/<int:oid>/update-obs", methods=["POST"])
 @login_required
 def update_obs(oid):

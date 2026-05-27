@@ -387,6 +387,17 @@ def _parse_float(value) -> float:
         return 0.0
 
 
+def _parse_item_pickup_datetime(data: dict):
+    date_str = (data.get("op_pickup_date") or "").strip()
+    time_str = (data.get("op_pickup_time") or "").strip()
+    if not date_str:
+        return None
+    try:
+        return datetime.fromisoformat(f"{date_str}T{time_str or '00:00'}")
+    except (TypeError, ValueError):
+        return None
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Itens do pedido
 # ─────────────────────────────────────────────────────────────────────────────
@@ -432,6 +443,32 @@ def update_item(item: OrderItem, data: dict) -> None:
     item.total_price = round((item.unit_price or 0) * (item.quantity or 1), 2)
     order = item.order
     order.total_amount = sum(i.total_price or 0 for i in order.items)
+    db.session.commit()
+
+
+def update_item_operational(item: OrderItem, data: dict, apply_to_all: bool = False) -> None:
+    """Atualiza dados operacionais por item; opcionalmente replica para todos os itens da SO."""
+    pickup_dt = _parse_item_pickup_datetime(data)
+
+    base_payload = {
+        "op_driver_name": data.get("op_driver_name", "") or "",
+        "op_driver_phone": data.get("op_driver_phone", "") or "",
+        "op_vehicle_model": data.get("op_vehicle_model", "") or "",
+        "op_vehicle_plate": data.get("op_vehicle_plate", "") or "",
+        "op_pickup_datetime": pickup_dt,
+        "op_pickup_location": data.get("op_pickup_location", "") or "",
+        "op_dropoff_location": data.get("op_dropoff_location", "") or "",
+        "op_passenger_name": data.get("op_passenger_name", "") or "",
+        "op_passenger_phone": data.get("op_passenger_phone", "") or "",
+        "op_flight_number": data.get("op_flight_number", "") or "",
+        "op_notes": data.get("op_notes", "") or "",
+    }
+
+    targets = item.order.items if apply_to_all else [item]
+    for target in targets:
+        for field, value in base_payload.items():
+            setattr(target, field, value)
+
     db.session.commit()
 
 
