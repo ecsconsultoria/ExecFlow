@@ -158,7 +158,17 @@ def pdf(po_id):
 @require_permission("po.view")
 def detail(po_id):
     from ...models.audit import AuditLog
-    po  = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
+    # Neutraliza varios lazy="joined" do PurchaseOrder (6 relacionamentos)
+    # que cascateiam Order/ServiceOrder/users — estoura memoria no Render 512MB.
+    po  = (PurchaseOrder.query
+           .options(
+               lazyload('*'),
+               joinedload(PurchaseOrder.supplier).lazyload('*'),
+               joinedload(PurchaseOrder.order).lazyload('*'),
+               selectinload(PurchaseOrder.items),
+           )
+           .filter_by(id=po_id, company_id=current_user.company_id)
+           .first_or_404())
     cid = current_user.company_id
     suppliers, services, categories, suppliers_json, services_json = _build_context(cid)
     audit_logs = AuditLog.query.filter_by(entity="po", entity_id=po.id).order_by(AuditLog.created_at.asc()).all()

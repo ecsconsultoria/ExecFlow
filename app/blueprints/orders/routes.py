@@ -97,15 +97,19 @@ def create(qid):
 @login_required
 @require_permission("so.view")
 def detail(oid):
-    order = Order.query.filter_by(
-        id=oid, company_id=current_user.company_id, deleted_at=None
-    ).first_or_404()
+    # Neutraliza os varios lazy="joined" do Order (6 users + quote cascateado).
+    # Sem isso, um unico SELECT vira 15+ JOINs e estoura memoria no Render 512MB.
+    order = (Order.query
+             .options(lazyload('*'), joinedload(Order.quote).lazyload('*'))
+             .filter_by(id=oid, company_id=current_user.company_id, deleted_at=None)
+             .first_or_404())
 
     # OS vinculadas via quote_id (dispatch center)
     linked_os = []
     if order.quote_id:
         linked_os = (
             ServiceOrder.query
+            .options(lazyload('*'))
             .filter_by(quote_id=order.quote_id)
             .filter(ServiceOrder.deleted_at.is_(None))
             .order_by(ServiceOrder.id.desc())
@@ -115,6 +119,7 @@ def detail(oid):
     # POs vinculadas via order_id
     linked_po = (
         PurchaseOrder.query
+        .options(lazyload('*'))
         .filter_by(order_id=order.id)
         .filter(PurchaseOrder.deleted_at.is_(None))
         .order_by(PurchaseOrder.id.desc())
