@@ -811,19 +811,64 @@
       </button>
       {% endif %}
 
-      {# PDF PT #}
-      <a href="{{ url_for('purchase_orders.pdf', po_id=po.id, lang='pt') }}" target="_blank"
-         data-tip="PDF PT"
-         class="act-btn bg-rose-600 hover:bg-rose-700">
-        <i class="fa-solid fa-file-pdf"></i><span style="font-size:10px;margin-left:3px">PT</span>
-      </a>
+      {% set _em = (po.supplier.email if po and po.supplier and po.supplier.email else '') %}
+      {% set _ph = (po.supplier.phone if po and po.supplier and po.supplier.phone else '') %}
 
-      {# PDF EN #}
-      <a href="{{ url_for('purchase_orders.pdf', po_id=po.id, lang='en') }}" target="_blank"
-         data-tip="PDF EN"
-         class="act-btn bg-rose-800 hover:bg-rose-900">
-        <i class="fa-solid fa-file-pdf"></i><span style="font-size:10px;margin-left:3px">EN</span>
-      </a>
+      {# PT dropdown: PDF + Email + WhatsApp #}
+      <div class="relative" x-data="{open:false}" @click.outside="open=false">
+        <button @click="open=!open" data-tip="PDF PT"
+                class="act-btn bg-rose-600 hover:bg-rose-700">
+          <i class="fa-solid fa-file-pdf"></i><span style="font-size:10px;margin-left:3px">PT</span>
+        </button>
+        <div x-show="open" x-cloak
+             class="absolute left-0 bottom-full mb-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 min-w-[160px] py-1 overflow-hidden">
+          <a href="{{ url_for('purchase_orders.pdf', po_id=po.id, lang='pt') }}" target="_blank"
+             @click="open=false"
+             class="flex items-center gap-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
+            <i class="fa-solid fa-download text-rose-500"></i> Baixar PDF
+          </a>
+          {% if _em %}
+          <button type="button" onclick="poSendEmail('pt')" @click="open=false"
+                  class="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
+            <i class="fa-solid fa-envelope text-blue-500"></i> Enviar Email
+          </button>
+          {% endif %}
+          {% if _ph %}
+          <button type="button" onclick="poWhatsApp('pt')" @click="open=false"
+                  class="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
+            <i class="fa-brands fa-whatsapp text-green-500"></i> WhatsApp
+          </button>
+          {% endif %}
+        </div>
+      </div>
+
+      {# EN dropdown: PDF + Email + WhatsApp #}
+      <div class="relative" x-data="{open:false}" @click.outside="open=false">
+        <button @click="open=!open" data-tip="PDF EN"
+                class="act-btn bg-rose-800 hover:bg-rose-900">
+          <i class="fa-solid fa-file-pdf"></i><span style="font-size:10px;margin-left:3px">EN</span>
+        </button>
+        <div x-show="open" x-cloak
+             class="absolute left-0 bottom-full mb-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 min-w-[160px] py-1 overflow-hidden">
+          <a href="{{ url_for('purchase_orders.pdf', po_id=po.id, lang='en') }}" target="_blank"
+             @click="open=false"
+             class="flex items-center gap-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
+            <i class="fa-solid fa-download text-rose-700"></i> Download PDF
+          </a>
+          {% if _em %}
+          <button type="button" onclick="poSendEmail('en')" @click="open=false"
+                  class="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
+            <i class="fa-solid fa-envelope text-blue-700"></i> Send Email
+          </button>
+          {% endif %}
+          {% if _ph %}
+          <button type="button" onclick="poWhatsApp('en')" @click="open=false"
+                  class="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
+            <i class="fa-brands fa-whatsapp text-green-600"></i> WhatsApp
+          </button>
+          {% endif %}
+        </div>
+      </div>
 
       {# Cancelar #}
       {% if po.status not in ('concluido', 'faturado', 'pago', 'cancelado') and has_perm('po.cancel') %}
@@ -1416,6 +1461,43 @@ function closeBaixa(pid, amt) {
     </button>`;
 }
 {% endif %}
+</script>
+
+<script>
+(function(){
+  const p = {
+    number:  "{{ (po.number if po else '')|e }}",
+    supplier:"{{ ((po.supplier.name if po and po.supplier else '') or '–')|e }}",
+    total:   "{{ ((po.computed_total if po else 0) or 0)|currency }}",
+    email:   "{{ ((po.supplier.email if po and po.supplier and po.supplier.email else '') or '')|e }}",
+    phone:   "{{ ((po.supplier.phone if po and po.supplier and po.supplier.phone else '') or '')|e }}",
+    {% if po %}
+    pdfPT:   "{{ url_for('purchase_orders.pdf', po_id=po.id, lang='pt') }}",
+    pdfEN:   "{{ url_for('purchase_orders.pdf', po_id=po.id, lang='en') }}",
+    {% else %}
+    pdfPT: "", pdfEN: "",
+    {% endif %}
+  };
+  window.poSendEmail = function(lang){
+    const pt = lang === 'pt';
+    const sub  = pt ? `Pedido de Compra ${p.number} – Executive Car SP`
+                    : `Purchase Order ${p.number} – Executive Car SP`;
+    const body = pt
+      ? `Prezado(a) ${p.supplier},\n\nSegue em anexo o pedido de compra nº ${p.number} da Executive Car SP.\n\nValor Total: ${p.total}\n\nAtenciosamente,\nExecutive Car SP`
+      : `Dear ${p.supplier},\n\nPlease find attached purchase order #${p.number} from Executive Car SP.\n\nTotal Amount: ${p.total}\n\nBest regards,\nExecutive Car SP`;
+    window.location.href = `mailto:${p.email}?subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(body)}`;
+  };
+  window.poWhatsApp = function(lang){
+    const clean   = (p.phone||'').replace(/\D/g, '');
+    const num     = clean.startsWith('55') ? clean : '55' + clean;
+    const pt      = lang !== 'en';
+    const pdfLink = window.location.origin + (pt ? p.pdfPT : p.pdfEN);
+    const msg     = pt
+      ? `Olá *${p.supplier}*! 👋\n\nSegue o pedido de compra *#${p.number}* da *Executive Car SP*.\n\n💰 Valor Total: *${p.total}*\n\n📄 PDF: ${pdfLink}`
+      : `Hello *${p.supplier}*! 👋\n\nPlease find your purchase order *#${p.number}* from *Executive Car SP*.\n\n💰 Total Amount: *${p.total}*\n\n📄 PDF: ${pdfLink}`;
+    window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
+  };
+})();
 </script>
 
 {% endblock %}

@@ -3,7 +3,7 @@ from datetime import datetime
 
 from flask import render_template, request, redirect, url_for, flash, abort, send_file, jsonify
 from flask_login import login_required, current_user
-from sqlalchemy.orm import lazyload, joinedload
+from sqlalchemy.orm import lazyload, joinedload, selectinload
 
 from . import orders_bp
 from ...models.order          import Order, OrderItem, OrderPayment, ORDER_STATUSES
@@ -493,10 +493,21 @@ def update_payment(pid):
 @login_required
 @require_permission("so.view")
 def pdf(oid, lang):
+    import gc
     from ...services.order_pdf import generate_order_pdf
-    order = _get_order(oid)
+    # Neutraliza lazy="joined" em cascata (6 users + quote) que dispara 15+ JOINs
+    # e hidrata MB desnecessarios -> estouro de memoria no Render 512MB.
+    order = (Order.query
+             .options(
+                 lazyload('*'),
+                 selectinload(Order.items),
+                 selectinload(Order.payments),
+             )
+             .filter_by(id=oid, company_id=current_user.company_id, deleted_at=None)
+             .first_or_404())
     lang  = lang if lang in ("pt", "en") else "pt"
     buf   = generate_order_pdf(order, lang=lang)
+    gc.collect()
     suffix = "PT" if lang == "pt" else "EN"
     filename = f"Pedido_{order.number}_{suffix}.pdf"
     return send_file(buf, mimetype="application/pdf",

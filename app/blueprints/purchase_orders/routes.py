@@ -141,11 +141,24 @@ def new():
 @login_required
 @require_permission("po.view")
 def pdf(po_id):
+    import gc
     from ...services.purchase_order_pdf import generate_po_pdf
-    po   = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
+    # Neutraliza lazy="joined" em cascata (6 relacionamentos) que estouram memoria.
+    po   = (PurchaseOrder.query
+            .options(
+                lazyload('*'),
+                joinedload(PurchaseOrder.supplier).lazyload('*'),
+                joinedload(PurchaseOrder.order).lazyload('*'),
+                joinedload(PurchaseOrder.service_order).lazyload('*'),
+                selectinload(PurchaseOrder.items),
+                selectinload(PurchaseOrder.payments),
+            )
+            .filter_by(id=po_id, company_id=current_user.company_id)
+            .first_or_404())
     lang = request.args.get("lang", "pt")
     buf  = generate_po_pdf(po, lang=lang)
     buf.seek(0)
+    gc.collect()
     return send_file(buf, mimetype="application/pdf",
                      download_name=f"{po.number}-{lang}.pdf",
                      as_attachment=False)
