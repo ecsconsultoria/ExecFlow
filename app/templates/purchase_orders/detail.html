@@ -815,9 +815,9 @@
       {% set _ph = (po.supplier.phone if po and po.supplier and po.supplier.phone else '') %}
 
       {# PT dropdown: PDF + Email + WhatsApp #}
-      <div class="relative" x-data="{open:false}" @click.outside="open=false">
+      <div class="relative flex-1 min-w-0" x-data="{open:false}" @click.outside="open=false">
         <button @click="open=!open" data-tip="PDF PT"
-                class="act-btn bg-rose-600 hover:bg-rose-700">
+                class="act-btn bg-rose-600 hover:bg-rose-700 w-full">
           <i class="fa-solid fa-file-pdf"></i><span style="font-size:10px;margin-left:3px">PT</span>
         </button>
         <div x-show="open" x-cloak
@@ -843,9 +843,9 @@
       </div>
 
       {# EN dropdown: PDF + Email + WhatsApp #}
-      <div class="relative" x-data="{open:false}" @click.outside="open=false">
+      <div class="relative flex-1 min-w-0" x-data="{open:false}" @click.outside="open=false">
         <button @click="open=!open" data-tip="PDF EN"
-                class="act-btn bg-rose-800 hover:bg-rose-900">
+                class="act-btn bg-rose-800 hover:bg-rose-900 w-full">
           <i class="fa-solid fa-file-pdf"></i><span style="font-size:10px;margin-left:3px">EN</span>
         </button>
         <div x-show="open" x-cloak
