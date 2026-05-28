@@ -1,10 +1,13 @@
+import os
 from app import create_app
 
-# Pre-import heavy PDF libs so Flask watchdog doesn't restart mid-request
-import reportlab.platypus  # noqa: F401
-import reportlab.lib.pagesizes  # noqa: F401
-import xml.etree.ElementTree  # noqa: F401
-import html.parser  # noqa: F401
+# Pre-import heavy PDF libs only em dev (Flask watchdog).
+# Em produção (gunicorn) NÃO pré-carregar: economiza ~30-50 MB do limite de 512 MB do Render.
+if os.environ.get("FLASK_ENV", "").lower() in ("development", "dev", ""):
+    import reportlab.platypus  # noqa: F401
+    import reportlab.lib.pagesizes  # noqa: F401
+    import xml.etree.ElementTree  # noqa: F401
+    import html.parser  # noqa: F401
 
 app = create_app()
 
