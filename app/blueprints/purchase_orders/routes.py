@@ -49,12 +49,15 @@ def index():
             PurchaseOrder.number.ilike(f"%{q}%") |
             PurchaseOrder.passenger_name.ilike(f"%{q}%")
         )
-    po_list = query.order_by(
+    page = request.args.get("page", 1, type=int)
+    pagination = query.order_by(
         PurchaseOrder.pickup_datetime.asc().nullsfirst(),
         PurchaseOrder.id.desc()
-    ).all()
+    ).paginate(page=page, per_page=25, error_out=False)
+    po_list = pagination.items
     return render_template("purchase_orders/index.html",
-                           po_list=po_list, status=status, q=q,
+                           po_list=po_list, pagination=pagination,
+                           status=status, q=q,
                            PO_STATUSES=PO_STATUSES)
 
 

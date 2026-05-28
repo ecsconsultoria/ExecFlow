@@ -16,6 +16,13 @@ with app.app_context():
     from flask_migrate import upgrade as _db_upgrade
     _db_upgrade()
 
+# Em prod: congela tudo que já foi importado/criado para fora do garbage collector.
+# Reduz pressao de memoria e fragmentacao (helpful no Render Starter 512 MB).
+if os.environ.get("FLASK_ENV", "").lower() == "production":
+    import gc
+    gc.collect()
+    gc.freeze()
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5002, debug=True,
             extra_files=[], reloader_type="stat")

@@ -50,8 +50,10 @@ def index():
         query = query.filter(
             Order.client_name.ilike(f"%{q}%") | Order.number.ilike(f"%{q}%")
         )
-    orders = query.order_by(Order.created_at.desc()).all()
-    return render_template("orders/index.html", orders=orders,
+    page = request.args.get("page", 1, type=int)
+    pagination = query.order_by(Order.created_at.desc()).paginate(page=page, per_page=25, error_out=False)
+    orders = pagination.items
+    return render_template("orders/index.html", orders=orders, pagination=pagination,
                            status=status, q=q, ORDER_STATUSES=ORDER_STATUSES)
 
 

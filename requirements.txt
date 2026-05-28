@@ -8,6 +8,5 @@ gunicorn
 psycopg2-binary
 python-dotenv
 reportlab
-Pillow
 openpyxl
 requests
