@@ -509,7 +509,7 @@ def pdf(oid, lang):
     buf   = generate_order_pdf(order, lang=lang)
     gc.collect()
     suffix = "PT" if lang == "pt" else "EN"
-    filename = f"Pedido_{order.number}_{suffix}.pdf"
+    filename = f"{order.number}_{suffix}.pdf"
     return send_file(buf, mimetype="application/pdf",
                      as_attachment=True, download_name=filename)
 

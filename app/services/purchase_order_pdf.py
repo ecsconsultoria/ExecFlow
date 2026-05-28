@@ -172,18 +172,31 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
 
     info_st = ParagraphStyle("inf", fontSize=8.5, textColor=BRAND_DARK,
                              alignment=TA_RIGHT, leading=13)
+    def _clean(v):
+        # Filtra None real e a string literal "None" (que vem salva no DB
+        # quando o form converte None -> str). Tambem trata strings vazias.
+        if v is None:
+            return None
+        s = str(v).strip()
+        if not s or s.lower() == "none":
+            return None
+        return s
+
     company_info_lines: list[str] = []
     if company_doc:
         cnpj_lbl = "CNPJ" if lang == "pt" else "TAX ID"
         company_info_lines.append(f"<b>{cnpj_lbl}:</b> {company_doc}")
-    if company and getattr(company, "phone", None):
+    _phone = _clean(getattr(company, "phone", None)) if company else None
+    if _phone:
         phone_lbl = "Telefone" if lang == "pt" else "Phone"
-        company_info_lines.append(f"<b>{phone_lbl}:</b> {company.phone}")
-    if company and getattr(company, "email", None):
-        company_info_lines.append(f"<b>E-mail:</b> {company.email}")
-    if company and getattr(company, "address", None):
+        company_info_lines.append(f"<b>{phone_lbl}:</b> {_phone}")
+    _email = _clean(getattr(company, "email", None)) if company else None
+    if _email:
+        company_info_lines.append(f"<b>E-mail:</b> {_email}")
+    _addr = _clean(getattr(company, "address", None)) if company else None
+    if _addr:
         addr_lbl = "Endereço" if lang == "pt" else "Address"
-        company_info_lines.append(f"<b>{addr_lbl}:</b> {company.address}")
+        company_info_lines.append(f"<b>{addr_lbl}:</b> {_addr}")
 
     if logo_img:
         info_para = Paragraph("<br/>".join(company_info_lines) if company_info_lines else "", info_st)
