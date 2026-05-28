@@ -144,6 +144,7 @@ def pdf(po_id):
     import gc
     from ...services.purchase_order_pdf import generate_po_pdf
     # Neutraliza lazy="joined" em cascata (6 relacionamentos) que estouram memoria.
+    # NOTE: PurchaseOrder.payments e lazy="dynamic" — nao pode usar selectinload nele.
     po   = (PurchaseOrder.query
             .options(
                 lazyload('*'),
@@ -151,7 +152,6 @@ def pdf(po_id):
                 joinedload(PurchaseOrder.order).lazyload('*'),
                 joinedload(PurchaseOrder.service_order).lazyload('*'),
                 selectinload(PurchaseOrder.items),
-                selectinload(PurchaseOrder.payments),
             )
             .filter_by(id=po_id, company_id=current_user.company_id)
             .first_or_404())
