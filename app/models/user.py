@@ -3,7 +3,7 @@ from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from ..extensions import db, login_manager
 from .base import TimestampMixin
-from .rbac import user_roles  # association table M:N
+from .rbac import user_roles, Role  # association table M:N + Role para eager-load no user_loader
 
 
 # Legacy role values — mantidos para backward-compat (User.role string).
@@ -25,10 +25,14 @@ class User(db.Model, UserMixin, TimestampMixin):
     must_change_password = db.Column(db.Boolean, default=False, nullable=False)
 
     # RBAC novo: M:N com Role
+    # NOTE: lazy="select" (era "joined"). O grafo Role+Permission so eh
+    # pre-carregado no user_loader para current_user. Qualquer outro lugar
+    # que carrega Users (Order.creator, Quote.approver, etc.) NAO deve mais
+    # arrastar centenas de Role/Permission objects e estourar memoria.
     roles = db.relationship(
         "Role",
         secondary=user_roles,
-        lazy="joined",
+        lazy="select",
         backref=db.backref("users", lazy="select"),
     )
 
@@ -110,4 +114,10 @@ class User(db.Model, UserMixin, TimestampMixin):
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    # Pre-carrega roles + permissions apenas aqui, ja que current_user usa
+    # has_role/has_perm em quase todo request. Demais queries de User nao
+    # devem mais arrastar o grafo RBAC todo (que antes era lazy="joined").
+    from sqlalchemy.orm import joinedload
+    return (User.query
+            .options(joinedload(User.roles).joinedload(Role.permissions))
+            .get(int(user_id)))

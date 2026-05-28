@@ -47,7 +47,7 @@ class Role(db.Model, TimestampMixin):
     permissions = db.relationship(
         "Permission",
         secondary=role_permissions,
-        lazy="joined",
+        lazy="select",
         backref=db.backref("roles", lazy="select"),
     )
 
