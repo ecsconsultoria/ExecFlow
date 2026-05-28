@@ -88,6 +88,7 @@ class PurchaseOrder(db.Model, TimestampMixin, SoftDeleteMixin):
 
     # ── Relacionamentos ───────────────────────────────────────────────────────
     creator          = db.relationship("User",           foreign_keys=[created_by],           lazy="joined")
+    company          = db.relationship("Company",       foreign_keys=[company_id],           lazy="select")
     supplier         = db.relationship("Supplier",      foreign_keys=[supplier_id],         lazy="joined")
     service          = db.relationship("Service",       foreign_keys=[service_id],           lazy="joined")
     service_order    = db.relationship("ServiceOrder",  foreign_keys=[service_order_id],     lazy="joined")

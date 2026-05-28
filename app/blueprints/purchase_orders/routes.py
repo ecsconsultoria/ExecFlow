@@ -148,6 +148,7 @@ def pdf(po_id):
     po   = (PurchaseOrder.query
             .options(
                 lazyload('*'),
+                joinedload(PurchaseOrder.company).lazyload('*'),
                 joinedload(PurchaseOrder.supplier).lazyload('*'),
                 joinedload(PurchaseOrder.order).lazyload('*'),
                 joinedload(PurchaseOrder.service_order).lazyload('*'),
