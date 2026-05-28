@@ -126,8 +126,8 @@
       </span>
       <div class="flex items-center gap-3">
         {% if has_perm('catalog.manage') %}
-        <form id="bulk-form" method="POST" action="{{ url_for('services.delete_bulk') }}" x-show="selected.length >
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> 0">
+        <form id="bulk-form" method="POST" action="{{ url_for('services.delete_bulk') }}" x-show="selected.length > 0">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="ids" :value="selected.join(',')">
           <button type="button" @click="bulkDelete()"
                   class="text-xs text-red-500 hover:text-red-700 font-medium flex items-center gap-1">
