@@ -2,6 +2,7 @@
 import json
 from flask import render_template, request, redirect, url_for, flash, send_file, jsonify
 from flask_login import login_required, current_user
+from sqlalchemy.orm import joinedload, selectinload, lazyload
 from . import purchase_orders_bp
 from ...models.purchase_order import PurchaseOrder, POPayment, POItem, PO_STATUSES
 from ...models.supplier import Supplier
@@ -12,17 +13,31 @@ from ...models.order import Order, OrderItem
 from ...extensions import db
 from ...services import purchase_order_service as pos
 from ...utils.audit import log_activity
+from ...utils.decorators import require_permission
 
 
 # ─── List ────────────────────────────────────────────────────────────────────
 
 @purchase_orders_bp.route("/")
 @login_required
+@require_permission("po.view")
 def index():
     cid    = current_user.company_id
     status = request.args.get("status", "")
     q      = request.args.get("q", "")
+    # IMPORTANT: PurchaseOrder model declares many relationships as lazy="joined"
+    # (creator, supplier, service, service_order, order, vehicle_category). When
+    # cascaded through Order/ServiceOrder (which also have many lazy="joined"
+    # users), a plain .all() generates a 15+ JOIN query that is catastrophically
+    # slow on SQLite+OneDrive. We neutralize those defaults with lazyload('*')
+    # and only eager-load what the template actually uses.
     query  = (PurchaseOrder.query
+              .options(
+                  lazyload('*'),
+                  joinedload(PurchaseOrder.supplier).lazyload('*'),
+                  joinedload(PurchaseOrder.order).lazyload('*'),
+                  selectinload(PurchaseOrder.items),
+              )
               .filter_by(company_id=cid)
               .filter(PurchaseOrder.deleted_at.is_(None)))
     if status:
@@ -66,6 +81,7 @@ def _build_context(cid):
 
 @purchase_orders_bp.route("/new", methods=["GET", "POST"])
 @login_required
+@require_permission("po.create")
 def new():
     cid = current_user.company_id
 
@@ -120,6 +136,7 @@ def new():
 
 @purchase_orders_bp.route("/<int:po_id>/pdf")
 @login_required
+@require_permission("po.view")
 def pdf(po_id):
     from ...services.purchase_order_pdf import generate_po_pdf
     po   = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
@@ -135,6 +152,7 @@ def pdf(po_id):
 
 @purchase_orders_bp.route("/<int:po_id>")
 @login_required
+@require_permission("po.view")
 def detail(po_id):
     from ...models.audit import AuditLog
     po  = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
@@ -154,6 +172,7 @@ def detail(po_id):
 
 @purchase_orders_bp.route("/<int:po_id>/save", methods=["POST"])
 @login_required
+@require_permission("po.edit")
 def save_all(po_id):
     po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
     if po.status in ("concluido", "faturado", "cancelado"):
@@ -203,6 +222,7 @@ def save_all(po_id):
 
 @purchase_orders_bp.route("/<int:po_id>/update-adjustments", methods=["POST"])
 @login_required
+@require_permission("po.edit")
 def update_adjustments(po_id):
     po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
     d = request.form.to_dict()
@@ -228,6 +248,7 @@ def update_adjustments(po_id):
 
 @purchase_orders_bp.route("/<int:po_id>/edit", methods=["GET", "POST"])
 @login_required
+@require_permission("po.edit")
 def edit(po_id):
     return redirect(url_for("purchase_orders.detail", po_id=po_id))
 
@@ -236,6 +257,7 @@ def edit(po_id):
 
 @purchase_orders_bp.route("/<int:po_id>/open", methods=["POST"])
 @login_required
+@require_permission("po.edit")
 def open_po(po_id):
     po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
     try:
@@ -250,6 +272,7 @@ def open_po(po_id):
 
 @purchase_orders_bp.route("/<int:po_id>/send", methods=["POST"])
 @login_required
+@require_permission("po.edit")
 def send(po_id):
     """Compat backward para links/ações antigas."""
     return open_po(po_id)
@@ -257,6 +280,7 @@ def send(po_id):
 
 @purchase_orders_bp.route("/<int:po_id>/approve", methods=["POST"])
 @login_required
+@require_permission("po.edit")
 def approve(po_id):
     po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
     try:
@@ -271,6 +295,7 @@ def approve(po_id):
 
 @purchase_orders_bp.route("/<int:po_id>/start", methods=["POST"])
 @login_required
+@require_permission("po.edit")
 def start_execution(po_id):
     po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
     try:
@@ -285,6 +310,7 @@ def start_execution(po_id):
 
 @purchase_orders_bp.route("/<int:po_id>/conclude", methods=["POST"])
 @login_required
+@require_permission("po.close")
 def conclude(po_id):
     po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
     try:
@@ -299,6 +325,7 @@ def conclude(po_id):
 
 @purchase_orders_bp.route("/<int:po_id>/faturar", methods=["POST"])
 @login_required
+@require_permission("financial.manage")
 def faturar(po_id):
     po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
     # Salva supplier_id se enviado pelo form (usuário selecionou mas não salvou antes)
@@ -317,6 +344,7 @@ def faturar(po_id):
 
 @purchase_orders_bp.route("/<int:po_id>/cancel", methods=["POST"])
 @login_required
+@require_permission("po.cancel")
 def cancel(po_id):
     po     = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
     reason = request.form.get("reason", "")
@@ -334,6 +362,7 @@ def cancel(po_id):
 
 @purchase_orders_bp.route("/<int:po_id>/generate-payments", methods=["POST"])
 @login_required
+@require_permission("po.edit")
 def generate_payments(po_id):
     po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
     pm = request.form.get("payment_method", "").strip()
@@ -377,6 +406,7 @@ def generate_payments(po_id):
 
 @purchase_orders_bp.route("/<int:po_id>/recalculate-payments", methods=["POST"])
 @login_required
+@require_permission("po.edit")
 def recalculate_payments(po_id):
     """Apaga parcelas não-pagas e regera com base no total atual."""
     po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
@@ -392,6 +422,7 @@ def recalculate_payments(po_id):
 
 @purchase_orders_bp.route("/payments/<int:pid>/update", methods=["POST"])
 @login_required
+@require_permission("po.edit")
 def update_payment(pid):
     pmt = POPayment.query.get_or_404(pid)
     po  = pmt.purchase_order
@@ -406,6 +437,7 @@ def update_payment(pid):
 
 @purchase_orders_bp.route("/payments/<int:pid>/delete", methods=["POST"])
 @login_required
+@require_permission("po.edit")
 def delete_payment(pid):
     pmt = POPayment.query.get_or_404(pid)
     po  = pmt.purchase_order
@@ -430,6 +462,7 @@ def delete_payment(pid):
 
 @purchase_orders_bp.route("/payments/<int:pid>/baixa", methods=["POST"])
 @login_required
+@require_permission("financial.manage")
 def baixa(pid):
     pmt = POPayment.query.get_or_404(pid)
     po  = pmt.purchase_order
@@ -452,6 +485,7 @@ def baixa(pid):
 
 @purchase_orders_bp.route("/<int:po_id>/items/add", methods=["POST"])
 @login_required
+@require_permission("po.edit")
 def add_item(po_id):
     po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
     pos.add_item(po, request.form.to_dict())
@@ -473,6 +507,7 @@ def add_item(po_id):
 
 @purchase_orders_bp.route("/items/<int:item_id>/update", methods=["POST"])
 @login_required
+@require_permission("po.edit")
 def update_item(item_id):
     item = POItem.query.get_or_404(item_id)
     po   = item.purchase_order
@@ -489,6 +524,7 @@ def update_item(item_id):
 
 @purchase_orders_bp.route("/items/<int:item_id>/update-operational", methods=["POST"])
 @login_required
+@require_permission("po.edit")
 def update_item_operational(item_id):
     item = POItem.query.get_or_404(item_id)
     po   = item.purchase_order
@@ -511,6 +547,7 @@ def update_item_operational(item_id):
 
 @purchase_orders_bp.route("/items/<int:item_id>/delete", methods=["POST"])
 @login_required
+@require_permission("po.edit")
 def delete_item(item_id):
     item = POItem.query.get_or_404(item_id)
     po   = item.purchase_order
@@ -529,6 +566,7 @@ def delete_item(item_id):
 
 @purchase_orders_bp.route("/<int:po_id>/delete", methods=["POST"])
 @login_required
+@require_permission("po.delete")
 def delete(po_id):
     po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).filter(
         PurchaseOrder.status != "excluido"
@@ -544,6 +582,7 @@ def delete(po_id):
 
 @purchase_orders_bp.route("/<int:po_id>/update-obs", methods=["POST"])
 @login_required
+@require_permission("po.edit")
 def update_obs(po_id):
     po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
     po.notes = request.form.get("notes", "").strip()

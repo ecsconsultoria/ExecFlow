@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login | Executive Car SP ERP v2</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/all.min.css') }}">
 </head>
 <body class="bg-slate-900 min-h-screen flex items-center justify-center">
   <div class="w-full max-w-sm bg-slate-800 rounded-2xl shadow-2xl p-8">
@@ -27,6 +27,7 @@
     {% endwith %}
 
     <form method="post" class="space-y-4">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div>
         <label class="block text-slate-300 text-sm mb-1">E-mail</label>
         <input type="email" name="email" required

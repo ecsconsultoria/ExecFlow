@@ -3,6 +3,7 @@
 from .base         import TimestampMixin, SoftDeleteMixin
 from .audit        import AuditLog
 from .company      import Company
+from .rbac         import Role, Permission, role_permissions, user_roles
 from .user         import User
 from .client       import Client
 from .supplier     import Supplier
@@ -28,6 +29,7 @@ __all__ = [
     "TimestampMixin", "SoftDeleteMixin",
     "AuditLog",
     "Company",
+    "Role", "Permission", "role_permissions", "user_roles",
     "User",
     "Client",
     "Supplier",

@@ -36,3 +36,9 @@ Thumbs.db
 
 # Test / QA artifacts
 qa_results.json
+.coverage
+.pytest_cache/
+htmlcov/
+
+# Tailwind CLI binary (40 MB)
+tools/tailwindcss.exe

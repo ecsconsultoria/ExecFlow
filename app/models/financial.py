@@ -2,7 +2,7 @@
 New operational financials use: RevenueEntry, OperationCost, SupplierPayment, FinancialEntry.
 """
 from ..extensions import db
-from .base import TimestampMixin
+from .base import TimestampMixin, SoftDeleteMixin
 
 FINANCIAL_TYPES      = ("revenue", "cost")
 FINANCIAL_CATEGORIES = (
@@ -13,7 +13,7 @@ FINANCIAL_CATEGORIES = (
 FINANCIAL_STATUSES = ("pendente", "aprovado", "pago", "parcial", "cancelado", "vencido")
 
 
-class FinancialRecord(db.Model, TimestampMixin):
+class FinancialRecord(db.Model, TimestampMixin, SoftDeleteMixin):
     """LEGACY — migrating to FinancialEntry + OperationCost + RevenueEntry."""
     __tablename__ = "financial_records"
 

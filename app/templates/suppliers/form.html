@@ -8,6 +8,7 @@
 {% block content %}
 <div class="max-w-lg mx-auto bg-white dark:bg-slate-800 rounded-xl shadow-sm p-6">
   <form method="post" class="space-y-4">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% for fname, label in [('name','Nome *'),('email','Email'),('phone','Telefone'),('document','CNPJ'),('address','Endereço'),('notes','Notas')] %}
     <div>
       <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ label }}</label>

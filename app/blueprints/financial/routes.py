@@ -5,14 +5,17 @@ from flask_login import login_required, current_user
 from sqlalchemy import func
 from . import financial_bp
 from ...utils import now_br
+from ...utils.decorators import require_permission
 from ...models.financial import FinancialRecord, AccountReceivable, FINANCIAL_CATEGORIES
 from ...extensions import db
+from ...utils.audit import log_activity
 
 _PAYMENT_METHODS = ["PIX", "TRANSFERÊNCIA", "BOLETO", "DINHEIRO", "CARTÃO", "CHEQUE"]
 
 
 @financial_bp.route("/")
 @login_required
+@require_permission("financial.view")
 def index():
     cid   = current_user.company_id
     month = request.args.get("month", now_br().strftime("%Y-%m"))
@@ -29,11 +32,13 @@ def index():
     revenue = (db.session.query(func.sum(FinancialRecord.amount))
                .filter(FinancialRecord.company_id == cid,
                        FinancialRecord.type == "revenue",
+                       FinancialRecord.deleted_at.is_(None),
                        FinancialRecord.paid_date.between(first, last))
                .scalar() or 0)
     costs = (db.session.query(func.sum(FinancialRecord.amount))
              .filter(FinancialRecord.company_id == cid,
                      FinancialRecord.type == "cost",
+                     FinancialRecord.deleted_at.is_(None),
                      FinancialRecord.paid_date.between(first, last))
              .scalar() or 0)
 
@@ -41,16 +46,18 @@ def index():
     pending_revenue = (db.session.query(func.sum(FinancialRecord.amount))
                        .filter(FinancialRecord.company_id == cid,
                                FinancialRecord.type == "revenue",
+                               FinancialRecord.deleted_at.is_(None),
                                FinancialRecord.status == "pendente")
                        .scalar() or 0)
     pending_costs = (db.session.query(func.sum(FinancialRecord.amount))
                      .filter(FinancialRecord.company_id == cid,
                              FinancialRecord.type == "cost",
+                             FinancialRecord.deleted_at.is_(None),
                              FinancialRecord.status == "pendente")
                      .scalar() or 0)
 
     # Registros filtrados
-    q = FinancialRecord.query.filter_by(company_id=cid)
+    q = FinancialRecord.query.filter_by(company_id=cid).filter(FinancialRecord.deleted_at.is_(None))
     if ftype:
         q = q.filter(FinancialRecord.type == ftype)
     if fstat:
@@ -85,11 +92,14 @@ def _save_record(r, form):
 
 @financial_bp.route("/record/new", methods=["GET", "POST"])
 @login_required
+@require_permission("financial.manage")
 def new_record():
     if request.method == "POST":
         r = FinancialRecord(company_id=current_user.company_id)
         _save_record(r, request.form)
         db.session.add(r)
+        db.session.flush()
+        log_activity("financial", r.id, current_user.company_id, f"Lançamento {r.type} R$ {r.amount:.2f} criado", current_user.id)
         db.session.commit()
         flash("Lançamento criado.", "success")
         return redirect(url_for("financial.index"))
@@ -100,10 +110,12 @@ def new_record():
 
 @financial_bp.route("/record/<int:rid>/edit", methods=["GET", "POST"])
 @login_required
+@require_permission("financial.manage")
 def edit_record(rid):
-    r = FinancialRecord.query.filter_by(id=rid, company_id=current_user.company_id).first_or_404()
+    r = FinancialRecord.query.filter_by(id=rid, company_id=current_user.company_id).filter(FinancialRecord.deleted_at.is_(None)).first_or_404()
     if request.method == "POST":
         _save_record(r, request.form)
+        log_activity("financial", r.id, current_user.company_id, "Lançamento editado", current_user.id)
         db.session.commit()
         flash("Lançamento atualizado.", "success")
         return redirect(url_for("financial.index"))
@@ -114,9 +126,11 @@ def edit_record(rid):
 
 @financial_bp.route("/record/<int:rid>/delete", methods=["POST"])
 @login_required
+@require_permission("financial.manage")
 def delete_record(rid):
-    r = FinancialRecord.query.filter_by(id=rid, company_id=current_user.company_id).first_or_404()
-    db.session.delete(r)
+    r = FinancialRecord.query.filter_by(id=rid, company_id=current_user.company_id).filter(FinancialRecord.deleted_at.is_(None)).first_or_404()
+    r.soft_delete()
+    log_activity("financial", r.id, current_user.company_id, f"Lançamento {r.type} R$ {r.amount:.2f} excluído", current_user.id)
     db.session.commit()
     flash("Lançamento excluído.", "success")
     return redirect(url_for("financial.index"))
@@ -124,12 +138,14 @@ def delete_record(rid):
 
 @financial_bp.route("/record/<int:rid>/baixa", methods=["POST"])
 @login_required
+@require_permission("financial.manage")
 def baixa_record(rid):
-    r = FinancialRecord.query.filter_by(id=rid, company_id=current_user.company_id).first_or_404()
+    r = FinancialRecord.query.filter_by(id=rid, company_id=current_user.company_id).filter(FinancialRecord.deleted_at.is_(None)).first_or_404()
     paid_date_str    = request.form.get("paid_date")
     r.paid_date      = date.fromisoformat(paid_date_str) if paid_date_str else now_br().date()
     r.payment_method = request.form.get("payment_method") or r.payment_method
     r.status         = "pago"
+    log_activity("financial", r.id, current_user.company_id, f"Baixa registrada R$ {r.amount:.2f} ({r.payment_method or '-'})", current_user.id)
     db.session.commit()
     flash("Baixa registrada com sucesso.", "success")
     return redirect(url_for("financial.index"))

@@ -1,18 +1,39 @@
-from flask import render_template, jsonify, request, redirect, url_for, flash, send_file
+from flask import render_template, jsonify, request, redirect, url_for, flash, send_file, abort
 from flask_login import login_required, current_user
 from . import services_bp
 from ...models.service import Service, State, ServicePricing
 from ...models.vehicle import VehicleCategory
 from ...extensions import db
+from ...utils.decorators import require_permission
+from ...utils.audit import log_activity
 
 DRIVER_TYPES = ["Monolíngue", "Bilíngue", ""]
+
+
+def _get_pricing_or_404(pid: int) -> ServicePricing:
+    """Carrega ServicePricing garantindo que pertence ao tenant atual.
+
+    Aceita Service.company_id == current_user.company_id OU None (catálogo
+    global compartilhado). Bloqueia acesso a pricing de outras empresas.
+    """
+    p = (ServicePricing.query
+         .join(Service, ServicePricing.service_id == Service.id)
+         .filter(ServicePricing.id == pid)
+         .filter((Service.company_id == current_user.company_id) |
+                 (Service.company_id.is_(None)))
+         .first())
+    if p is None:
+        abort(404)
+    return p
 
 
 def _build_rows(f_service="", f_vehicle="", f_driver="", f_state=""):
     q = (ServicePricing.query
          .join(Service, ServicePricing.service_id == Service.id)
          .join(VehicleCategory, ServicePricing.category_id == VehicleCategory.id)
-         .filter(Service.is_active == True, ServicePricing.is_active == True))
+         .filter(Service.is_active == True, ServicePricing.is_active == True)
+         .filter((Service.company_id == current_user.company_id) |
+                 (Service.company_id.is_(None))))
     if f_service:
         q = q.filter(Service.name.ilike(f"%{f_service}%"))
     if f_vehicle:
@@ -28,6 +49,7 @@ def _build_rows(f_service="", f_vehicle="", f_driver="", f_state=""):
 
 @services_bp.route("/", methods=["GET"])
 @login_required
+@require_permission("catalog.view")
 def index():
     f_service = request.args.get("f_service", "")
     f_vehicle = request.args.get("f_vehicle", "")
@@ -47,6 +69,7 @@ def index():
 
 @services_bp.route("/add", methods=["POST"])
 @login_required
+@require_permission("catalog.manage")
 def add():
     service_name = (request.form.get("service_name") or "").strip()
     category_id  = request.form.get("category_id", type=int)
@@ -89,8 +112,9 @@ def add():
 
 @services_bp.route("/edit/<int:pid>", methods=["POST"])
 @login_required
+@require_permission("catalog.manage")
 def edit(pid):
-    p = ServicePricing.query.get_or_404(pid)
+    p = _get_pricing_or_404(pid)
     p.price_cost = float(request.form.get("price_cost") or 0)
     p.price_base = float(request.form.get("price_base") or 0)
     db.session.commit()
@@ -100,12 +124,14 @@ def edit(pid):
 
 @services_bp.route("/delete/<int:pid>", methods=["POST"])
 @login_required
+@require_permission("catalog.manage")
 def delete(pid):
-    p = ServicePricing.query.get_or_404(pid)
+    p = _get_pricing_or_404(pid)
     p.is_active = False
     svc = p.service
     if svc and not svc.pricing.filter_by(is_active=True).filter(ServicePricing.id != pid).count():
         svc.is_active = False
+    log_activity("service_pricing", pid, current_user.company_id, f"Preço de serviço {svc.name if svc else pid} desativado", current_user.id)
     db.session.commit()
     flash("Serviço removido.", "success")
     return redirect(url_for("services.index"))
@@ -113,19 +139,33 @@ def delete(pid):
 
 @services_bp.route("/delete-bulk", methods=["POST"])
 @login_required
+@require_permission("catalog.manage")
 def delete_bulk():
     ids = request.form.getlist("ids")
+    skipped = 0
     for raw in ids:
         try:
-            p = ServicePricing.query.get(int(raw))
-            if not p:
-                continue
+            pid_int = int(raw)
+        except (ValueError, TypeError):
+            continue
+        # Tenant guard: pula silenciosamente IDs de outras empresas
+        p = (ServicePricing.query
+             .join(Service, ServicePricing.service_id == Service.id)
+             .filter(ServicePricing.id == pid_int)
+             .filter((Service.company_id == current_user.company_id) |
+                     (Service.company_id.is_(None)))
+             .first())
+        if not p:
+            skipped += 1
+            continue
+        try:
             p.is_active = False
             svc = p.service
             if svc and not svc.pricing.filter_by(is_active=True).filter(ServicePricing.id != p.id).count():
                 svc.is_active = False
         except (ValueError, TypeError):
             pass
+    log_activity("service_pricing", 0, current_user.company_id, f"Remoção em lote de {len(ids)} preços de serviço", current_user.id)
     db.session.commit()
     flash(f"{len(ids)} registro(s) removido(s).", "success")
     return redirect(url_for("services.index"))
@@ -133,6 +173,7 @@ def delete_bulk():
 
 @services_bp.route("/import-excel", methods=["POST"])
 @login_required
+@require_permission("catalog.manage")
 def import_excel():
     try:
         import openpyxl
@@ -200,6 +241,7 @@ def import_excel():
 
 @services_bp.route("/export-excel")
 @login_required
+@require_permission("catalog.view")
 def export_excel():
     """Export all active service pricings to xlsx."""
     import io, openpyxl
@@ -248,6 +290,7 @@ def export_excel():
 
 @services_bp.route("/pricing", methods=["GET"])
 @login_required
+@require_permission("catalog.view")
 def pricing():
     """JSON endpoint: pricing for quote builder."""
     svc_id  = request.args.get("service_id", type=int)

@@ -10,10 +10,12 @@ from ...models.booking  import Booking
 from ...models.financial import FinancialRecord
 from ...models.service_order import ServiceOrder
 from ...extensions import db
+from ...utils.decorators import require_permission
 
 
 @reports_bp.route("/")
 @login_required
+@require_permission("reports.view")
 def index():
     cid   = current_user.company_id
     month = request.args.get("month", now_br().strftime("%Y-%m"))
@@ -39,10 +41,12 @@ def index():
 
     revenue = (db.session.query(func.sum(FinancialRecord.amount))
                .filter(FinancialRecord.company_id == cid, FinancialRecord.type == "revenue",
+                       FinancialRecord.deleted_at.is_(None),
                        FinancialRecord.paid_date.between(first, last))
                .scalar() or 0)
     costs = (db.session.query(func.sum(FinancialRecord.amount))
              .filter(FinancialRecord.company_id == cid, FinancialRecord.type == "cost",
+                     FinancialRecord.deleted_at.is_(None),
                      FinancialRecord.paid_date.between(first, last))
              .scalar() or 0)
 

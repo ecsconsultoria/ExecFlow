@@ -5,10 +5,12 @@
 {% block content %}
 <div class="flex justify-between items-center mb-5">
   <p class="text-sm text-slate-500">{{ suppliers|length }} fornecedor(es)</p>
+  {% if has_perm('suppliers.edit') %}
   <a href="{{ url_for('suppliers.new') }}"
      class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg flex items-center gap-2">
     <i class="fa-solid fa-plus"></i> Novo Fornecedor
   </a>
+  {% endif %}
 </div>
 <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
   <table class="w-full text-sm">
@@ -29,11 +31,16 @@
         <td class="px-4 py-3 text-slate-500">{{ s.phone or '–' }}</td>
         <td class="px-4 py-3 text-slate-500">{{ s.drivers.count() }}</td>
         <td class="px-4 py-3 flex gap-3">
+          {% if has_perm('suppliers.edit') %}
           <a href="{{ url_for('suppliers.edit', sid=s.id) }}" class="text-blue-500 hover:underline text-xs">Editar</a>
+          {% endif %}
+          {% if has_perm('suppliers.delete') %}
           <form method="post" action="{{ url_for('suppliers.delete', sid=s.id) }}" class="inline"
                 onsubmit="return confirm('Excluir?')">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="text-red-500 hover:underline text-xs">Excluir</button>
           </form>
+          {% endif %}
         </td>
       </tr>
       {% else %}

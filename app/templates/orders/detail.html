@@ -138,6 +138,7 @@
    Botões no sidebar referenciam form="main-form"
 ══════════════════════════════════════════ #}
 <form id="main-form" method="post" action="{{ url_for('orders.save_all', oid=order.id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
 {# ── Grid 3 colunas ── #}
 <div class="grid lg:grid-cols-3 gap-4">
@@ -427,6 +428,7 @@
     </span>
     {% if not locked %}
     <form method="post" action="{{ url_for('orders.recalculate_payments', oid=order.id) }}" class="shrink-0">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button type="submit"
               class="text-xs bg-amber-500 hover:bg-amber-600 text-white font-semibold px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap">
         <i class="fa-solid fa-rotate mr-1"></i>Recalcular
@@ -517,6 +519,7 @@
             {% if not pmt.is_paid %}
             <form method="post" action="{{ url_for('orders.update_payment', pid=pmt.id) }}"
                   id="pf-{{ pmt.id }}" class="contents">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <td class="px-2 py-1.5">
                 <input type="date" name="due_date"
                        value="{{ pmt.due_date.isoformat() if pmt.due_date else '' }}"
@@ -711,7 +714,7 @@
   <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-2">
     <div class="flex flex-row gap-1.5">
 
-      {% if order.status not in ('cancelado', 'concluido', 'faturado') %}
+      {% if order.status not in ('cancelado', 'concluido', 'faturado') and has_perm('so.edit') %}
       <button type="submit" form="main-form" name="action" value="save"
               data-tip="Salvar"
               class="act-btn bg-teal-600 hover:bg-teal-700">
@@ -719,7 +722,7 @@
       </button>
       {% endif %}
 
-      {% if order.status == 'aberto' %}
+      {% if order.status == 'aberto' and has_perm('so.invoice') %}
       <button type="button"
               @click="
                 if (!document.querySelector('[name=emission_date]')?.value) {
@@ -737,7 +740,7 @@
       </button>
       {% endif %}
 
-      {% if order.status == 'novo' %}
+      {% if order.status == 'novo' and has_perm('so.edit') %}
       <button type="button" data-tip="Abrir SO"
               onclick="document.getElementById('open-order-form').submit()"
               class="act-btn bg-sky-600 hover:bg-sky-700">
@@ -745,7 +748,7 @@
       </button>
       {% endif %}
 
-      {% if order.status in ('aberto','faturado','concluido') %}
+      {% if order.status in ('aberto','faturado','concluido') and has_perm('po.create') %}
       <a href="{{ url_for('purchase_orders.new', order_id=order.id) }}"
          data-tip="Criar PC/PO"
          class="act-btn bg-violet-600 hover:bg-violet-700">
@@ -765,7 +768,7 @@
         <i class="fa-solid fa-file-pdf"></i><span style="font-size:10px;margin-left:3px">EN</span>
       </a>
 
-      {% if order.status not in ('concluido','cancelado') %}
+      {% if order.status not in ('concluido','cancelado') and has_perm('so.cancel') %}
       <button type="button" @click="showCancelModal=true"
               data-tip="Cancelar SO"
               class="act-btn bg-red-500 hover:bg-red-600">
@@ -773,13 +776,15 @@
       </button>
       {% endif %}
 
+      {% if has_perm('so.delete') %}
       <button type="button" @click="showDeleteModal=true"
               data-tip="Excluir SO"
               class="act-btn bg-red-900 hover:bg-red-950">
         <i class="fa-solid fa-trash"></i>
       </button>
+      {% endif %}
 
-      {% if order.status == 'faturado' %}
+      {% if order.status == 'faturado' and has_perm('so.reopen') %}
       <button type="button" onclick="document.getElementById('reabrir-form').submit()"
               data-tip="Reabrir para Aberto"
               class="act-btn bg-sky-600 hover:bg-sky-700">
@@ -812,6 +817,7 @@
   <form id="del-item-{{ item.id }}" method="post"
         action="{{ url_for('orders.delete_item', iid=item.id) }}"
         {% if order.status != 'novo' %}onsubmit="return confirm('Remover item {{ loop.index }}?')"{% endif %}>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   </form>
   {% endfor %}
 </div>
@@ -819,16 +825,19 @@
 {# Form independente — Abrir Pedido (fora do main-form) #}
 <form id="open-order-form" method="post"
       action="{{ url_for('orders.open_order', oid=order.id) }}" class="hidden">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 </form>
 
 {# Form independente — Reabrir Pedido (faturado → aberto) #}
 <form id="reabrir-form" method="post"
       action="{{ url_for('orders.reabrir', oid=order.id) }}" class="hidden">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 </form>
 
 {# Form independente — Gerar Contas (fora do main-form) #}
 <form id="gen-payments-form" method="post"
       action="{{ url_for('orders.generate_payments', oid=order.id) }}" class="hidden">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <input type="hidden" id="gp-f-method"         name="payment_method">
   <input type="hidden" id="gp-f-terms"          name="payment_terms">
   <input type="hidden" id="gp-f-amount"         name="custom_amount">
@@ -1069,6 +1078,7 @@
               class="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
     </div>
     <form method="post" action="{{ url_for('orders.update_obs', oid=order.id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="px-5 py-4">
         <textarea name="obs" rows="4" placeholder="Digite uma observação para este pedido..."
                   class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700
@@ -1103,6 +1113,7 @@
               class="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
     </div>
     <form method="post" action="{{ url_for('orders.add_item', oid=order.id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="px-5 py-4 grid grid-cols-2 gap-3">
 
         <div class="col-span-2">
@@ -1176,6 +1187,7 @@
               class="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
     </div>
     <form method="post" :action="editItemUrl">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="px-5 py-4 space-y-3">
         <div>
           <label class="lbl">Serviço</label>
@@ -1223,6 +1235,7 @@
     </div>
 
     <form method="post" :action="opItemUrl">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="px-5 py-4 space-y-3">
         <div>
           <label class="lbl">Serviço</label>
@@ -1323,6 +1336,7 @@
               class="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
     </div>
     <form method="POST" action="{{ url_for('orders.cancel', oid=order.id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="px-5 py-4">
         <label class="lbl">Motivo</label>
         <textarea name="reason" rows="3" required placeholder="Descreva o motivo do cancelamento..."
@@ -1353,6 +1367,7 @@
               class="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
     </div>
     <form method="POST" action="{{ url_for('orders.delete', oid=order.id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="px-5 py-4 text-sm text-slate-600 dark:text-slate-300">
         Esta ação é irreversível. O pedido <strong>{{ order.number }}</strong> será excluído permanentemente.
       </div>

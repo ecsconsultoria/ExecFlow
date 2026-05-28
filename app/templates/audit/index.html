@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Auditoria{% endblock %}
+{% block page_title %}<i class="fa-solid fa-clipboard-list mr-2 text-blue-500"></i>Logs de Auditoria{% endblock %}
+
+{% block content %}
+<p class="text-sm text-slate-500 mb-5">{{ total }} registro(s) — página {{ page }}/{{ pages }}</p>
+
+<div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead class="bg-slate-50 dark:bg-slate-700">
+      <tr>
+        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Quando</th>
+        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Usuário</th>
+        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Ação</th>
+        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Entidade</th>
+        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">IP</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+      {% for log in logs %}
+      <tr class="hover:bg-slate-50 dark:hover:bg-slate-700">
+        <td class="px-4 py-2 text-xs text-slate-500">{{ log.created_at|fdatetime }}</td>
+        <td class="px-4 py-2 text-slate-600">{{ log.user.email if log.user else '–' }}</td>
+        <td class="px-4 py-2">
+          <span class="text-xs px-2 py-0.5 rounded bg-blue-50 text-blue-700">{{ log.action }}</span>
+        </td>
+        <td class="px-4 py-2 text-slate-500">{{ log.entity }}:{{ log.entity_id or '–' }}</td>
+        <td class="px-4 py-2 text-slate-400 text-xs">{{ log.ip_address or '–' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="px-4 py-10 text-center text-slate-400">Nenhum registro de auditoria.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if pages > 1 %}
+<div class="flex gap-2 mt-4 justify-center">
+  {% if page > 1 %}
+    <a href="?page={{ page - 1 }}" class="px-3 py-1 rounded border text-sm text-slate-600 hover:bg-slate-50">‹ Anterior</a>
+  {% endif %}
+  <span class="px-3 py-1 text-sm text-slate-500">{{ page }} / {{ pages }}</span>
+  {% if page < pages %}
+    <a href="?page={{ page + 1 }}" class="px-3 py-1 rounded border text-sm text-slate-600 hover:bg-slate-50">Próxima ›</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

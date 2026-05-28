@@ -29,6 +29,7 @@
     </div>
     <div class="p-5">
       <form method="POST" action="{{ url_for('services.add') }}" class="space-y-4">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="grid sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Tipo de serviço *</label>
@@ -106,6 +107,7 @@
       </p>
       <form method="POST" action="{{ url_for('services.import_excel') }}" enctype="multipart/form-data"
             class="flex items-center gap-3">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="file" name="file" accept=".xlsx,.xls"
                class="flex-1 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm text-slate-600 dark:text-slate-300 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-slate-100 dark:file:bg-slate-600 file:text-slate-700 dark:file:text-slate-200">
         <button type="submit"
@@ -123,13 +125,16 @@
         <i class="fa-solid fa-table-list mr-2 text-blue-500"></i>Catálogo de Serviços
       </span>
       <div class="flex items-center gap-3">
-        <form id="bulk-form" method="POST" action="{{ url_for('services.delete_bulk') }}" x-show="selected.length > 0">
+        {% if has_perm('catalog.manage') %}
+        <form id="bulk-form" method="POST" action="{{ url_for('services.delete_bulk') }}" x-show="selected.length >
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> 0">
           <input type="hidden" name="ids" :value="selected.join(',')">
           <button type="button" @click="bulkDelete()"
                   class="text-xs text-red-500 hover:text-red-700 font-medium flex items-center gap-1">
             <i class="fa-solid fa-trash"></i> Excluir selecionados (<span x-text="selected.length"></span>)
           </button>
         </form>
+        {% endif %}
         <div class="relative inline-block text-left">
           <button @click="actMenu=!actMenu"
                   class="inline-flex items-center gap-1.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow transition-all whitespace-nowrap">
@@ -238,14 +243,17 @@
               <td class="px-2 py-1.5 text-slate-400" x-show="editId !== p.id" x-text="p.state_code || '–'"></td>
             <td class="px-2 py-1.5" x-show="editId !== p.id">
               <div class="flex gap-2 justify-end">
+                {% if has_perm('catalog.manage') %}
                 <button @click="startEdit(p.id, p.price_cost, p.price_base)"
                         class="text-blue-400 hover:text-blue-600 p-1"><i class="fa-solid fa-pencil text-xs"></i></button>
                 <form method="POST" :action="p.delete_url"
                       onsubmit="return confirm('Remover este serviço?')">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button type="submit" class="text-red-400 hover:text-red-600 p-1">
                     <i class="fa-solid fa-trash text-xs"></i>
                   </button>
                 </form>
+                {% endif %}
               </div>
             </td>
 
@@ -253,6 +261,7 @@
             <td colspan="7" class="px-2 py-1.5" x-show="editId === p.id">
               <form method="POST" :action="p.edit_url"
                     class="flex items-center gap-3 flex-wrap">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <span class="text-xs font-medium text-slate-600 dark:text-slate-300"
                       x-text="p.service_name + (p.category_name ? ' — ' + p.category_name : '')"></span>
                 <label class="text-xs text-slate-500">Custo R$</label>

@@ -4,11 +4,13 @@ from flask_login import login_required, current_user
 from . import dispatch_bp
 from ...services import dispatch_service
 from ...utils import now_br
+from ...utils.decorators import require_permission
 from datetime import date, timedelta
 
 
 @dispatch_bp.route("/")
 @login_required
+@require_permission("dispatch.view")
 def index():
     cid = current_user.company_id
     date_str = request.args.get("date", "")

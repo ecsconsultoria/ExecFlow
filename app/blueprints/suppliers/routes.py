@@ -3,10 +3,13 @@ from flask_login import login_required, current_user
 from . import suppliers_bp
 from ...models.supplier import Supplier
 from ...extensions import db
+from ...utils.audit import log_activity
+from ...utils.decorators import require_permission
 
 
 @suppliers_bp.route("/")
 @login_required
+@require_permission("suppliers.view")
 def index():
     q     = request.args.get("q", "").strip()
     query = Supplier.query.filter_by(company_id=current_user.company_id, deleted_at=None)
@@ -18,6 +21,7 @@ def index():
 
 @suppliers_bp.route("/new", methods=["GET", "POST"])
 @login_required
+@require_permission("suppliers.edit")
 def new():
     if request.method == "POST":
         s = Supplier(
@@ -43,6 +47,7 @@ def new():
 
 @suppliers_bp.route("/<int:sid>/edit", methods=["GET", "POST"])
 @login_required
+@require_permission("suppliers.edit")
 def edit(sid):
     supplier = Supplier.query.filter_by(id=sid, company_id=current_user.company_id, deleted_at=None).first_or_404()
     if request.method == "POST":
@@ -65,9 +70,11 @@ def edit(sid):
 
 @suppliers_bp.route("/<int:sid>/delete", methods=["POST"])
 @login_required
+@require_permission("suppliers.delete")
 def delete(sid):
     supplier = Supplier.query.filter_by(id=sid, company_id=current_user.company_id, deleted_at=None).first_or_404()
     supplier.soft_delete()
+    log_activity("supplier", supplier.id, current_user.company_id, f"Fornecedor {supplier.name!r} excluído", current_user.id)
     db.session.commit()
     flash("Fornecedor removido.", "info")
     return redirect(url_for("suppliers.index"))

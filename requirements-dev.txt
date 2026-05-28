@@ -1,0 +1,11 @@
+# Dependências apenas para desenvolvimento / testes.
+# NÃO são instaladas em produção (Render usa requirements.txt).
+#
+# Instalar localmente:
+#   pip install -r requirements-dev.txt
+
+-r requirements.txt
+
+pytest>=9.0
+pytest-flask>=1.3
+pytest-cov>=7.0

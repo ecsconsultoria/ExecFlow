@@ -9,6 +9,7 @@
   <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-6">
     <h2 class="font-semibold text-slate-700 dark:text-slate-200 mb-4">Identidade da Empresa</h2>
     <form method="post" action="{{ url_for('dashboard.settings') }}" enctype="multipart/form-data" class="space-y-4">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="grid grid-cols-2 gap-4">
         <div class="col-span-2">
           <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nome da Empresa</label>
@@ -70,6 +71,7 @@
     <h2 class="font-semibold text-slate-700 dark:text-slate-200 mb-1">Taxas de Cobrança</h2>
     <p class="text-xs text-slate-400 mb-4">Usadas para calcular automaticamente preços NF e Cartão a partir do preço base quando não cadastrados manualmente.</p>
     <form method="post" action="{{ url_for('dashboard.save_rates') }}" class="space-y-4">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="grid grid-cols-2 gap-4">
         <div>
           <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -171,6 +173,7 @@
             Cancelar
           </button>
           <form :action="action ? actions[action].url : '#'" method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit"
                     :class="action ? actions[action].color : 'bg-red-600'"
                     class="px-5 py-2 text-sm font-semibold rounded-lg text-white transition-colors">

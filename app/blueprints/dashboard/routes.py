@@ -1,6 +1,7 @@
 from flask import render_template, request, redirect, url_for, flash, current_app
 from flask_login import login_required, current_user
 from . import dashboard_bp
+from ...utils.decorators import require_permission
 from ...models.client   import Client
 from ...models.quote    import Quote
 from ...models.booking  import Booking
@@ -92,6 +93,7 @@ def index():
 
 @dashboard_bp.route("/settings", methods=["GET", "POST"])
 @login_required
+@require_permission("settings.manage")
 def settings():
     company = Company.query.get(current_user.company_id)
     if request.method == "POST":
@@ -130,6 +132,7 @@ def settings():
 
 @dashboard_bp.route("/settings/reset-transactional", methods=["POST"])
 @login_required
+@require_permission("settings.manage")
 def reset_transactional():
     """Apaga somente SO, PO e Orçamentos. Mantém cadastros base."""
     TABLES = [
@@ -153,6 +156,7 @@ def reset_transactional():
 
 @dashboard_bp.route("/settings/reset-financial", methods=["POST"])
 @login_required
+@require_permission("settings.manage")
 def reset_financial():
     """Apaga somente os registros financeiros. Preserva tudo mais."""
     TABLES = [
@@ -178,6 +182,7 @@ def reset_financial():
 
 @dashboard_bp.route("/settings/reset-all", methods=["POST"])
 @login_required
+@require_permission("settings.manage")
 def reset_all():
     """Apaga TODOS os dados transacionais, financeiros e de despacho.
     Preserva apenas: usuários, empresa, clientes, fornecedores,
@@ -221,6 +226,7 @@ def reset_all():
 
 @dashboard_bp.route("/settings/rates", methods=["POST"])
 @login_required
+@require_permission("settings.manage")
 def save_rates():
     company = Company.query.get(current_user.company_id)
     try:

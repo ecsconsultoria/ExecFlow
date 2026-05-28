@@ -1,6 +1,6 @@
 import os
 from flask import Flask, send_from_directory
-from .extensions import db, migrate, login_manager
+from .extensions import db, migrate, login_manager, csrf
 from .blueprints import register_blueprints
 
 
@@ -21,8 +21,31 @@ def create_app(config_name: str | None = None) -> Flask:
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
+    csrf.init_app(app)
+
+    # ── SQLite: enable WAL + sane PRAGMAs to avoid "database is locked" ──
+    from sqlalchemy import event
+    from sqlalchemy.engine import Engine
+    import sqlite3 as _sqlite3
+
+    @event.listens_for(Engine, "connect")
+    def _sqlite_pragmas(dbapi_conn, _rec):
+        if isinstance(dbapi_conn, _sqlite3.Connection):
+            try:
+                cur = dbapi_conn.cursor()
+                cur.execute("PRAGMA journal_mode=WAL;")
+                cur.execute("PRAGMA synchronous=NORMAL;")
+                cur.execute("PRAGMA busy_timeout=30000;")
+                cur.execute("PRAGMA foreign_keys=ON;")
+                cur.close()
+            except Exception:
+                pass
 
     register_blueprints(app)
+
+    # ── Phase 8: security headers (X-Frame, nosniff, Referrer-Policy, etc.) ──
+    from .utils.security import register_security_headers
+    register_security_headers(app)
 
     # ── Persistent upload folder ──────────────────────────────────────────────
     # In production set env var UPLOAD_FOLDER=/orcamentos/uploads (Render disk).
@@ -63,11 +86,59 @@ def create_app(config_name: str | None = None) -> Flask:
             pass
         return {"current_company": None}
 
+    @app.before_request
+    def _enforce_password_change():
+        """Força usuários com must_change_password a trocar antes de seguir."""
+        from flask import request, redirect, url_for
+        from flask_login import current_user
+        try:
+            if not current_user.is_authenticated:
+                return None
+            if not getattr(current_user, "must_change_password", False):
+                return None
+            allowed = {
+                "auth.change_password", "auth.logout", "auth.login",
+                "static", "uploaded_file",
+            }
+            if request.endpoint in allowed:
+                return None
+            return redirect(url_for("auth.change_password"))
+        except Exception:
+            return None
+
+    @app.context_processor
+    def _inject_rbac_helpers():
+        """Expe `has_perm` / `has_any_perm` aos templates (UX only).
+
+        IMPORTANTE: estes helpers são apenas para esconder/exibir elementos
+        na UI. A segurança real é server-side via @require_permission.
+        """
+        from flask_login import current_user
+
+        def _has_perm(code):
+            try:
+                if not current_user.is_authenticated:
+                    return False
+                return current_user.has_permission(code)
+            except Exception:
+                return False
+
+        def _has_any_perm(*codes):
+            try:
+                if not current_user.is_authenticated:
+                    return False
+                return any(current_user.has_permission(c) for c in codes)
+            except Exception:
+                return False
+
+        return {"has_perm": _has_perm, "has_any_perm": _has_any_perm}
+
     with app.app_context():
         from . import models  # noqa
         db.create_all()
         _ensure_schema_columns()
         _seed_initial_data(app)
+        _seed_rbac(app)
 
     return app
 
@@ -165,6 +236,26 @@ def _ensure_schema_columns():
                         ))
                         log.info('Schema patch applied: po_items.%s', col_name)
 
+        # ── users: must_change_password flag (force password change on first login) ─
+        if 'users' in table_names:
+            existing_u = {c['name'] for c in insp.get_columns('users')}
+            if 'must_change_password' not in existing_u:
+                with db.engine.begin() as conn:
+                    conn.execute(_text(
+                        "ALTER TABLE users ADD COLUMN must_change_password BOOLEAN DEFAULT FALSE"
+                    ))
+                log.info('Schema patch applied: users.must_change_password')
+
+        # ── financial_records: soft delete column ──────────────────────────────────
+        if 'financial_records' in table_names:
+            existing_fr = {c['name'] for c in insp.get_columns('financial_records')}
+            if 'deleted_at' not in existing_fr:
+                with db.engine.begin() as conn:
+                    conn.execute(_text(
+                        "ALTER TABLE financial_records ADD COLUMN deleted_at TIMESTAMP"
+                    ))
+                log.info('Schema patch applied: financial_records.deleted_at')
+
         # ── service_pricing: fix driver_type typo 'Bilingue' → 'Bilíngue' ────
         if 'service_pricing' in table_names:
             with db.engine.begin() as conn:
@@ -258,3 +349,65 @@ def _do_seed():
         _db.session.add(admin)
 
     _db.session.commit()
+
+
+def _seed_rbac(app: Flask):
+    """Cria/atualiza Permissions, Roles canônicas e suas associações.
+
+    Idempotente: pode rodar a cada boot. Também migra usuários legados que
+    ainda não têm Role atribuído (User.role string → Role objects).
+    """
+    import logging
+    log = logging.getLogger(__name__)
+    try:
+        from .models.rbac import Role, Permission
+        from .models.user import User
+        from .utils.permissions import (
+            PERMISSION_CATALOG, SYSTEM_ROLES,
+            ROLE_PERMISSION_MATRIX, LEGACY_ROLE_MAP,
+        )
+
+        # 1) Upsert Permissions
+        existing_perms = {p.code: p for p in Permission.query.all()}
+        for code, category, label, desc in PERMISSION_CATALOG:
+            p = existing_perms.get(code)
+            if p is None:
+                p = Permission(code=code, category=category, label=label, description=desc)
+                db.session.add(p)
+                existing_perms[code] = p
+            else:
+                p.category    = category
+                p.label       = label
+                p.description = desc
+        db.session.flush()
+
+        # 2) Upsert Roles canônicas + sincroniza permissões
+        existing_roles = {r.code: r for r in Role.query.all()}
+        for code, label, desc in SYSTEM_ROLES:
+            r = existing_roles.get(code)
+            if r is None:
+                r = Role(code=code, label=label, description=desc, is_system=True)
+                db.session.add(r)
+                existing_roles[code] = r
+            else:
+                r.label       = label
+                r.description = desc
+                r.is_system   = True
+            # sync permissions desta role
+            wanted_codes = ROLE_PERMISSION_MATRIX.get(code, set())
+            r.permissions = [existing_perms[c] for c in wanted_codes if c in existing_perms]
+        db.session.flush()
+
+        # 3) Migração one-shot: users sem roles → mapear pela coluna legada
+        users_without_roles = User.query.filter(~User.roles.any()).all()
+        for u in users_without_roles:
+            target_code = LEGACY_ROLE_MAP.get((u.role or "").lower())
+            if target_code and target_code in existing_roles:
+                u.roles.append(existing_roles[target_code])
+                log.info("RBAC migration: user %s (legacy=%s) → role %s",
+                         u.email, u.role, target_code)
+
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        log.warning("_seed_rbac failed: %s", exc)

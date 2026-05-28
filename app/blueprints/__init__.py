@@ -14,6 +14,9 @@ def register_blueprints(app):
     from .dispatch         import dispatch_bp
     from .orders           import orders_bp
     from .purchase_orders  import purchase_orders_bp
+    from .users         import users_bp
+    from .roles         import roles_bp
+    from .audit         import audit_bp
 
     app.register_blueprint(auth_bp,             url_prefix="/auth")
     app.register_blueprint(dashboard_bp,        url_prefix="/")
@@ -30,3 +33,6 @@ def register_blueprints(app):
     app.register_blueprint(dispatch_bp,         url_prefix="/dispatch")
     app.register_blueprint(orders_bp,           url_prefix="/orders")
     app.register_blueprint(purchase_orders_bp,  url_prefix="/po")
+    app.register_blueprint(users_bp,            url_prefix="/users")
+    app.register_blueprint(roles_bp,            url_prefix="/roles")
+    app.register_blueprint(audit_bp,            url_prefix="/audit")

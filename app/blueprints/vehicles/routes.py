@@ -3,10 +3,13 @@ from flask_login import login_required, current_user
 from . import vehicles_bp
 from ...models.vehicle import Vehicle, VehicleCategory
 from ...extensions import db
+from ...utils.audit import log_activity
+from ...utils.decorators import require_permission
 
 
 @vehicles_bp.route("/")
 @login_required
+@require_permission("vehicles.view")
 def index():
     vehicles = Vehicle.query.filter_by(company_id=current_user.company_id, deleted_at=None).order_by(Vehicle.make).all()
     return render_template("vehicles/index.html", vehicles=vehicles)
@@ -14,6 +17,7 @@ def index():
 
 @vehicles_bp.route("/new", methods=["GET", "POST"])
 @login_required
+@require_permission("vehicles.edit")
 def new():
     categories = VehicleCategory.query.filter_by(is_active=True).order_by(VehicleCategory.sort_order).all()
     if request.method == "POST":
@@ -37,6 +41,7 @@ def new():
 
 @vehicles_bp.route("/<int:vid>/edit", methods=["GET", "POST"])
 @login_required
+@require_permission("vehicles.edit")
 def edit(vid):
     vehicle    = Vehicle.query.filter_by(id=vid, company_id=current_user.company_id, deleted_at=None).first_or_404()
     categories = VehicleCategory.query.filter_by(is_active=True).order_by(VehicleCategory.sort_order).all()
@@ -57,9 +62,11 @@ def edit(vid):
 
 @vehicles_bp.route("/<int:vid>/delete", methods=["POST"])
 @login_required
+@require_permission("vehicles.delete")
 def delete(vid):
     vehicle = Vehicle.query.filter_by(id=vid, company_id=current_user.company_id, deleted_at=None).first_or_404()
     vehicle.soft_delete()
+    log_activity("vehicle", vehicle.id, current_user.company_id, f"Veículo {vehicle.plate!r} excluído", current_user.id)
     db.session.commit()
     flash("Veículo removido.", "info")
     return redirect(url_for("vehicles.index"))

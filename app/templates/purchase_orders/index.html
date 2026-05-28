@@ -4,10 +4,12 @@
 
 {% block content %}
 <div class="flex flex-wrap items-center gap-3 mb-5">
+  {% if has_perm('po.create') %}
   <a href="{{ url_for('purchase_orders.new') }}"
      class="bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium px-4 py-2 rounded-lg flex items-center gap-2">
     <i class="fa-solid fa-plus"></i> Nova PO
   </a>
+  {% endif %}
   <form class="flex gap-2" method="get">
     <select name="status"
             class="border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none">

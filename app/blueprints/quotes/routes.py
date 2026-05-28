@@ -2,6 +2,7 @@ import json
 import os
 from flask import render_template, request, redirect, url_for, flash, jsonify, current_app, abort, send_file
 from flask_login import login_required, current_user
+from sqlalchemy.orm import lazyload
 from . import quotes_bp
 from ...models.quote   import Quote, QuoteItem, QuoteInclusion, BILLING_TYPES, QUOTE_STATUSES, DEFAULT_INCLUSIONS
 from ...models.client  import Client
@@ -10,6 +11,7 @@ from ...models.vehicle import VehicleCategory
 from ...models.driver  import Driver
 from ...models.company import Company
 from ...extensions import db
+from ...utils.decorators import require_permission
 from ...services.quote_service   import QuoteService
 from ...services.booking_service import BookingService
 from ...utils import now_br, make_client_token
@@ -69,10 +71,15 @@ def _catalog_json():
 
 @quotes_bp.route("/")
 @login_required
+@require_permission("quote.view")
 def index():
     status = request.args.get("status", "")
     q      = request.args.get("q", "")
-    query  = Quote.query.filter_by(company_id=current_user.company_id, deleted_at=None)
+    # Quote declares creator/approver/rejecter as lazy="joined". Template only
+    # uses scalar columns, so neutralize default joineds for speed.
+    query  = (Quote.query
+              .options(lazyload('*'))
+              .filter_by(company_id=current_user.company_id, deleted_at=None))
     if status:
         query = query.filter_by(status=status)
     else:
@@ -86,6 +93,7 @@ def index():
 
 @quotes_bp.route("/new", methods=["GET", "POST"])
 @login_required
+@require_permission("quote.create")
 def new():
     if request.method == "POST":
         if request.is_json:
@@ -127,6 +135,7 @@ def new():
 
 @quotes_bp.route("/<int:qid>")
 @login_required
+@require_permission("quote.view")
 def detail(qid):
     from ...models.order import Order
     from ...models.audit import AuditLog
@@ -141,6 +150,7 @@ def detail(qid):
 
 @quotes_bp.route("/<int:qid>/edit", methods=["GET", "POST"])
 @login_required
+@require_permission("quote.edit")
 def edit(qid):
     from ...models.order import Order
     quote = Quote.query.filter_by(id=qid, company_id=current_user.company_id, deleted_at=None).first_or_404()
@@ -204,6 +214,7 @@ def edit(qid):
 
 @quotes_bp.route("/<int:qid>/pdf/<lang>")
 @login_required
+@require_permission("quote.view")
 def pdf(qid, lang):
     """Generate and download PDF in PT or EN."""
     if lang not in ("pt", "en"):
@@ -218,6 +229,7 @@ def pdf(qid, lang):
 
 @quotes_bp.route("/<int:qid>/approve", methods=["POST"])
 @login_required
+@require_permission("quote.approve")
 def approve(qid):
     quote = Quote.query.filter_by(id=qid, company_id=current_user.company_id, deleted_at=None).first_or_404()
     quote.status      = "aprovado"
@@ -231,6 +243,7 @@ def approve(qid):
 
 @quotes_bp.route("/<int:qid>/reject", methods=["POST"])
 @login_required
+@require_permission("quote.approve")
 def reject(qid):
     quote = Quote.query.filter_by(id=qid, company_id=current_user.company_id, deleted_at=None).first_or_404()
     quote.status           = "reprovado"
@@ -245,6 +258,7 @@ def reject(qid):
 
 @quotes_bp.route("/<int:qid>/confirm-booking", methods=["POST"])
 @login_required
+@require_permission("quote.approve")
 def confirm_booking(qid):
     """Confirma orçamento aprovado → cria Booking + OS automaticamente."""
     quote = Quote.query.filter_by(id=qid, company_id=current_user.company_id, deleted_at=None).first_or_404()
@@ -258,6 +272,7 @@ def confirm_booking(qid):
 
 @quotes_bp.route("/<int:qid>/create-os", methods=["POST"])
 @login_required
+@require_permission("quote.approve")
 def create_os(qid):
     """Cria OS diretamente a partir de um orçamento aprovado."""
     from datetime import datetime
@@ -297,6 +312,7 @@ def create_os(qid):
 
 @quotes_bp.route("/<int:qid>/delete", methods=["POST"])
 @login_required
+@require_permission("quote.delete")
 def delete(qid):
     quote = Quote.query.filter_by(id=qid, company_id=current_user.company_id, deleted_at=None).filter(
         Quote.status != "excluido"

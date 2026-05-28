@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if user else 'Novo' }} Usuário{% endblock %}
+{% block page_title %}
+  <i class="fa-solid fa-user-gear mr-2 text-blue-500"></i>
+  {{ 'Editar' if user else 'Novo' }} Usuário
+{% endblock %}
+
+{% block content %}
+<form method="post" class="space-y-6 max-w-3xl">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-6 space-y-4">
+    <h3 class="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-2">Dados do usuário</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-xs font-medium text-slate-500 mb-1">Nome *</label>
+        <input name="name" value="{{ user.name if user else '' }}" required
+               class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-slate-500 mb-1">E-mail *</label>
+        <input name="email" type="email" value="{{ user.email if user else '' }}"
+               {% if user %}disabled readonly{% endif %} required
+               class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-sm {% if user %}opacity-60{% endif %}">
+      </div>
+      {% if not user %}
+      <div>
+        <label class="block text-xs font-medium text-slate-500 mb-1">Senha inicial *</label>
+        <input name="password" type="text" minlength="6" required
+               class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-sm">
+        <p class="text-xs text-slate-400 mt-1">Mínimo 6 caracteres. Usuário deverá trocá-la no 1º login.</p>
+      </div>
+      {% else %}
+      <div>
+        <label class="block text-xs font-medium text-slate-500 mb-1">Redefinir senha</label>
+        <input name="new_password" type="text" minlength="6" placeholder="(deixe vazio p/ manter)"
+               class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-sm">
+        <p class="text-xs text-slate-400 mt-1">Se preenchido, usuário deverá trocá-la no próximo login.</p>
+      </div>
+      {% endif %}
+      <div class="flex items-end">
+        <label class="inline-flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+          <input type="checkbox" name="is_active" value="1"
+                 {% if user is none or user.is_active %}checked{% endif %}
+                 class="rounded border-slate-300">
+          Usuário ativo
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-6">
+    <h3 class="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-3">Papéis (Roles)</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {% for r in roles %}
+      <label class="flex items-start gap-3 p-3 border border-slate-200 dark:border-slate-700 rounded-lg cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700">
+        <input type="checkbox" name="roles" value="{{ r.id }}"
+               {% if r.id in role_ids %}checked{% endif %}
+               class="mt-1 rounded border-slate-300">
+        <div>
+          <p class="text-sm font-medium text-slate-700 dark:text-slate-200">{{ r.label }} <span class="text-xs text-slate-400">({{ r.code }})</span></p>
+          <p class="text-xs text-slate-500">{{ r.description }}</p>
+        </div>
+      </label>
+      {% endfor %}
+    </div>
+    <p class="text-xs text-slate-400 mt-3">
+      Veja o detalhe das permissões de cada papel em
+      <a href="{{ url_for('roles.index') }}" class="text-blue-600 hover:underline">Roles & Permissões</a>.
+    </p>
+  </div>
+
+  <div class="flex gap-2">
+    <a href="{{ url_for('users.index') }}"
+       class="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">
+      Cancelar
+    </a>
+    <button type="submit"
+            class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">
+      Salvar
+    </button>
+  </div>
+</form>
+{% endblock %}

@@ -3,6 +3,7 @@ from datetime import datetime
 
 from flask import render_template, request, redirect, url_for, flash, abort, send_file, jsonify
 from flask_login import login_required, current_user
+from sqlalchemy.orm import lazyload, joinedload
 
 from . import orders_bp
 from ...models.order          import Order, OrderItem, OrderPayment, ORDER_STATUSES
@@ -18,6 +19,7 @@ from ...services              import service_order_service as sos
 from ...services              import purchase_order_service as pos
 from ...utils                 import now_br
 from ...utils.audit           import log_activity
+from ...utils.decorators      import require_permission
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -26,10 +28,20 @@ from ...utils.audit           import log_activity
 
 @orders_bp.route("/")
 @login_required
+@require_permission("so.view")
 def index():
     status = request.args.get("status", "")
     q      = request.args.get("q", "")
-    query  = Order.query.filter_by(company_id=current_user.company_id, deleted_at=None)
+    # Order declares 6 users (creator/opener/invoicer/closer/canceller/reopener)
+    # plus quote as lazy="joined". Cascaded with Quote's joineds this generates
+    # 10+ JOINs per row. Neutralize defaults and eager-load only `quote` (used
+    # in template), with its own joineds disabled.
+    query  = (Order.query
+              .options(
+                  lazyload('*'),
+                  joinedload(Order.quote).lazyload('*'),
+              )
+              .filter_by(company_id=current_user.company_id, deleted_at=None))
     if status:
         query = query.filter_by(status=status)
     else:
@@ -49,6 +61,7 @@ def index():
 
 @orders_bp.route("/create/<int:qid>", methods=["POST"])
 @login_required
+@require_permission("so.create")
 def create(qid):
     """Cria Pedido a partir de um Orçamento aprovado."""
     quote = Quote.query.filter_by(
@@ -80,6 +93,7 @@ def create(qid):
 
 @orders_bp.route("/<int:oid>")
 @login_required
+@require_permission("so.view")
 def detail(oid):
     order = Order.query.filter_by(
         id=oid, company_id=current_user.company_id, deleted_at=None
@@ -144,6 +158,7 @@ def detail(oid):
 
 @orders_bp.route("/<int:oid>/open", methods=["POST"])
 @login_required
+@require_permission("so.edit")
 def open_order(oid):
     order = _get_order(oid)
     try:
@@ -158,6 +173,7 @@ def open_order(oid):
 
 @orders_bp.route("/<int:oid>/faturar", methods=["POST"])
 @login_required
+@require_permission("so.invoice")
 def faturar(oid):
     order = _get_order(oid)
     try:
@@ -172,6 +188,7 @@ def faturar(oid):
 
 @orders_bp.route("/<int:oid>/fechar", methods=["POST"])
 @login_required
+@require_permission("so.close")
 def fechar(oid):
     order = _get_order(oid)
     try:
@@ -186,6 +203,7 @@ def fechar(oid):
 
 @orders_bp.route("/<int:oid>/cancel", methods=["POST"])
 @login_required
+@require_permission("so.cancel")
 def cancel(oid):
     order = _get_order(oid)
     reason = request.form.get("reason", "")
@@ -201,6 +219,7 @@ def cancel(oid):
 
 @orders_bp.route("/<int:oid>/reabrir", methods=["POST"])
 @login_required
+@require_permission("so.reopen")
 def reabrir(oid):
     order = _get_order(oid)
     try:
@@ -219,6 +238,7 @@ def reabrir(oid):
 
 @orders_bp.route("/<int:oid>/generate-payments", methods=["POST"])
 @login_required
+@require_permission("so.edit")
 def generate_payments(oid):
     order = _get_order(oid)
     if order.status in ("concluido", "faturado", "cancelado"):
@@ -277,6 +297,7 @@ def generate_payments(oid):
 
 @orders_bp.route("/<int:oid>/recalculate-payments", methods=["POST"])
 @login_required
+@require_permission("so.edit")
 def recalculate_payments(oid):
     """Apaga parcelas não-pagas e regera com base no total atual."""
     order = _get_order(oid)
@@ -292,6 +313,7 @@ def recalculate_payments(oid):
 
 @orders_bp.route("/<int:oid>/payments/add", methods=["POST"])
 @login_required
+@require_permission("so.edit")
 def add_payment(oid):
     order = _get_order(oid)
     try:
@@ -306,6 +328,7 @@ def add_payment(oid):
 
 @orders_bp.route("/payments/<int:pid>/delete", methods=["POST"])
 @login_required
+@require_permission("so.edit")
 def delete_payment(pid):
     pmt   = OrderPayment.query.get_or_404(pid)
     order = pmt.order
@@ -334,6 +357,7 @@ def delete_payment(pid):
 
 @orders_bp.route("/payments/<int:pid>/baixa", methods=["POST"])
 @login_required
+@require_permission("financial.manage")
 def baixa(pid):
     pmt   = OrderPayment.query.get_or_404(pid)
     order = pmt.order
@@ -359,6 +383,7 @@ def baixa(pid):
 
 @orders_bp.route("/<int:oid>/update-header", methods=["POST"])
 @login_required
+@require_permission("so.edit")
 def update_header(oid):
     order = _get_order(oid)
     data = request.form.to_dict()
@@ -376,6 +401,7 @@ def update_header(oid):
 
 @orders_bp.route("/<int:oid>/update-adjustments", methods=["POST"])
 @login_required
+@require_permission("so.edit")
 def update_adjustments(oid):
     order = _get_order(oid)
     order_service.update_adjustments(order, request.form.to_dict())
@@ -387,6 +413,7 @@ def update_adjustments(oid):
 
 @orders_bp.route("/<int:oid>/save-all", methods=["POST"])
 @login_required
+@require_permission("so.edit")
 def save_all(oid):
     """Salva cabeçalho + ajustes. Se action='faturar', também fatura o pedido."""
     order  = _get_order(oid)
@@ -434,6 +461,7 @@ def save_all(oid):
 
 @orders_bp.route("/payments/<int:pid>/update", methods=["POST"])
 @login_required
+@require_permission("so.edit")
 def update_payment(pid):
     pmt   = OrderPayment.query.get_or_404(pid)
     order = pmt.order
@@ -456,6 +484,7 @@ def update_payment(pid):
 
 @orders_bp.route("/<int:oid>/pdf/<lang>")
 @login_required
+@require_permission("so.view")
 def pdf(oid, lang):
     from ...services.order_pdf import generate_order_pdf
     order = _get_order(oid)
@@ -473,6 +502,7 @@ def pdf(oid, lang):
 
 @orders_bp.route("/<int:oid>/items/add", methods=["POST"])
 @login_required
+@require_permission("so.edit")
 def add_item(oid):
     order = _get_order(oid)
     _check_company(order)
@@ -488,6 +518,7 @@ def add_item(oid):
 
 @orders_bp.route("/items/<int:iid>/delete", methods=["POST"])
 @login_required
+@require_permission("so.edit")
 def delete_item(iid):
     item = OrderItem.query.get_or_404(iid)
     order = item.order
@@ -505,6 +536,7 @@ def delete_item(iid):
 
 @orders_bp.route("/items/<int:iid>/update", methods=["POST"])
 @login_required
+@require_permission("so.edit")
 def update_item(iid):
     item  = OrderItem.query.get_or_404(iid)
     order = item.order
@@ -521,6 +553,7 @@ def update_item(iid):
 
 @orders_bp.route("/items/<int:iid>/update-operational", methods=["POST"])
 @login_required
+@require_permission("so.edit")
 def update_item_operational(iid):
     item  = OrderItem.query.get_or_404(iid)
     order = item.order
@@ -543,6 +576,7 @@ def update_item_operational(iid):
 
 @orders_bp.route("/<int:oid>/update-obs", methods=["POST"])
 @login_required
+@require_permission("so.edit")
 def update_obs(oid):
     order = _get_order(oid)
     _check_company(order)
@@ -562,6 +596,7 @@ def update_obs(oid):
 
 @orders_bp.route("/<int:oid>/delete", methods=["POST"])
 @login_required
+@require_permission("so.delete")
 def delete(oid):
     order = Order.query.filter_by(id=oid, company_id=current_user.company_id).filter(
         Order.status != "excluido"
@@ -584,6 +619,7 @@ def delete(oid):
 
 @orders_bp.route("/<int:oid>/create-po", methods=["POST"])
 @login_required
+@require_permission("po.create")
 def create_po(oid):
     order = _get_order(oid)
     if order.status not in ("aberto", "faturado"):
@@ -612,6 +648,7 @@ def create_po(oid):
 
 @orders_bp.route("/<int:oid>/create-os", methods=["POST"])
 @login_required
+@require_permission("dispatch.edit")
 def create_os(oid):
     order = _get_order(oid)
     if order.status not in ("aberto", "faturado"):

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Roles & Permissões{% endblock %}
+{% block page_title %}<i class="fa-solid fa-shield-halved mr-2 text-blue-500"></i>Roles & Permissões{% endblock %}
+
+{% block content %}
+<p class="text-sm text-slate-500 mb-5">
+  Papéis canônicos do sistema (somente leitura). Cada papel agrupa um conjunto de permissões.
+</p>
+
+<div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead class="bg-slate-50 dark:bg-slate-700">
+      <tr>
+        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Permissão</th>
+        {% for r in roles %}
+          <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
+            {{ r.code }}
+            {% if r.is_system %}<i class="fa-solid fa-lock text-slate-300 ml-1" title="System role"></i>{% endif %}
+          </th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+      {% for cat, perms in perms_by_cat.items() %}
+        <tr class="bg-slate-50 dark:bg-slate-900/50">
+          <td colspan="{{ roles|length + 1 }}" class="px-4 py-1.5 text-xs font-semibold uppercase text-slate-500">
+            {{ cat }}
+          </td>
+        </tr>
+        {% for p in perms %}
+        <tr class="hover:bg-slate-50 dark:hover:bg-slate-700">
+          <td class="px-4 py-2">
+            <div class="font-medium text-slate-700 dark:text-slate-200">{{ p.label }}</div>
+            <div class="text-xs text-slate-400">{{ p.code }}</div>
+          </td>
+          {% for r in roles %}
+            <td class="px-4 py-2 text-center">
+              {% if p in r.permissions %}
+                <i class="fa-solid fa-check text-emerald-500"></i>
+              {% else %}
+                <i class="fa-solid fa-minus text-slate-300"></i>
+              {% endif %}
+            </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

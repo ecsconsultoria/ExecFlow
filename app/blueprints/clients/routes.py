@@ -3,10 +3,13 @@ from flask_login import login_required, current_user
 from . import clients_bp
 from ...models.client import Client
 from ...extensions import db
+from ...utils.decorators import require_permission
+from ...utils.audit import log_activity
 
 
 @clients_bp.route("/")
 @login_required
+@require_permission("clients.view")
 def index():
     q     = request.args.get("q", "").strip()
     query = Client.query.filter_by(company_id=current_user.company_id, deleted_at=None)
@@ -18,6 +21,7 @@ def index():
 
 @clients_bp.route("/new", methods=["GET", "POST"])
 @login_required
+@require_permission("clients.edit")
 def new():
     if request.method == "POST":
         client = Client(
@@ -46,6 +50,7 @@ def new():
 
 @clients_bp.route("/<int:cid>/edit", methods=["GET", "POST"])
 @login_required
+@require_permission("clients.edit")
 def edit(cid):
     client = Client.query.filter_by(id=cid, company_id=current_user.company_id, deleted_at=None).first_or_404()
     if request.method == "POST":
@@ -71,9 +76,11 @@ def edit(cid):
 
 @clients_bp.route("/<int:cid>/delete", methods=["POST"])
 @login_required
+@require_permission("clients.delete")
 def delete(cid):
     client = Client.query.filter_by(id=cid, company_id=current_user.company_id, deleted_at=None).first_or_404()
     client.soft_delete()
+    log_activity("client", client.id, current_user.company_id, f"Cliente {client.name!r} excluído", current_user.id)
     db.session.commit()
     flash("Cliente removido.", "info")
     return redirect(url_for("clients.index"))
@@ -81,6 +88,7 @@ def delete(cid):
 
 @clients_bp.route("/search")
 @login_required
+@require_permission("clients.view")
 def search():
     q = request.args.get("q", "")
     clients = (Client.query

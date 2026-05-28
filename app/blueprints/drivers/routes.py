@@ -4,10 +4,13 @@ from . import drivers_bp
 from ...models.driver import Driver
 from ...models.supplier import Supplier
 from ...extensions import db
+from ...utils.decorators import require_permission
+from ...utils.audit import log_activity
 
 
 @drivers_bp.route("/")
 @login_required
+@require_permission("drivers.view")
 def index():
     q     = request.args.get("q", "").strip()
     query = Driver.query.filter_by(company_id=current_user.company_id, deleted_at=None)
@@ -19,6 +22,7 @@ def index():
 
 @drivers_bp.route("/new", methods=["GET", "POST"])
 @login_required
+@require_permission("drivers.edit")
 def new():
     suppliers = Supplier.query.filter_by(company_id=current_user.company_id, deleted_at=None, is_active=True).order_by(Supplier.name).all()
     if request.method == "POST":
@@ -42,6 +46,7 @@ def new():
 
 @drivers_bp.route("/<int:did>/edit", methods=["GET", "POST"])
 @login_required
+@require_permission("drivers.edit")
 def edit(did):
     driver    = Driver.query.filter_by(id=did, company_id=current_user.company_id, deleted_at=None).first_or_404()
     suppliers = Supplier.query.filter_by(company_id=current_user.company_id, deleted_at=None, is_active=True).order_by(Supplier.name).all()
@@ -62,9 +67,11 @@ def edit(did):
 
 @drivers_bp.route("/<int:did>/delete", methods=["POST"])
 @login_required
+@require_permission("drivers.delete")
 def delete(did):
     driver = Driver.query.filter_by(id=did, company_id=current_user.company_id, deleted_at=None).first_or_404()
     driver.soft_delete()
+    log_activity("driver", driver.id, current_user.company_id, f"Motorista {driver.name!r} excluído", current_user.id)
     db.session.commit()
     flash("Motorista removido.", "info")
     return redirect(url_for("drivers.index"))

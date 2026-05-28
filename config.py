@@ -7,7 +7,13 @@ load_dotenv()
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "change-me-in-production")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True, "pool_recycle": 300}
+    # SQLite: longer timeout + check_same_thread off to avoid "database is locked"
+    # under Flask debug auto-reload (2 procs) and OneDrive file scans.
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_pre_ping": True,
+        "pool_recycle": 300,
+        "connect_args": {"timeout": 30, "check_same_thread": False},
+    }
 
     # E-mail
     SMTP_HOST    = os.environ.get("SMTP_HOST", "")
@@ -38,6 +44,20 @@ class Config:
     NF_RATE   = float(os.environ.get("NF_RATE", "0.10"))
     CARD_RATE = float(os.environ.get("CARD_RATE", "0.065"))
 
+    # ── Session cookie hardening (Phase 8) ─────────────────────────
+    # HttpOnly: bloqueia leitura via document.cookie (defesa XSS → roubo de sessão)
+    # SameSite=Lax: navegador NÃO envia cookie em POSTs cross-site → defesa CSRF
+    # Secure: cookie só trafega em HTTPS (ativado em produção via env ou ProductionConfig)
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_SECURE   = os.environ.get("SESSION_COOKIE_SECURE", "0") == "1"
+    # Sessão expira em 8h de inatividade (default; sobrescrevível via env)
+    PERMANENT_SESSION_LIFETIME = int(os.environ.get("SESSION_LIFETIME_SECONDS", 28800))
+    # ── CSRF (Flask-WTF) ────────────────────────────────────
+    # Token de sessão exigido em todo POST/PUT/PATCH/DELETE.
+    # Templates injetam {{ csrf_token() }} nos forms; AJAX usa header X-CSRFToken.
+    WTF_CSRF_ENABLED   = True
+    WTF_CSRF_TIME_LIMIT = int(os.environ.get("WTF_CSRF_TIME_LIMIT", 28800))
     @property
     def SQLALCHEMY_DATABASE_URI(self):
         url = os.environ.get("DATABASE_URL", "sqlite:///DB_V2.db")
@@ -52,11 +72,15 @@ class DevelopmentConfig(Config):
 
 class ProductionConfig(Config):
     DEBUG = False
+    # Em produção exigir HTTPS no cookie de sessão (sobrescreve env var ausente)
+    SESSION_COOKIE_SECURE = True
 
 
 class TestingConfig(Config):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
+    # Desabilita CSRF durante testes (test_client não emite tokens).
+    WTF_CSRF_ENABLED = False
 
 
 config = {
