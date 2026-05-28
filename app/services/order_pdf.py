@@ -183,64 +183,24 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         except Exception:
             logo_img = None
 
-    info_st = ParagraphStyle("inf", fontSize=8.5, textColor=BRAND_DARK,
-                              alignment=TA_RIGHT, leading=13)
-
-    def _clean(v):
-        # Filtra None real e a string literal "None" (que vem salva no DB
-        # quando o form converte None -> str). Tambem trata strings vazias.
-        if v is None:
-            return None
-        s = str(v).strip()
-        if not s or s.lower() == "none":
-            return None
-        return s
-
-    company_info_lines = []
-    if company_doc:
-        cnpj_lbl = "CNPJ" if lang == "pt" else "TAX ID"
-        company_info_lines.append(f"<b>{cnpj_lbl}:</b> {company_doc}")
-    _phone = _clean(getattr(company, "phone", None)) if company else None
-    if _phone:
-        phone_lbl = "Telefone" if lang == "pt" else "Phone"
-        company_info_lines.append(f"<b>{phone_lbl}:</b> {_phone}")
-    _email = _clean(getattr(company, "email", None)) if company else None
-    if _email:
-        company_info_lines.append(f"<b>E-mail:</b> {_email}")
-    _addr = _clean(getattr(company, "address", None)) if company else None
-    if _addr:
-        addr_lbl = "Endereço" if lang == "pt" else "Address"
-        company_info_lines.append(f"<b>{addr_lbl}:</b> {_addr}")
-
+    # ── Logo centralizado (mesmo estilo do PDF de orçamento) ───────────────
     if logo_img:
-        info_para = Paragraph(
-            "<br/>".join(company_info_lines) if company_info_lines else "",
-            info_st,
-        )
-        hdr_tbl = Table([[logo_img, info_para]], colWidths=[W * 0.40, W * 0.60])
+        hdr_tbl = Table([[logo_img]], colWidths=[W])
         hdr_tbl.setStyle(TableStyle([
-            ("ALIGN",         (0, 0), (0, 0), "LEFT"),
-            ("ALIGN",         (1, 0), (1, 0), "RIGHT"),
-            ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+            ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
             ("TOPPADDING",    (0, 0), (-1, -1), 0),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-            ("LEFTPADDING",   (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING",  (0, 0), (-1, -1), 0),
         ]))
     else:
-        hdr_tbl = Table([[
-            Paragraph(f"<b>{company_name.upper()}</b>",
-                      ParagraphStyle("hc", fontSize=18, fontName="Helvetica-Bold",
-                                     textColor=BRAND_DARK, alignment=TA_LEFT)),
-            Paragraph("<br/>".join(company_info_lines) if company_info_lines else "",
-                      info_st),
-        ]], colWidths=[W * 0.50, W * 0.50])
+        hdr_tbl = Table([[Paragraph(
+            f"<b>{company_name.upper()}</b>",
+            ParagraphStyle("hc", fontSize=18, fontName="Helvetica-Bold",
+                           textColor=BRAND_DARK, alignment=TA_CENTER),
+        )]], colWidths=[W])
         hdr_tbl.setStyle(TableStyle([
-            ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
-            ("TOPPADDING",    (0, 0), (-1, -1), 4),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-            ("LEFTPADDING",   (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING",  (0, 0), (-1, -1), 0),
+            ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
+            ("TOPPADDING",    (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
         ]))
 
     story.append(hdr_tbl)
