@@ -17,6 +17,8 @@ def create_app(config_name: str | None = None) -> Flask:
     instance = cfg()
     if hasattr(instance, "SQLALCHEMY_DATABASE_URI"):
         app.config["SQLALCHEMY_DATABASE_URI"] = instance.SQLALCHEMY_DATABASE_URI
+    if hasattr(instance, "SQLALCHEMY_ENGINE_OPTIONS"):
+        app.config["SQLALCHEMY_ENGINE_OPTIONS"] = instance.SQLALCHEMY_ENGINE_OPTIONS
 
     db.init_app(app)
     migrate.init_app(app, db)

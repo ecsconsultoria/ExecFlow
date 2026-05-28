@@ -7,13 +7,19 @@ load_dotenv()
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "change-me-in-production")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    # SQLite: longer timeout + check_same_thread off to avoid "database is locked"
-    # under Flask debug auto-reload (2 procs) and OneDrive file scans.
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_pre_ping": True,
-        "pool_recycle": 300,
-        "connect_args": {"timeout": 30, "check_same_thread": False},
-    }
+
+    @property
+    def SQLALCHEMY_ENGINE_OPTIONS(self):
+        """Engine options dependem do driver.
+
+        SQLite (dev/OneDrive): timeout + check_same_thread evitam "database is locked".
+        Postgres (prod/Render): não aceita esses connect_args — só pool tuning.
+        """
+        url = os.environ.get("DATABASE_URL", "")
+        opts = {"pool_pre_ping": True, "pool_recycle": 300}
+        if url.startswith("sqlite") or not url:
+            opts["connect_args"] = {"timeout": 30, "check_same_thread": False}
+        return opts
 
     # E-mail
     SMTP_HOST    = os.environ.get("SMTP_HOST", "")
