@@ -39,9 +39,6 @@ PERMISSION_CATALOG = [
     ("quote.delete",       "quote",     "Orçamentos — remover",       "Soft delete de orçamentos"),
     ("quote.approve",      "quote",     "Orçamentos — aprovar",       "Aprovar orçamentos / converter em SO"),
 
-    # bookings
-    ("booking.view",       "booking",   "Bookings — ver",             "Listar bookings"),
-    ("booking.edit",       "booking",   "Bookings — editar",          "Criar/editar bookings"),
 
     # sales orders
     ("so.view",            "so",        "SO — ver",                   "Listar e visualizar Sales Orders"),
@@ -119,7 +116,6 @@ _OPERATIONAL_PERMS = {
     "vehicles.view",
     "catalog.view",
     "quote.view", "quote.create", "quote.edit", "quote.approve",
-    "booking.view", "booking.edit",
     "so.view", "so.create", "so.edit", "so.close", "so.reopen",
     "po.view", "po.create", "po.edit",
     "dispatch.view", "dispatch.edit",

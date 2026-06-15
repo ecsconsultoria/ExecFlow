@@ -10,3 +10,4 @@ python-dotenv
 reportlab
 openpyxl
 requests
+deep-translator

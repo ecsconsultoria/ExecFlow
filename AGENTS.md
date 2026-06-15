@@ -142,6 +142,8 @@ Quote (Orçamento)
                                                                     ↘ cancelado
 ```
 
+> **Booking removido em 05/06/2026.** O fluxo agora é Quote → Order → ServiceOrder diretamente.
+
 **Entidades financeiras associadas:**
 - `OrderPayment` — Parcelas a receber (vinculadas à Order)
 - `POPayment` — Parcelas a pagar (vinculadas à PurchaseOrder)

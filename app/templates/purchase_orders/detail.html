@@ -60,9 +60,7 @@
   </a>
   {% if po %}
   Purchase Order <span class="font-mono font-bold">{{ po.number }}</span>
-  <span class="ml-2 text-xs px-2 py-0.5 rounded-full bg-{{ po.status_color }}-100 text-{{ po.status_color }}-700 dark:bg-{{ po.status_color }}-900 dark:text-{{ po.status_color }}-300">
-    {{ po.status_label }}
-  </span>
+  <span class="ml-2" style="{{ po.status|status_badge_style }}"><span style="width:7px;height:7px;border-radius:50%;background:{{ po.status|status_dot_color }};flex-shrink:0;display:inline-block"></span> {{ po.status_label }}</span>
   {% else %}
   <i class="fa-solid fa-cart-flatbed mr-2 text-violet-500"></i>Nova Purchase Order
   {% endif %}
@@ -84,10 +82,11 @@
   usarHora:          {{ 'true' if po and po.pickup_datetime and (po.pickup_datetime.hour or po.pickup_datetime.minute) else 'false' }},
   discType:          '{{ po.discount_type or 'R$' if po else 'R$' }}',
   isExpensePO:       {{ 'true' if po and po.items and po.items|map(attribute='category')|select('ne', None)|map(attribute='category_type')|list|unique|list == ['expense'] else 'false' }},
-  showCancelModal:   false,
-  showDeleteModal:   false,
-  showObsModal:      false,
-  showAddItemModal:  false,
+  showCancelModal:        false,
+  showDeleteModal:        false,
+  showObsModal:           false,
+  showAddItemModal:       false,
+  showNewSupplierModal:   false,
   showEditItemModal: false,
   editItemUrl:       '',
   editDesc:          '',
@@ -162,9 +161,15 @@
 
       <div>
         <label class="lbl">Emissão</label>
+        {% if po and po.status not in ('cancelado',) %}
+        <input type="date" name="emission_date"
+               value="{{ po.created_at.strftime('%Y-%m-%d') if po and po.created_at else '' }}"
+               class="fi w-36">
+        {% else %}
         <p class="text-sm text-slate-600 dark:text-slate-300 pt-1">
           {{ po.created_at.strftime('%d/%m/%Y') if po and po.created_at else '–' }}
         </p>
+        {% endif %}
       </div>
 
       <div>
@@ -209,7 +214,7 @@
 
       <div>
         <label class="lbl">Fornecedor *</label>
-        <select name="supplier_id" class="fi"
+        <select name="supplier_id" id="supplier-select" class="fi"
                 {% if locked %}disabled{% endif %}
                 onchange="selectSupplier(this.value)">
           <option value="">– Selecione –</option>
@@ -219,6 +224,12 @@
           </option>
           {% endfor %}
         </select>
+        {% if not locked %}
+        <button type="button" @click="showNewSupplierModal=true"
+                class="mt-1 text-xs text-violet-600 hover:text-violet-800 dark:text-violet-400 dark:hover:text-violet-200 flex items-center gap-1 transition-colors">
+          <i class="fa-solid fa-plus text-[10px]"></i> Novo Fornecedor
+        </button>
+        {% endif %}
       </div>
 
       <div>
@@ -366,11 +377,11 @@
     <tfoot class="border-t-2 border-slate-200 dark:border-slate-600">
       <tr class="bg-slate-50 dark:bg-slate-700/50">
         <td colspan="4" class="px-3 py-2 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide">
-          Total PO
+          SubTotal
         </td>
         <td id="po-total-val"
             class="px-3 py-2 text-right font-extrabold text-red-600 dark:text-red-400 font-mono whitespace-nowrap text-sm">
-          {{ po.computed_total|currency if po else 'R\xa00,00' }}
+          {{ po.subtotal|currency if po else 'R\xa00,00' }}
         </td>
         <td></td>
       </tr>
@@ -398,7 +409,7 @@
             </div>
             <input type="hidden" name="discount_type" :value="discType">
             <input type="text" name="discount_value" placeholder="0,00"
-                   value="{{ po.discount_value or '' }}" class="fi w-20 font-mono">
+                   value="{% if po.discount_value %}{{ ('%.2f' % po.discount_value).replace('.', ',') }}{% endif %}" class="fi w-20 font-mono">
           </div>
         </div>
 
@@ -458,7 +469,8 @@
     <div class="sm:w-52 shrink-0 bg-slate-700 dark:bg-slate-900 text-white p-3 space-y-3">
       <div>
         <p class="text-xs text-slate-400 uppercase mb-0.5">A Pagar</p>
-        <p class="text-xl font-extrabold text-red-300 font-mono" id="po-apagar-val">{{ apagar|currency }}</p>
+        <p class="text-xl font-extrabold text-red-300 font-mono">{{ po.computed_total|currency }}</p>
+        <span id="po-apagar-val" class="hidden">{{ apagar|currency }}</span>
         {% if po.total_paid() > 0 %}
         <p class="text-xs text-emerald-400">Pago: {{ po.total_paid()|currency }}</p>
         {% endif %}
@@ -522,7 +534,7 @@
             <th class="px-2 py-1.5 text-left">Vencimento</th>
             <th class="px-2 py-1.5 text-left hidden sm:table-cell">Obs</th>
             <th class="px-2 py-1.5 text-right">Valor</th>
-            <th class="px-2 py-1.5 text-center w-20">Baixa</th>
+            <th class="px-2 py-1.5 text-center w-28">Baixa</th>
             <th class="px-2 py-1.5 text-center">Pago em</th>
             <th class="px-2 py-1.5 w-6"></th>
           </tr>
@@ -534,27 +546,23 @@
             <td class="px-2 py-1.5 text-center text-slate-500" data-pmt-no>{{ pmt.installment_no }}/{{ total_pmts }}</td>
 
             {% if not pmt.is_paid %}
-            <form method="post" action="{{ url_for('purchase_orders.update_payment', pid=pmt.id) }}"
-                  id="pf-{{ pmt.id }}" class="contents">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <td class="px-2 py-1.5">
                 <input type="date" name="due_date"
                        value="{{ pmt.due_date.isoformat() if pmt.due_date else '' }}"
                        class="fi" style="min-width:120px"
-                       onchange="this.form.requestSubmit()">
+                       onchange="savePmt({{ pmt.id }}, 'due_date', this.value)">
               </td>
               <td class="px-2 py-1.5 hidden sm:table-cell">
                 <input type="text" name="notes" value="{{ pmt.notes or '' }}"
                        placeholder="nota..." class="fi" style="min-width:80px"
-                       onblur="savePmtNotes({{ pmt.id }}, this.value)">
+                       onblur="savePmt({{ pmt.id }}, 'notes', this.value)">
               </td>
               <td class="px-2 py-1.5">
                 <input type="text" name="amount"
                        value="{{ '%.2f'|format(pmt.amount or 0)|replace('.', ',') }}"
                        class="fi text-right font-mono" style="min-width:75px"
-                       onblur="this.form.requestSubmit()">
+                       onblur="savePmt({{ pmt.id }}, 'amount', this.value)">
               </td>
-            </form>
             <td class="px-2 py-1.5 text-center"
                 id="baixa-td-{{ pmt.id }}"
                 data-url="{{ url_for('purchase_orders.baixa', pid=pmt.id) }}"
@@ -634,7 +642,7 @@
 <div class="space-y-4">
 
 {# ── Histórico / Info ── #}
-<div x-data="{ histOpen: {{ 'false' if (po and audit_logs) else 'true' }} }"
+<div x-data="{ histOpen: false }"
      class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
   {# Toggle header #}
   <button type="button" @click="histOpen = !histOpen"
@@ -742,7 +750,7 @@
     {% if not locked and has_perm('po.edit' if po else 'po.create') %}
     <button type="submit" form="main-form"
             data-tip="{{ 'Salvar PO' if po else 'Criar PO' }}"
-            class="act-btn bg-violet-600 hover:bg-violet-700">
+            class="act-btn bg-blue-600 hover:bg-blue-700">
       <i class="fa-solid fa-floppy-disk"></i>
     </button>
     {% endif %}
@@ -752,19 +760,13 @@
       {% if po.status == 'rascunho' and has_perm('po.edit') %}
       <button type="button"
           data-tip="Abrir PO"
-              onclick="document.getElementById('po-open-form').submit()"
+              onclick="
+                const sel = document.getElementById('supplier-select');
+                if (sel && sel.value) document.getElementById('open-supplier-id').value = sel.value;
+                document.getElementById('po-open-form').submit();
+              "
               class="act-btn bg-blue-600 hover:bg-blue-700">
         <i class="fa-solid fa-folder-open"></i>
-      </button>
-      {% endif %}
-
-      {# Aprovar #}
-      {% if po.status in ('aberto', 'enviado') and has_perm('po.approve') %}
-      <button type="button"
-              data-tip="Confirmar / Aprovar"
-              onclick="document.getElementById('po-approve-form').submit()"
-              class="act-btn bg-green-600 hover:bg-green-700">
-        <i class="fa-solid fa-check"></i>
       </button>
       {% endif %}
 
@@ -783,7 +785,7 @@
       <button type="button"
               data-tip="Concluir PO"
               onclick="if(confirm('Concluir esta PO?'))document.getElementById('po-conclude-form').submit()"
-              class="act-btn bg-emerald-600 hover:bg-emerald-700">
+              class="act-btn bg-green-600 hover:bg-green-700">
         <i class="fa-solid fa-flag-checkered"></i>
       </button>
       {% endif %}
@@ -806,7 +808,7 @@
                 document.getElementById('faturar-supplier-id').value = sid.value;
                 document.getElementById('po-faturar-form').submit();
               "
-              class="act-btn bg-amber-500 hover:bg-amber-600">
+              class="act-btn bg-green-600 hover:bg-green-700">
         <i class="fa-solid fa-file-invoice"></i>
       </button>
       {% endif %}
@@ -814,58 +816,52 @@
       {% set _em = (po.supplier.email if po and po.supplier and po.supplier.email else '') %}
       {% set _ph = (po.supplier.phone if po and po.supplier and po.supplier.phone else '') %}
 
-      {# PT dropdown: PDF + Email + WhatsApp #}
+      {# PDF unified dropdown: PT + EN — Baixar, Email, WhatsApp #}
       <div class="relative flex-1 min-w-0" x-data="{open:false}" @click.outside="open=false">
-        <button type="button" @click="open=!open" data-tip="PDF PT"
-                class="act-btn bg-rose-600 hover:bg-rose-700 w-full">
-          <i class="fa-solid fa-file-pdf"></i><span style="font-size:10px;margin-left:3px">PT</span>
+        <button type="button" @click="open=!open" data-tip="PDF / Enviar"
+                class="act-btn bg-slate-600 hover:bg-slate-700 w-full">
+          <i class="fa-solid fa-file-pdf"></i><span style="font-size:10px;margin-left:3px">PDF</span>
         </button>
         <div x-show="open" x-cloak
-             class="absolute left-0 bottom-full mb-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 min-w-[160px] py-1 overflow-hidden">
-          <a href="{{ url_for('purchase_orders.pdf', po_id=po.id, lang='pt') }}" target="_blank"
-             @click="open=false"
-             class="flex items-center gap-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
-            <i class="fa-solid fa-download text-rose-500"></i> Baixar PDF
-          </a>
+             class="absolute left-0 top-full mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 py-1 overflow-hidden"
+             style="min-width:200px">
+          <div style="display:grid;grid-template-columns:1fr 1fr">
+            <a href="{{ url_for('purchase_orders.pdf', po_id=po.id, lang='pt') }}" target="_blank"
+               @click="open=false"
+               class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
+              <i class="fa-solid fa-download text-rose-500"></i> PDF PT
+            </a>
+            <a href="{{ url_for('purchase_orders.pdf', po_id=po.id, lang='en') }}" target="_blank"
+               @click="open=false"
+               class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
+              <i class="fa-solid fa-download text-rose-700"></i> PDF EN
+            </a>
+          </div>
           {% if _em %}
-          <button type="button" onclick="poSendEmail('pt')" @click="open=false"
-                  class="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
-            <i class="fa-solid fa-envelope text-blue-500"></i> Enviar Email
-          </button>
+          <hr class="my-1 border-slate-100 dark:border-slate-700">
+          <div style="display:grid;grid-template-columns:1fr 1fr">
+            <button type="button" onclick="poSendEmail('pt')" @click="open=false"
+                    class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
+              <i class="fa-solid fa-envelope text-blue-500"></i> Email PT
+            </button>
+            <button type="button" onclick="poSendEmail('en')" @click="open=false"
+                    class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
+              <i class="fa-solid fa-envelope text-blue-700"></i> Email EN
+            </button>
+          </div>
           {% endif %}
           {% if _ph %}
-          <button type="button" onclick="poWhatsApp('pt')" @click="open=false"
-                  class="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
-            <i class="fa-brands fa-whatsapp text-green-500"></i> WhatsApp
-          </button>
-          {% endif %}
-        </div>
-      </div>
-
-      {# EN dropdown: PDF + Email + WhatsApp #}
-      <div class="relative flex-1 min-w-0" x-data="{open:false}" @click.outside="open=false">
-        <button type="button" @click="open=!open" data-tip="PDF EN"
-                class="act-btn bg-rose-800 hover:bg-rose-900 w-full">
-          <i class="fa-solid fa-file-pdf"></i><span style="font-size:10px;margin-left:3px">EN</span>
-        </button>
-        <div x-show="open" x-cloak
-             class="absolute left-0 bottom-full mb-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 min-w-[160px] py-1 overflow-hidden">
-          <a href="{{ url_for('purchase_orders.pdf', po_id=po.id, lang='en') }}" target="_blank"
-             @click="open=false"
-             class="flex items-center gap-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
-            <i class="fa-solid fa-download text-rose-700"></i> Download PDF
-          </a>
-          {% if _em %}
-          <button type="button" onclick="poSendEmail('en')" @click="open=false"
-                  class="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
-            <i class="fa-solid fa-envelope text-blue-700"></i> Send Email
-          </button>
-          {% endif %}
-          {% if _ph %}
-          <button type="button" onclick="poWhatsApp('en')" @click="open=false"
-                  class="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
-            <i class="fa-brands fa-whatsapp text-green-600"></i> WhatsApp
-          </button>
+          <hr class="my-1 border-slate-100 dark:border-slate-700">
+          <div style="display:grid;grid-template-columns:1fr 1fr">
+            <button type="button" onclick="poWhatsApp('pt')" @click="open=false"
+                    class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
+              <i class="fa-brands fa-whatsapp text-green-500"></i> WA PT
+            </button>
+            <button type="button" onclick="poWhatsApp('en')" @click="open=false"
+                    class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
+              <i class="fa-brands fa-whatsapp text-green-600"></i> WA EN
+            </button>
+          </div>
           {% endif %}
         </div>
       </div>
@@ -875,7 +871,7 @@
       <button type="button"
               data-tip="Cancelar PO"
               @click="showCancelModal=true"
-              class="act-btn bg-red-500 hover:bg-red-600">
+              class="act-btn bg-red-600 hover:bg-red-700">
         <i class="fa-solid fa-ban"></i>
       </button>
       {% endif %}
@@ -885,7 +881,7 @@
       <button type="button"
               data-tip="Excluir PO"
               @click="showDeleteModal=true"
-              class="act-btn bg-red-900 hover:bg-red-950">
+              class="act-btn bg-red-800 hover:bg-red-900">
         <i class="fa-solid fa-trash"></i>
       </button>
       {% endif %}
@@ -894,7 +890,7 @@
     {# Nova PO — botão voltar #}
     <a href="{{ url_for('orders.detail', oid=linked_order.id) if linked_order else url_for('purchase_orders.index') }}"
        data-tip="Cancelar"
-       class="act-btn bg-slate-400 hover:bg-slate-500">
+       class="act-btn bg-slate-500 hover:bg-slate-600">
       <i class="fa-solid fa-xmark"></i>
     </a>
     {% endif %}
@@ -917,9 +913,8 @@
 ══════════════════════════════════════════ #}
 {% if po %}
 <form id="po-open-form"    method="post" action="{{ url_for('purchase_orders.open_po', po_id=po.id) }}" class="hidden">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"></form>
-<form id="po-approve-form" method="post" action="{{ url_for('purchase_orders.approve', po_id=po.id) }}" class="hidden">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"></form>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" id="open-supplier-id" name="supplier_id" value=""></form>
 <form id="po-start-form"   method="post" action="{{ url_for('purchase_orders.start_execution', po_id=po.id) }}" class="hidden">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"></form>
 <form id="po-conclude-form" method="post" action="{{ url_for('purchase_orders.conclude', po_id=po.id) }}" class="hidden">
@@ -929,6 +924,65 @@
   <input type="hidden" id="faturar-supplier-id" name="supplier_id" value="">
 </form>
 {% endif %}
+
+{# ══════════════════════════════════════════
+   Modal: Novo Fornecedor (inline)
+══════════════════════════════════════════ #}
+<div x-show="showNewSupplierModal" x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+     @keydown.escape.window="showNewSupplierModal=false"
+     @supplier-created.window="showNewSupplierModal=false">
+  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-lg p-6"
+       @click.stop>
+    <h3 class="font-bold text-slate-800 dark:text-slate-100 mb-4">
+      <i class="fa-solid fa-handshake text-violet-500 mr-2"></i>Novo Fornecedor
+    </h3>
+    <div class="space-y-3" id="ns-form">
+      <div class="grid grid-cols-2 gap-3">
+        <div class="col-span-2">
+          <label class="lbl">Nome *</label>
+          <input type="text" id="ns-name" class="fi" placeholder="Razão social ou nome" autocomplete="off">
+        </div>
+        <div>
+          <label class="lbl">Contato</label>
+          <input type="text" id="ns-contact" class="fi" placeholder="Nome do contato">
+        </div>
+        <div>
+          <label class="lbl">Telefone</label>
+          <input type="text" id="ns-phone" class="fi" placeholder="(11) 99999-9999">
+        </div>
+        <div>
+          <label class="lbl">Email</label>
+          <input type="text" id="ns-email" class="fi" placeholder="email@exemplo.com">
+        </div>
+        <div>
+          <label class="lbl">CNPJ / CPF</label>
+          <input type="text" id="ns-document" class="fi" placeholder="00.000.000/0001-00">
+        </div>
+        <div>
+          <label class="lbl">Tipo de Serviço</label>
+          <input type="text" id="ns-service-type" class="fi" placeholder="Ex: Transporte, Hotel...">
+        </div>
+        <div>
+          <label class="lbl">Cond. Pagamento</label>
+          <input type="text" id="ns-payment-terms" class="fi" placeholder="Ex: 30 dias">
+        </div>
+      </div>
+      <p id="ns-error" class="text-red-500 text-xs hidden"></p>
+    </div>
+    <div class="flex gap-2 justify-end mt-4">
+      <button type="button" @click="showNewSupplierModal=false"
+              class="aq-btn bg-slate-400 hover:bg-slate-500">
+        <i class="fa-solid fa-xmark mr-1"></i> Cancelar
+      </button>
+      <button type="button" onclick="createSupplierInline()"
+              id="ns-save-btn"
+              class="aq-btn bg-violet-600 hover:bg-violet-700">
+        <i class="fa-solid fa-floppy-disk mr-1"></i> Cadastrar
+      </button>
+    </div>
+  </div>
+</div>
 
 {# ══════════════════════════════════════════
    Modal: Observações
@@ -997,6 +1051,7 @@
           <div>
             <label class="lbl">Categoria</label>
             <select name="category_id" id="ai-category" class="fi"
+                    onchange="poFetchItemCost()"
                     @change="isExpensePO = $el.options[$el.selectedIndex]?.dataset?.ctype === 'expense'">
               <option value="">– Categoria –</option>
               {% set transport_cats = categories|selectattr('category_type', 'ne', 'expense')|selectattr('category_type', 'ne', 'financial_expense')|list %}
@@ -1217,9 +1272,9 @@
     <form method="post" action="{{ url_for('purchase_orders.cancel', po_id=po.id) }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="mb-4">
-        <label class="lbl">Motivo (opcional)</label>
+        <label class="lbl">Motivo <span class="text-red-500">*</span></label>
         <input type="text" name="reason" placeholder="Informe o motivo do cancelamento..."
-               class="fi">
+               class="fi" required minlength="3">
       </div>
       <div class="flex gap-2 justify-end">
         <button type="button" @click="showCancelModal=false"
@@ -1271,6 +1326,40 @@
 </div>
 {# /x-data #}
 
+{# ── Modal de Baixa (PO) ────────────────────────────────────────────────── #}
+<div id="baixa-modal"
+     class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50"
+     style="display:none">
+  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-sm mx-4">
+    <h3 class="text-base font-semibold text-slate-700 dark:text-slate-200 mb-5">
+      <i class="fa-solid fa-circle-check text-emerald-500 mr-2"></i>Registrar Baixa
+    </h3>
+    <form id="baixa-form" method="post" class="space-y-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Data do pagamento</label>
+        <input type="date" name="paid_date" id="baixa-date"
+               class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Valor pago (R$)</label>
+        <input type="text" name="paid_amount" id="baixa-amount"
+               class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm font-mono text-right focus:outline-none focus:ring-2 focus:ring-emerald-400">
+      </div>
+      <div class="flex justify-end gap-2 pt-1">
+        <button type="button" onclick="closeBaixa()"
+                class="px-4 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700">
+          Cancelar
+        </button>
+        <button type="submit"
+                class="px-5 py-2 text-sm rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-colors">
+          <i class="fa-solid fa-check mr-1"></i>Confirmar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
 {# ══════════════════════════════════════════
    Scripts
 ══════════════════════════════════════════ #}
@@ -1284,6 +1373,80 @@ function selectSupplier(id) {
   if (el('supp-document')) el('supp-document').textContent = s.document || '–';
 }
 
+async function createSupplierInline() {
+  const g = (id) => (document.getElementById(id)?.value || '').trim();
+  const name = g('ns-name');
+  const errEl = document.getElementById('ns-error');
+  if (!name) {
+    errEl.textContent = 'Nome é obrigatório.';
+    errEl.classList.remove('hidden');
+    document.getElementById('ns-name').focus();
+    return;
+  }
+  errEl.classList.add('hidden');
+  const btn = document.getElementById('ns-save-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Salvando...';
+  try {
+    const resp = await fetch('/suppliers/api/new', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token() }}'
+      },
+      body: JSON.stringify({
+        name:          name,
+        contact:       g('ns-contact'),
+        phone:         g('ns-phone'),
+        email:         g('ns-email'),
+        document:      g('ns-document'),
+        service_type:  g('ns-service-type'),
+        payment_terms: g('ns-payment-terms'),
+      })
+    });
+    const data = await resp.json();
+    if (!data.ok) throw new Error(data.error || 'Erro ao salvar');
+    // Add to local lookup
+    _suppliers[String(data.id)] = {
+      contact: data.contact, email: data.email,
+      phone: data.phone, document: data.document
+    };
+    // Add option to select and choose it
+    const sel = document.getElementById('supplier-select');
+    const opt = new Option(data.name, data.id, true, true);
+    sel.appendChild(opt);
+    selectSupplier(data.id);
+    // Close modal via custom event (Alpine v3 safe)
+    window.dispatchEvent(new CustomEvent('supplier-created'));
+    ['ns-name','ns-contact','ns-phone','ns-email','ns-document','ns-service-type','ns-payment-terms']
+      .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    // Toast success
+    _poToast('Fornecedor "' + data.name + '" cadastrado com sucesso.', 'green');
+  } catch(e) {
+    errEl.textContent = e.message;
+    errEl.classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-1"></i> Cadastrar';
+  }
+}
+
+function _poToast(msg, color) {
+  color = color || 'green';
+  const colors = { green: '#16a34a', red: '#dc2626', amber: '#d97706' };
+  const t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = [
+    'position:fixed;bottom:24px;right:24px;z-index:9999',
+    'padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600',
+    'color:#fff;box-shadow:0 4px 16px rgba(0,0,0,.18)',
+    'transition:opacity .4s',
+    'background:' + (colors[color] || colors.green),
+  ].join(';');
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 3000);
+}
+
 // ── Add-item helpers ──────────────────────────────────────────────────────
 const _svcNames = {
   {% for sv in services %}'{{ sv.id }}':'{{ sv.name|replace("'","&#39;") }}',
@@ -1292,6 +1455,23 @@ const _svcNames = {
 function fillAddItemDesc(svcId) {
   const desc = document.getElementById('ai-description');
   if (desc && !desc.value && svcId && _svcNames[svcId]) desc.value = _svcNames[svcId];
+  // also try to fetch cost suggestion if category is already selected
+  poFetchItemCost();
+}
+
+function poFetchItemCost() {
+  const svcId = document.getElementById('ai-service')?.value;
+  const catId = document.getElementById('ai-category')?.value;
+  const costInput = document.getElementById('ai-unit');
+  if (!svcId || !catId || !costInput) return;
+  fetch(`/services/pricing?service_id=${svcId}&category_id=${catId}&billing_type=recibo`)
+    .then(r => r.json())
+    .then(d => {
+      if (d.price_cost > 0 && (!costInput.value || costInput.value === '0,00')) {
+        costInput.value = d.price_cost.toFixed(2).replace('.', ',');
+      }
+    })
+    .catch(() => {});
 }
 
 function deletePoItem(url) {
@@ -1299,6 +1479,11 @@ function deletePoItem(url) {
   const form = document.createElement('form');
   form.method = 'POST';
   form.action = url;
+  const csrf = document.createElement('input');
+  csrf.type  = 'hidden';
+  csrf.name  = 'csrf_token';
+  csrf.value = '{{ csrf_token() }}';
+  form.appendChild(csrf);
   document.body.appendChild(form);
   form.submit();
 }
@@ -1341,21 +1526,18 @@ function submitGenPayments() {
     const bUrl    = baixaUrl.replace('/0/', '/' + p.id + '/');
       tr.innerHTML = `
         <td class="px-2 py-1.5 text-center text-slate-500">${p.no}/${total}</td>
-        <form method="post" action="${rowUrl}" id="pf-${p.id}" class="contents">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <td class="px-2 py-1.5">
-            <input type="date" name="due_date" value="${p.due_date}" class="fi" style="min-width:120px"
-                   onchange="this.form.requestSubmit()">
-          </td>
-          <td class="px-2 py-1.5">
-            <input type="text" name="notes" value="${p.notes || ''}" placeholder="nota..." class="fi" style="min-width:80px"
-                   onblur="savePmtNotes(${p.id}, this.value)">
-          </td>
-          <td class="px-2 py-1.5">
-            <input type="text" name="amount" value="${amt_fmt}" class="fi text-right font-mono" style="min-width:75px"
-                   onblur="this.form.requestSubmit()">
-          </td>
-        </form>
+        <td class="px-2 py-1.5">
+          <input type="date" name="due_date" value="${p.due_date}" class="fi" style="min-width:120px"
+                 onchange="savePmt(${p.id}, 'due_date', this.value)">
+        </td>
+        <td class="px-2 py-1.5">
+          <input type="text" name="notes" value="${p.notes || ''}" placeholder="nota..." class="fi" style="min-width:80px"
+                 onblur="savePmt(${p.id}, 'notes', this.value)">
+        </td>
+        <td class="px-2 py-1.5">
+          <input type="text" name="amount" value="${amt_fmt}" class="fi text-right font-mono" style="min-width:75px"
+                 onblur="savePmt(${p.id}, 'amount', this.value)">
+        </td>
         <td class="px-2 py-1.5 text-center"
             id="baixa-td-${p.id}"
             data-url="${bUrl}"
@@ -1380,18 +1562,27 @@ function submitGenPayments() {
     const apagarEl = document.getElementById('po-apagar-val');
     if (apagarEl) apagarEl.textContent = 'R\u00a0' + data.a_pagar.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
     if (total > 0) { wrap.style.display = ''; empty.style.display = 'none'; }
-    document.getElementById('gp-custom-amount').value = '';
+    // Pré-preenche saldo restante no campo Valor Parcela
+    const customAmtInput = document.getElementById('gp-custom-amount');
+    if (data.a_pagar > 0.001) {
+      customAmtInput.value = data.a_pagar.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+    } else {
+      customAmtInput.value = '';
+    }
   })
   .catch(() => alert('Erro ao comunicar com o servidor.'));
 }
 
-function savePmtNotes(pid, val) {
+function savePmt(pid, field, val) {
   const fd = new FormData();
-  fd.append('notes', val);
+  fd.append(field, val);
   fetch('{{ url_for("purchase_orders.update_payment", pid=0) }}'.replace('/0/', '/' + pid + '/'), {
     method:  'POST',
-    headers: {'X-Requested-With': 'XMLHttpRequest'},
-    body:    fd,
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest',
+      'X-CSRFToken': '{{ csrf_token() }}',
+    },
+    body: fd,
   }).catch(() => {});
 }
 
@@ -1419,47 +1610,21 @@ function deletePmt(pid) {
 function openBaixa(pid) {
   const td  = document.getElementById('baixa-td-' + pid);
   if (!td) return;
-  const url = td.dataset.url;
-  const amt = td.dataset.amount;
-  td.innerHTML = `<div class="flex items-center gap-0.5">
-      <input type="text" value="${amt}" id="baixa-inp-${pid}"
-             class="fi w-16 text-right font-mono"
-             onkeydown="if(event.key==='Enter'){event.preventDefault();submitBaixa(${pid});}if(event.key==='Escape')closeBaixa(${pid},'${amt}');">
-      <button type="button" onclick="submitBaixa(${pid})"
-              class="p-1 rounded bg-emerald-600 text-white hover:bg-emerald-700">
-        <i class="fa-solid fa-check" style="font-size:9px"></i>
-      </button>
-      <button type="button" onclick="closeBaixa(${pid},'${amt}')"
-              class="p-1 rounded bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-200">
-        <i class="fa-solid fa-xmark" style="font-size:9px"></i>
-      </button>
-    </div>`;
-  const inp = document.getElementById('baixa-inp-' + pid);
-  if (inp) { inp.focus(); inp.select(); }
+  document.getElementById('baixa-form').action = td.dataset.url;
+  document.getElementById('baixa-amount').value = td.dataset.amount;
+  document.getElementById('baixa-date').value = new Date().toISOString().split('T')[0];
+  const modal = document.getElementById('baixa-modal');
+  modal.style.display = 'flex';
+  setTimeout(() => document.getElementById('baixa-date').focus(), 50);
 }
 
-function submitBaixa(pid) {
-  const td  = document.getElementById('baixa-td-' + pid);
-  const inp = document.getElementById('baixa-inp-' + pid);
-  if (!td || !inp) return;
-  const val = inp.value.replace(/\./g, '').replace(',', '.');
-  const fd  = new FormData();
-  fd.append('paid_amount', val);
-  fetch(td.dataset.url, { method: 'POST', body: fd })
-    .then(() => location.reload())
-    .catch(() => alert('Erro ao comunicar com o servidor.'));
+function closeBaixa() {
+  document.getElementById('baixa-modal').style.display = 'none';
 }
 
-function closeBaixa(pid, amt) {
-  const td = document.getElementById('baixa-td-' + pid);
-  if (!td) return;
-  td.innerHTML = `
-    <button type="button" onclick="openBaixa(${pid})"
-            class="p-1 rounded text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-900/30"
-            title="Dar baixa">
-      <i class="fa-solid fa-circle-check"></i>
-    </button>`;
-}
+document.getElementById('baixa-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeBaixa();
+});
 {% endif %}
 </script>
 

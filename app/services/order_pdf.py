@@ -61,17 +61,17 @@ _T: dict[str, dict[str, str]] = {
     "generated":        {"pt": "Gerado em",                "en": "Generated on"},
     # Operational data
     "op_hdr":           {"pt": "DADOS OPERACIONAIS",       "en": "OPERATIONAL DATA"},
-    "op_driver":        {"pt": "Motorista",                "en": "Driver"},
-    "op_driver_phone":  {"pt": "Fone",                     "en": "Phone"},
-    "op_modelo":        {"pt": "Modelo",                   "en": "Model"},
-    "op_plate":         {"pt": "Placa",                    "en": "Plate"},
+    "op_driver":        {"pt": "Motorista",                "en": "Driver Name"},
+    "op_driver_phone":  {"pt": "Fone",                     "en": "Mobile"},
+    "op_modelo":        {"pt": "Modelo",                   "en": "Vehicle Model"},
+    "op_plate":         {"pt": "Placa",                    "en": "License Plate"},
     "op_pickup":        {"pt": "Data / Hora Pickup",        "en": "Pickup Date/Time"},
     "op_pickup_date":   {"pt": "Data Pickup",               "en": "Pickup Date"},
     "op_pickup_time":   {"pt": "Hora Pickup",               "en": "Pickup Time"},
-    "op_from":          {"pt": "Embarque",                  "en": "Pickup"},
-    "op_to":            {"pt": "Desembarque",               "en": "Dropoff"},
+    "op_from":          {"pt": "Embarque",                  "en": "Pickup Location"},
+    "op_to":            {"pt": "Desembarque",               "en": "Drop-off Location"},
     "op_passenger":     {"pt": "Passageiro",               "en": "Passenger"},
-    "op_pax_phone":     {"pt": "Fone Passageiro",          "en": "Pax Phone"},
+    "op_pax_phone":     {"pt": "Fone Pax",                 "en": "Pax Phone"},
     "op_flight":        {"pt": "Nº Voo",                  "en": "Flight No."},
     "op_obs":           {"pt": "Observações",              "en": "Notes"},
 }
@@ -231,7 +231,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
     ]
     order_col_values = [
         _fmt_date(order.emission_date, lang),
-        _fmt_datetime(order.delivery_datetime, lang),
+        _fmt_date(order.delivery_datetime, lang),
         _billing_label(order.billing_type or "recibo", lang),
         vendor_name or "–",
         status_val,
@@ -504,14 +504,17 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
     story.append(Paragraph(obs_hdr_label, sec_hdr))
     story.append(HRFlowable(width=W, thickness=1, color=BRAND_GOLD, spaceAfter=3))
     bullet_st = ParagraphStyle("obs_bullet", parent=normal, leftIndent=12, firstLineIndent=-8)
-    hora_extra_txt = (
-        "Hora Extra: 10% sobre o valor total da diária, a partir de 30 minutos de despera."
-        if lang == "pt" else
-        "Overtime: 10% of the total daily rate, after 30 minutes of waiting."
-    )
-    story.append(Paragraph(f"• {hora_extra_txt}", bullet_st))
+    if order.status != "faturado":
+        hora_extra_txt = (
+            "Hora Extra será cobrada a partir de 30 minutos de espera."
+            if lang == "pt" else
+            "Overtime will be charged after 30 minutes of waiting."
+        )
+        story.append(Paragraph(f"• {hora_extra_txt}", bullet_st))
     if order.obs:
-        for line in order.obs.splitlines():
+        from ..utils.translate import translate_obs
+        obs_text = translate_obs(order.obs, lang) if lang != "pt" else order.obs
+        for line in obs_text.splitlines():
             safe = line.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
             if not safe.strip():
                 story.append(Spacer(1, 3))
@@ -523,6 +526,8 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
     story.append(Spacer(1, 4 * mm))
 
     # ── Dados operacionais por item — formato compacto, agrupados ──────────
+    # Omitidos no PDF após faturamento (dados operacionais são do despacho,
+    # não pertencem ao documento fiscal).
     op_label_st = ParagraphStyle(
         "op_label_c", fontName="Helvetica-Bold", fontSize=7,
         textColor=colors.HexColor("#64748b"), leading=9, spaceAfter=0,
@@ -539,32 +544,34 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
     items_sorted = sorted(order.items, key=lambda it: (it.sort_order or 0, it.id))
     item_index = {it.id: i + 1 for i, it in enumerate(items_sorted)}
 
+    # Dados operacionais omitidos no PDF pós-faturamento
     op_groups: list[tuple[tuple, list]] = []  # [(key_tuple, [items])]
-    for it in items_sorted:
-        op_pickup_dt = getattr(it, "op_pickup_datetime", None)
-        key = (
-            (getattr(it, "op_driver_name", "") or "").strip(),
-            (getattr(it, "op_driver_phone", "") or "").strip(),
-            (getattr(it, "op_vehicle_model", "") or "").strip(),
-            (getattr(it, "op_vehicle_plate", "") or "").strip(),
-            op_pickup_dt.isoformat() if op_pickup_dt else "",
-            (getattr(it, "op_pickup_location", "") or "").strip(),
-            (getattr(it, "op_dropoff_location", "") or "").strip(),
-            (getattr(it, "op_passenger_name", "") or "").strip(),
-            (getattr(it, "op_passenger_phone", "") or "").strip(),
-            (getattr(it, "op_flight_number", "") or "").strip(),
-            (getattr(it, "op_notes", "") or "").strip(),
-        )
-        if not any(key):
-            continue
-        matched = False
-        for k, lst in op_groups:
-            if k == key:
-                lst.append(it)
-                matched = True
-                break
-        if not matched:
-            op_groups.append((key, [it]))
+    if order.status != "faturado":
+        for it in items_sorted:
+            op_pickup_dt = getattr(it, "op_pickup_datetime", None)
+            key = (
+                (getattr(it, "op_driver_name", "") or "").strip(),
+                (getattr(it, "op_driver_phone", "") or "").strip(),
+                (getattr(it, "op_vehicle_model", "") or "").strip(),
+                (getattr(it, "op_vehicle_plate", "") or "").strip(),
+                op_pickup_dt.isoformat() if op_pickup_dt else "",
+                (getattr(it, "op_pickup_location", "") or "").strip(),
+                (getattr(it, "op_dropoff_location", "") or "").strip(),
+                (getattr(it, "op_passenger_name", "") or "").strip(),
+                (getattr(it, "op_passenger_phone", "") or "").strip(),
+                (getattr(it, "op_flight_number", "") or "").strip(),
+                (getattr(it, "op_notes", "") or "").strip(),
+            )
+            if not any(key):
+                continue
+            matched = False
+            for k, lst in op_groups:
+                if k == key:
+                    lst.append(it)
+                    matched = True
+                    break
+            if not matched:
+                op_groups.append((key, [it]))
 
     total_items = len(items_sorted)
 
@@ -646,6 +653,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
 
     if op_groups:
         story.append(Spacer(1, 2 * mm))
+    # ── Fim do bloco de dados operacionais ──────────────────────────────────
 
     # ── Footer as page callback (like quote PDF) ───────────────────────────
     from datetime import datetime as _dt

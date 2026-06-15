@@ -11,7 +11,6 @@ from .driver       import Driver
 from .vehicle      import VehicleCategory, Vehicle
 from .service      import State, Service, ServicePricing
 from .quote        import Quote, QuoteItem, BILLING_TYPES, QUOTE_STATUSES
-from .booking      import Booking, BOOKING_STATUSES
 from .financial    import FinancialRecord, AccountReceivable
 
 # V4 — novos modelos operacionais
@@ -37,7 +36,6 @@ __all__ = [
     "VehicleCategory", "Vehicle",
     "State", "Service", "ServicePricing",
     "Quote", "QuoteItem", "BILLING_TYPES", "QUOTE_STATUSES",
-    "Booking", "BOOKING_STATUSES",
     "FinancialRecord", "AccountReceivable",
     # V4 operational
     "ServiceOrder", "OS_STATUSES",

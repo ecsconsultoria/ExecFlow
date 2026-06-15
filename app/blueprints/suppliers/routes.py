@@ -1,4 +1,4 @@
-from flask import render_template, request, redirect, url_for, flash
+from flask import render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from . import suppliers_bp
 from ...models.supplier import Supplier
@@ -78,3 +78,54 @@ def delete(sid):
     db.session.commit()
     flash("Fornecedor removido.", "info")
     return redirect(url_for("suppliers.index"))
+
+
+@suppliers_bp.route("/bulk-delete", methods=["POST"])
+@login_required
+@require_permission("suppliers.delete")
+def bulk_delete():
+    ids = request.form.getlist("ids")
+    if not ids:
+        flash("Nenhum fornecedor selecionado.", "warning")
+        return redirect(url_for("suppliers.index"))
+    count = 0
+    for sid in ids:
+        s = Supplier.query.filter_by(id=sid, company_id=current_user.company_id, deleted_at=None).first()
+        if s:
+            s.soft_delete()
+            count += 1
+    db.session.commit()
+    flash(f"{count} fornecedor(es) removido(s).", "info")
+    return redirect(url_for("suppliers.index"))
+
+
+@suppliers_bp.route("/api/new", methods=["POST"])
+@login_required
+@require_permission("suppliers.edit")
+def api_create():
+    """JSON endpoint — cria fornecedor inline (chamado pelo PO via fetch)."""
+    data = request.get_json(silent=True) or {}
+    name = (data.get("name") or "").strip()
+    if not name:
+        return jsonify({"ok": False, "error": "Nome obrigatório"}), 400
+    s = Supplier(
+        company_id    = current_user.company_id,
+        name          = name,
+        contact       = (data.get("contact") or "").strip() or None,
+        email         = (data.get("email")   or "").strip() or None,
+        phone         = (data.get("phone")   or "").strip() or None,
+        document      = (data.get("document") or "").strip() or None,
+        service_type  = (data.get("service_type") or "").strip() or None,
+        payment_terms = (data.get("payment_terms") or "").strip() or None,
+    )
+    db.session.add(s)
+    db.session.commit()
+    return jsonify({
+        "ok":       True,
+        "id":       s.id,
+        "name":     s.name,
+        "contact":  s.contact  or "",
+        "email":    s.email    or "",
+        "phone":    s.phone    or "",
+        "document": s.document or "",
+    })

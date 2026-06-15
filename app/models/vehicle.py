@@ -59,7 +59,5 @@ class Vehicle(db.Model, TimestampMixin, SoftDeleteMixin):
     notes       = db.Column(db.Text)
     is_active   = db.Column(db.Boolean, default=True)
 
-    bookings = db.relationship("Booking", backref="vehicle", lazy="dynamic")
-
     def __repr__(self):
         return f"<Vehicle {self.plate}>"

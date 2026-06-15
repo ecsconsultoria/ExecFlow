@@ -18,8 +18,22 @@ from ...services              import order_service
 from ...services              import service_order_service as sos
 from ...services              import purchase_order_service as pos
 from ...utils                 import now_br
+from ...utils.helpers         import parse_brl
 from ...utils.audit           import log_activity
 from ...utils.decorators      import require_permission
+
+
+def _void_order_financial_records(order):
+    """Soft-delete todos os FinancialRecords vinculados às parcelas do SO."""
+    from ...services.financial_service import void_payment_financial_records
+    void_payment_financial_records(order.payments, "order_payment")
+
+
+def _void_linked_po_financial_records(order):
+    """Soft-delete FinancialRecords das parcelas de todas as POs vinculadas ao SO."""
+    from ...services.financial_service import void_payment_financial_records
+    for po in order.purchase_orders:
+        void_payment_financial_records(po.payments, "po_payment")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -55,6 +69,22 @@ def index():
     orders = pagination.items
     return render_template("orders/index.html", orders=orders, pagination=pagination,
                            status=status, q=q, ORDER_STATUSES=ORDER_STATUSES)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Criação Manual (sem orçamento)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@orders_bp.route("/new", methods=["GET"])
+@login_required
+@require_permission("so.create")
+def new():
+    """Cria um Pedido em branco e redireciona para o detalhe para preenchimento."""
+    order = order_service.create_manual(current_user.company_id, current_user.id)
+    log_activity("order", order.id, order.company_id, "Criado manualmente", current_user.id)
+    db.session.commit()
+    flash(f"Pedido {order.number} criado. Preencha os dados abaixo.", "info")
+    return redirect(url_for("orders.detail", oid=order.id))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -138,12 +168,14 @@ def detail(oid):
 
     from sqlalchemy import or_
     from ...models.audit import AuditLog
+    from ...models.client import Client
     services   = Service.query.filter(
         or_(Service.company_id == current_user.company_id, Service.company_id.is_(None))
     ).filter_by(is_active=True).order_by(Service.name).all()
     categories = VehicleCategory.query.filter_by(is_active=True).order_by(VehicleCategory.name).all()
     company    = Company.query.get(order.company_id)
     audit_logs = AuditLog.query.filter_by(entity="order", entity_id=order.id).order_by(AuditLog.created_at.asc()).all()
+    clients    = Client.query.filter_by(company_id=current_user.company_id, deleted_at=None).order_by(Client.name).all()
 
     return render_template(
         "orders/detail.html",
@@ -156,6 +188,7 @@ def detail(oid):
         categories=categories,
         company=company,
         audit_logs=audit_logs,
+        clients=clients,
     )
 
 
@@ -168,6 +201,22 @@ def detail(oid):
 @require_permission("so.edit")
 def open_order(oid):
     order = _get_order(oid)
+    bt = request.form.get("billing_type", "").strip()
+    if bt and bt in ("recibo", "nf", "cartao", "nf_cartao"):
+        order.billing_type = bt
+    cid = request.form.get("client_id", type=int)
+    if cid:
+        from ...models.client import Client
+        c = Client.query.filter_by(id=cid, company_id=current_user.company_id, deleted_at=None).first()
+        if c:
+            order.client_id   = c.id
+            order.client_name = c.name
+            if not order.email and c.email:
+                order.email = c.email
+            if not order.phone and c.phone:
+                order.phone = c.phone
+            if not order.celular and c.whatsapp:
+                order.celular = c.whatsapp
     try:
         order_service.open_order(order, current_user.id)
         log_activity("order", order.id, order.company_id, "Aberto", current_user.id)
@@ -216,6 +265,9 @@ def cancel(oid):
     reason = request.form.get("reason", "")
     try:
         order_service.cancel(order, reason, current_user.id)
+        _void_order_financial_records(order)
+        # Void FRs das POs cascade-canceladas (o service só marca status, não soft-deleta)
+        _void_linked_po_financial_records(order)
         log_activity("order", order.id, order.company_id, "Cancelado", current_user.id)
         db.session.commit()
         flash("Pedido cancelado.", "info")
@@ -275,17 +327,14 @@ def generate_payments(oid):
     custom_total = None
     raw_custom = request.form.get("custom_amount", "").strip()
     if raw_custom:
-        try:
-            # Handle Brazilian format: "5.000,00" → remove . then swap , → .
-            custom_total = float(raw_custom.replace(".", "").replace(",", "."))
-        except ValueError:
-            pass
+        custom_total = parse_brl(raw_custom)
     pmts = order_service.generate_payments(order, custom_total=custom_total)
     log_activity("order", order.id, order.company_id, "Parcelas geradas", current_user.id)
     db.session.commit()
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         total_scheduled = sum(p.amount or 0 for p in order.payments)
-        a_pagar = max(order.computed_total - total_scheduled, 0)
+        paid_total = order.total_paid()
+        a_pagar = max(float(order.total_pending()), 0.0) if paid_total > 0 else max(order.computed_total - total_scheduled, 0)
         return jsonify({
             'ok': True,
             'installments': [{
@@ -356,7 +405,8 @@ def delete_payment(pid):
     db.session.commit()
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         total_scheduled = sum(p.amount or 0 for p in order.payments)
-        a_pagar = max(order.computed_total - total_scheduled, 0)
+        paid_total = order.total_paid()
+        a_pagar = max(float(order.total_pending()), 0.0) if paid_total > 0 else max(order.computed_total - total_scheduled, 0)
         return jsonify({'ok': True, 'a_pagar': a_pagar, 'total_count': len(order.payments)})
     flash("Parcela removida.", "info")
     return redirect(url_for("orders.detail", oid=order.id))
@@ -369,13 +419,16 @@ def baixa(pid):
     pmt   = OrderPayment.query.get_or_404(pid)
     order = pmt.order
     _check_company(order)
-    if order.status in ("concluido", "cancelado"):
+    if order.status == "cancelado":
         flash("Pedido não pode ser editado no status atual.", "warning")
         return redirect(url_for("orders.detail", oid=order.id))
     try:
         raw         = request.form.get("paid_amount", "")
         paid_amount = float(str(raw).replace(",", ".")) if raw else (pmt.amount or 0)
-        order_service.baixa(pmt, paid_amount, current_user.id)
+        paid_date_str = request.form.get("paid_date", "")
+        from datetime import date as _date_type
+        paid_date = _date_type.fromisoformat(paid_date_str) if paid_date_str else None
+        order_service.baixa(pmt, paid_amount, current_user.id, paid_date=paid_date)
         log_activity("order", order.id, order.company_id, f"Parcela {pmt.installment_no} baixada", current_user.id)
         db.session.commit()
         flash("Pagamento registrado.", "success")
@@ -436,6 +489,17 @@ def save_all(oid):
     else:
         data.pop("delivery_datetime", None)
     order_service.update_header(order, data)
+    # client_id (seleção de cliente cadastrado)
+    cid_str = data.get("client_id", "").strip()
+    if cid_str:
+        try:
+            from ...models.client import Client
+            c = Client.query.filter_by(id=int(cid_str), company_id=current_user.company_id, deleted_at=None).first()
+            if c:
+                order.client_id   = c.id
+                order.client_name = c.name
+        except (ValueError, TypeError):
+            pass
     # Contact fields
     for field in ("client_name", "email", "phone", "celular"):
         if field in data:
@@ -473,7 +537,7 @@ def update_payment(pid):
     pmt   = OrderPayment.query.get_or_404(pid)
     order = pmt.order
     _check_company(order)
-    if order.status in ("concluido", "faturado", "cancelado"):
+    if order.status == "cancelado":
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({'ok': False, 'error': 'Pedido bloqueado'}), 403
         flash("Pedido não pode ser editado no status atual.", "warning")
@@ -508,8 +572,7 @@ def pdf(oid, lang):
     lang  = lang if lang in ("pt", "en") else "pt"
     buf   = generate_order_pdf(order, lang=lang)
     gc.collect()
-    suffix = "PT" if lang == "pt" else "EN"
-    filename = f"{order.number}_{suffix}.pdf"
+    filename = f"{order.number}.pdf"
     return send_file(buf, mimetype="application/pdf",
                      as_attachment=True, download_name=filename)
 
@@ -625,6 +688,12 @@ def delete(oid):
         quote = Quote.query.get(order.quote_id)
         if quote and quote.status == "reserva_confirmada":
             quote.status = "aprovado"
+    _void_order_financial_records(order)
+    # Exclui POs vinculadas e seus lançamentos financeiros
+    for po in order.purchase_orders:
+        if po.status not in ("excluido", "cancelado"):
+            po.status = "excluido"
+    _void_linked_po_financial_records(order)
     log_activity("order", order.id, order.company_id, "Excluído", current_user.id)
     db.session.commit()
     flash(f"Pedido {order.number} excluído.", "info")

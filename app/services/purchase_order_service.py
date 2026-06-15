@@ -3,10 +3,11 @@
 PO = despesa / contas a pagar (contraparte de custo do Pedido SO).
 Fluxo: rascunho → aberto → aprovado → em_execucao → concluido
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from ..extensions import db
 from ..models.purchase_order import PurchaseOrder, POPayment, POItem, PO_STATUSES
 from ..utils import now_br
+from ..utils.helpers import parse_brl
 from . import numbering_service
 from . import margin_service
 
@@ -147,11 +148,32 @@ def faturar(po: PurchaseOrder, user_id: int) -> PurchaseOrder:
 
 def cancel(po: PurchaseOrder, user_id: int, reason: str = "") -> PurchaseOrder:
     """Cancela a PO."""
+    if not (reason or "").strip():
+        raise ValueError("Informe o motivo do cancelamento")
     _assert_status(po, ["rascunho", "aberto", "enviado", "aprovado"])
     po.status       = "cancelado"
     po.cancelled_at = now_br()
-    if reason:
-        po.internal_notes = (po.internal_notes or "") + f"\n[Cancelado] {reason}"
+    po.internal_notes = (po.internal_notes or "") + (
+        f"\n[Cancelado em {now_br().strftime('%d/%m/%Y %H:%M')} por user_id={user_id}] {reason.strip()}"
+    )
+
+    # Cancela FinancialRecords vinculados aos pagamentos desta PO
+    from ..models.financial import FinancialRecord
+    payment_refs = [f"po_payment:{p.id}" for p in po.payments.all()]
+    if payment_refs:
+        frs = FinancialRecord.query.filter(
+            FinancialRecord.company_id == po.company_id,
+            FinancialRecord.deleted_at.is_(None),
+            FinancialRecord.status.notin_(("cancelado", "pago")),
+            FinancialRecord.reference.in_(payment_refs),
+        ).all()
+        for fr in frs:
+            fr.status = "cancelado"
+
+    # Recalcula margem do SO vinculado, se houver
+    if po.order_id and po.order:
+        margin_service.recalculate_order(po.order)
+
     return po
 
 
@@ -168,7 +190,7 @@ def _apply_data(po: PurchaseOrder, data: dict):
         if v in (None, ""):
             return default
         try:
-            return float(str(v).replace(".", "").replace(",", "."))
+            return parse_brl(v)
         except (ValueError, TypeError):
             return default
 
@@ -232,7 +254,7 @@ def _assert_status(po: PurchaseOrder, allowed: list):
 
 def _parse_float(val) -> float:
     try:
-        return float(str(val).replace(".", "").replace(",", "."))
+        return parse_brl(val)
     except (ValueError, TypeError):
         return 0.0
 
@@ -334,9 +356,18 @@ def delete_payment(payment: POPayment) -> None:
     db.session.commit()
 
 
-def baixa(payment: POPayment, paid_amount: float, user_id: int) -> None:
+def baixa(payment: POPayment, paid_amount: float, user_id: int, paid_date: date | None = None) -> None:
+    """Liquida uma parcela de PurchaseOrder.
+
+    Toda a operação é atômica: o pagamento, o espelho financeiro,
+    e o sync de parcelas pendentes são commitados juntos.
+    Se qualquer etapa falhar, nada persiste.
+    """
+    _paid_date = paid_date if paid_date else now_br().date()
+    _now = now_br()
+    _paid_at = _now.replace(year=_paid_date.year, month=_paid_date.month, day=_paid_date.day)
     payment.paid_amount = paid_amount
-    payment.paid_at     = now_br()
+    payment.paid_at     = _paid_at
     payment.paid_by     = user_id
 
     po = payment.purchase_order
@@ -353,80 +384,91 @@ def baixa(payment: POPayment, paid_amount: float, user_id: int) -> None:
             po.status   = "pago"
             po.paid_at  = now_br()
 
+    # Espelho financeiro — criado ANTES do commit para atomicidade
+    _sync_po_payment_financial_record(payment, po, _paid_date, paid_amount)
+    _sync_po_pending_financials(po)
+
     db.session.commit()
 
-    # Lançamento de custo no módulo financeiro (best-effort)
-    try:
-        from ..models.financial import FinancialRecord
-        _ref  = f"po_payment:{payment.id}"
-        fr = FinancialRecord.query.filter_by(company_id=po.company_id, reference=_ref).first()
-        if fr:
-            fr.amount    = paid_amount
-            fr.paid_date = now_br().date()
-            fr.status    = "pago"
-        else:
-            total_inst    = po.payments.count()
-            supplier_name = (po.supplier.name if po.supplier else "") or ""
-            desc = f"{po.number}"
-            if supplier_name:
-                desc += f" — {supplier_name}"
-            desc += f" — parcela {payment.installment_no}/{total_inst}"
-            fr = FinancialRecord(
+
+def _sync_po_payment_financial_record(payment: POPayment, po, paid_date, paid_amount) -> None:
+    """Cria/atualiza o FinancialRecord de uma parcela paga (custo).
+
+    Chamado ANTES do commit principal para garantir atomicidade.
+    """
+    from ..models.financial import FinancialRecord
+    _ref = f"po_payment:{payment.id}"
+    fr = FinancialRecord.query.filter_by(
+        company_id=po.company_id, reference=_ref
+    ).filter(FinancialRecord.deleted_at.is_(None)).first()
+    if fr:
+        fr.amount        = paid_amount
+        fr.paid_date     = paid_date
+        fr.emission_date = po.created_at.date() if po.created_at else None
+        fr.status        = "pago"
+    else:
+        total_inst    = len(list(po.payments))
+        supplier_name = (po.supplier.name if po.supplier else "") or ""
+        desc = f"{po.number}"
+        if supplier_name:
+            desc += f" — {supplier_name}"
+        desc += f" — parcela {payment.installment_no}/{total_inst}"
+        db.session.add(FinancialRecord(
+            company_id     = po.company_id,
+            type           = "cost",
+            category       = "custo_fornecedor",
+            description    = desc,
+            amount         = paid_amount,
+            status         = "pago",
+            payment_method = getattr(po, "payment_method", "") or "",
+            emission_date  = po.created_at.date() if po.created_at else None,
+            paid_date      = paid_date,
+            reference      = _ref,
+        ))
+
+
+def _sync_po_pending_financials(po: PurchaseOrder) -> None:
+    """Cria/atualiza lançamentos pendentes de custo para parcelas em aberto da PO.
+
+    Não faz rollback — o caller gerencia a transação.
+    """
+    from ..models.financial import FinancialRecord
+    total_inst    = len(list(po.payments))
+    supplier_name = (po.supplier.name if po.supplier else "") or ""
+    for p in po.payments:
+        if p.is_paid:
+            continue
+        _ref = f"po_payment:{p.id}"
+        desc = f"{po.number}"
+        if supplier_name:
+            desc += f" — {supplier_name}"
+        desc += f" — parcela {p.installment_no}/{total_inst}"
+        fr = FinancialRecord.query.filter_by(
+            company_id=po.company_id, reference=_ref
+        ).filter(FinancialRecord.deleted_at.is_(None)).first()
+        if fr and fr.status != "pago":
+            fr.type           = "cost"
+            fr.category       = "custo_fornecedor"
+            fr.description    = desc
+            fr.amount         = p.amount or 0
+            fr.status         = "pendente"
+            fr.payment_method = getattr(po, "payment_method", "") or ""
+            fr.emission_date  = po.created_at.date() if po.created_at else None
+            fr.due_date       = p.due_date
+            fr.paid_date      = None
+        elif not fr:
+            db.session.add(FinancialRecord(
                 company_id     = po.company_id,
                 type           = "cost",
                 category       = "custo_fornecedor",
                 description    = desc,
-                amount         = paid_amount,
-                status         = "pago",
+                amount         = p.amount or 0,
+                status         = "pendente",
                 payment_method = getattr(po, "payment_method", "") or "",
-                paid_date      = now_br().date(),
+                emission_date  = po.created_at.date() if po.created_at else None,
+                due_date       = p.due_date,
                 reference      = _ref,
-            )
-            db.session.add(fr)
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-
-
-def _sync_po_pending_financials(po: PurchaseOrder) -> None:
-    """Cria/atualiza lançamentos pendentes de custo para parcelas em aberto da PO."""
-    try:
-        from ..models.financial import FinancialRecord
-        total_inst    = po.payments.count()
-        supplier_name = (po.supplier.name if po.supplier else "") or ""
-        for p in po.payments:
-            if p.is_paid:
-                continue
-            _ref = f"po_payment:{p.id}"
-            desc = f"{po.number}"
-            if supplier_name:
-                desc += f" — {supplier_name}"
-            desc += f" — parcela {p.installment_no}/{total_inst}"
-            fr = FinancialRecord.query.filter_by(company_id=po.company_id, reference=_ref).first()
-            if fr:
-                fr.type           = "cost"
-                fr.category       = "custo_fornecedor"
-                fr.description    = desc
-                fr.amount         = p.amount or 0
-                fr.status         = "pendente"
-                fr.payment_method = getattr(po, "payment_method", "") or ""
-                fr.due_date       = p.due_date
-                fr.paid_date      = None
-            else:
-                db.session.add(FinancialRecord(
-                    company_id     = po.company_id,
-                    type           = "cost",
-                    category       = "custo_fornecedor",
-                    description    = desc,
-                    amount         = p.amount or 0,
-                    status         = "pendente",
-                    payment_method = getattr(po, "payment_method", "") or "",
-                    due_date       = p.due_date,
-                    reference      = _ref,
-                ))
-    except Exception:
-        # Não bloqueia faturamento por falha do espelho financeiro.
-        db.session.rollback()
+            ))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -435,7 +477,7 @@ def _sync_po_pending_financials(po: PurchaseOrder) -> None:
 
 def _parse_cost(val) -> float:
     try:
-        return float(str(val).replace(".", "").replace(",", "."))
+        return parse_brl(val)
     except (ValueError, TypeError):
         return 0.0
 

@@ -1,7 +1,8 @@
 {% extends "base.html" %}
-{% block title %}Dashboard{% endblock %}
+{% block title %}Dashboard Executivo{% endblock %}
+
 {% block page_title %}
-  <i class="fa-solid fa-gauge-high mr-2 text-blue-500"></i>Painel Operacional
+  <i class="fa-solid fa-gauge-high mr-2 text-blue-500"></i>Painel Executivo
   <span class="ml-3 text-xs text-slate-400 font-normal hidden sm:inline">
     <i class="fa-regular fa-clock mr-1"></i>
     <span x-data="{t:''}" x-init="setInterval(()=>{t=new Date().toLocaleTimeString('pt-BR')},1000)" x-text="t"></span>
@@ -9,212 +10,564 @@
 {% endblock %}
 
 {% block content %}
-<!-- ── KPI Strip ─────────────────────────────────────────────────────────── -->
-<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
-  <a href="{{ url_for('clients.index') }}"
-     class="group bg-white dark:bg-slate-800 rounded-xl p-4 flex items-center gap-3 shadow-sm hover:shadow-md hover:ring-1 hover:ring-blue-200 dark:hover:ring-blue-700 transition-all">
-    <div class="w-10 h-10 bg-blue-50 dark:bg-blue-900/30 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50 transition-colors">
-      <i class="fa-solid fa-users text-blue-600 dark:text-blue-400 text-sm"></i>
-    </div>
-    <div>
-      <p class="text-2xl font-bold text-slate-800 dark:text-slate-100 leading-none">{{ total_clients }}</p>
-      <p class="text-xs text-slate-500 mt-0.5">Clientes</p>
-    </div>
-  </a>
-  <a href="{{ url_for('quotes.index') }}"
-     class="group bg-white dark:bg-slate-800 rounded-xl p-4 flex items-center gap-3 shadow-sm hover:shadow-md hover:ring-1 hover:ring-violet-200 dark:hover:ring-violet-700 transition-all">
-    <div class="w-10 h-10 bg-violet-50 dark:bg-violet-900/30 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-violet-100 transition-colors">
-      <i class="fa-solid fa-file-invoice-dollar text-violet-600 dark:text-violet-400 text-sm"></i>
-    </div>
-    <div>
-      <p class="text-2xl font-bold text-slate-800 dark:text-slate-100 leading-none">{{ total_quotes }}</p>
-      <p class="text-xs text-slate-500 mt-0.5">Orçamentos</p>
-    </div>
-  </a>
+{# ── Period selector + Title row ──────────────────────────────────────────── #}
+<div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+  <p class="text-xs text-slate-500 dark:text-slate-400">
+    Período:
+    <strong class="text-slate-700 dark:text-slate-200">
+      {% if period == 'last_month' %}Mês Anterior
+      {% elif period == 'last_30' %}Últimos 30 dias
+      {% elif period == 'quarter' %}Trimestre
+      {% elif period == 'ytd' %}Este Ano
+      {% else %}Este Mês{% endif %}
+    </strong>
+    <span class="text-slate-400">({{ p_start.strftime('%d/%m/%Y') }} – {{ p_end.strftime('%d/%m/%Y') }})</span>
+  </p>
+  <div class="flex items-center gap-2">
+    {% for val, label in [('this_month','Este Mês'),('last_month','Mês Anterior'),('last_30','Últimos 30d'),('quarter','Trimestre'),('ytd','Este Ano')] %}
+    <a href="?period={{ val }}"
+       class="text-xs px-3 py-1.5 rounded-lg border transition-colors
+              {% if period == val %}bg-blue-600 text-white border-blue-600{% else %}bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-blue-400{% endif %}">
+      {{ label }}
+    </a>
+    {% endfor %}
+  </div>
+</div>
+
+{# ── ROW A — Executive KPI Band ───────────────────────────────────────────── #}
+<div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-5">
+
+  {# Receita SO #}
   <a href="{{ url_for('orders.index') }}"
-     class="group bg-white dark:bg-slate-800 rounded-xl p-4 flex items-center gap-3 shadow-sm hover:shadow-md hover:ring-1 hover:ring-teal-200 dark:hover:ring-teal-700 transition-all">
-    <div class="w-10 h-10 bg-teal-50 dark:bg-teal-900/30 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-teal-100 transition-colors">
-      <i class="fa-solid fa-bag-shopping text-teal-600 dark:text-teal-400 text-sm"></i>
-    </div>
-    <div>
-      <p class="text-2xl font-bold text-slate-800 dark:text-slate-100 leading-none">{{ total_orders }}</p>
-      <p class="text-xs text-slate-500 mt-0.5">Sales Orders</p>
-    </div>
-  </a>
-  <a href="{{ url_for('financial.index') }}"
-     class="group bg-white dark:bg-slate-800 rounded-xl p-4 flex items-center gap-3 shadow-sm hover:shadow-md hover:ring-1 hover:ring-green-200 dark:hover:ring-green-700 transition-all">
-    <div class="w-10 h-10 bg-green-50 dark:bg-green-900/30 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-green-100 transition-colors">
-      <i class="fa-solid fa-coins text-green-600 dark:text-green-400 text-sm"></i>
-    </div>
-    <div>
-      <p class="text-lg font-bold text-green-700 dark:text-green-400 leading-none">{{ so_revenue_month|currency }}</p>
-      <p class="text-xs text-slate-500 mt-0.5">Receita SO (mês)</p>
-    </div>
-  </a>
-</div>
-
-<!-- ── Margem Operacional Strip ──────────────────────────────────────────── -->
-<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-  <!-- PO Custo -->
-  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 flex items-center gap-3 shadow-sm">
-    <div class="w-10 h-10 bg-red-50 dark:bg-red-900/30 rounded-lg flex items-center justify-center shrink-0">
-      <i class="fa-solid fa-file-invoice text-red-500 dark:text-red-400 text-sm"></i>
-    </div>
-    <div>
-      <p class="text-lg font-bold text-red-600 dark:text-red-400 leading-none">{{ po_cost_month|currency }}</p>
-      <p class="text-xs text-slate-500 mt-0.5">Custo PO (mês)</p>
-    </div>
-  </div>
-  <!-- Margem R$ -->
-  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 flex items-center gap-3 shadow-sm">
-    <div class="w-10 h-10 {% if margin_month >= 0 %}bg-emerald-50 dark:bg-emerald-900/30{% else %}bg-orange-50 dark:bg-orange-900/30{% endif %} rounded-lg flex items-center justify-center shrink-0">
-      <i class="fa-solid fa-chart-line {% if margin_month >= 0 %}text-emerald-600 dark:text-emerald-400{% else %}text-orange-500 dark:text-orange-400{% endif %} text-sm"></i>
-    </div>
-    <div>
-      <p class="text-lg font-bold {% if margin_month >= 0 %}text-emerald-700 dark:text-emerald-400{% else %}text-orange-600 dark:text-orange-400{% endif %} leading-none">{{ margin_month|currency }}</p>
-      <p class="text-xs text-slate-500 mt-0.5">Margem Operacional (mês)</p>
-    </div>
-  </div>
-  <!-- Margem % -->
-  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 flex items-center gap-3 shadow-sm">
-    <div class="w-10 h-10 {% if margin_pct >= 20 %}bg-emerald-50 dark:bg-emerald-900/30{% elif margin_pct >= 0 %}bg-amber-50 dark:bg-amber-900/30{% else %}bg-red-50 dark:bg-red-900/30{% endif %} rounded-lg flex items-center justify-center shrink-0">
-      <i class="fa-solid fa-percent {% if margin_pct >= 20 %}text-emerald-600{% elif margin_pct >= 0 %}text-amber-600{% else %}text-red-500{% endif %} text-sm"></i>
-    </div>
-    <div>
-      <p class="text-lg font-bold {% if margin_pct >= 20 %}text-emerald-700 dark:text-emerald-400{% elif margin_pct >= 0 %}text-amber-700 dark:text-amber-400{% else %}text-red-600 dark:text-red-400{% endif %} leading-none">{{ margin_pct }}%</p>
-      <p class="text-xs text-slate-500 mt-0.5">Margem % (mês)</p>
-    </div>
-  </div>
-</div>
-
-<!-- ── Main Grid ─────────────────────────────────────────────────────────── -->
-<div class="grid lg:grid-cols-3 gap-5">
-
-  <!-- OS do Dia — Dispatch Preview (col-span-2) -->
-  <div class="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl shadow-sm flex flex-col">
-    <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700">
-      <div class="flex items-center gap-2">
-        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-        <h2 class="font-semibold text-slate-700 dark:text-slate-200 text-sm">Operações de Hoje</h2>
-        {% if os_today %}
-        <span class="text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">{{ os_today|length }}</span>
-        {% endif %}
+     class="group bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm hover:shadow-md hover:ring-1 hover:ring-blue-200 dark:hover:ring-blue-700 transition-all col-span-1">
+    <div class="flex items-center gap-2 mb-1">
+      <div class="w-7 h-7 bg-blue-50 dark:bg-blue-900/30 rounded-lg flex items-center justify-center shrink-0">
+        <i class="fa-solid fa-arrow-trend-up text-blue-600 dark:text-blue-400 text-xs"></i>
       </div>
-      <a href="{{ url_for('dispatch.index') }}"
-         class="text-xs text-blue-500 hover:text-blue-700 hover:underline flex items-center gap-1">
-        Centro de Despacho <i class="fa-solid fa-arrow-right text-xs"></i>
-      </a>
+      <p class="text-xs text-slate-500 dark:text-slate-400 truncate">Receita SO</p>
     </div>
-    {% if os_today %}
-    <div class="divide-y divide-slate-50 dark:divide-slate-700/50">
-      {% for os in os_today %}
-      <div class="flex items-center gap-3 px-5 py-3">
-        <!-- Time + status bar -->
-        <div class="w-12 text-right shrink-0">
-          <p class="text-xs font-bold text-slate-600 dark:text-slate-300">
-            {{ os.pickup_datetime.strftime('%H:%M') if os.pickup_datetime else '–' }}
-          </p>
-          <span class="text-xs {{ os.status|status_badge }} px-1.5 py-0.5 rounded-full">{{ os.status_label }}</span>
-        </div>
-        <!-- Vertical divider -->
-        <div class="w-0.5 h-10 bg-slate-100 dark:bg-slate-700 rounded shrink-0"></div>
-        <!-- Info -->
-        <div class="flex-1 min-w-0">
-          <div class="flex items-center gap-2">
-            <span class="font-mono text-xs font-semibold text-blue-600 dark:text-blue-400">{{ os.code }}</span>
-            {% if os.flight_number %}
-            <span class="text-xs text-slate-400"><i class="fa-solid fa-plane text-xs mr-0.5"></i>{{ os.flight_number }}</span>
-            {% endif %}
+    <p class="text-base font-extrabold text-blue-700 dark:text-blue-400 leading-none font-mono">{{ so_revenue_month|currency }}</p>
+    {% if delta_revenue is not none %}
+    <p class="text-xs mt-1 {% if delta_revenue >= 0 %}text-emerald-600{% else %}text-red-500{% endif %}">
+      {% if delta_revenue >= 0 %}▲{% else %}▼{% endif %} {{ delta_revenue|abs }}% vs anterior
+    </p>
+    {% endif %}
+  </a>
+
+  {# Custo PO #}
+  <a href="{{ url_for('purchase_orders.index') }}"
+     class="group bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm hover:shadow-md hover:ring-1 hover:ring-rose-200 dark:hover:ring-rose-700 transition-all col-span-1">
+    <div class="flex items-center gap-2 mb-1">
+      <div class="w-7 h-7 bg-rose-50 dark:bg-rose-900/30 rounded-lg flex items-center justify-center shrink-0">
+        <i class="fa-solid fa-file-invoice text-rose-500 dark:text-rose-400 text-xs"></i>
+      </div>
+      <p class="text-xs text-slate-500 dark:text-slate-400 truncate">Custo PO</p>
+    </div>
+    <p class="text-base font-extrabold text-rose-600 dark:text-rose-400 leading-none font-mono">{{ po_cost_month|currency }}</p>
+  </a>
+
+  {# Margem R$ #}
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm col-span-1">
+    <div class="flex items-center gap-2 mb-1">
+      <div class="w-7 h-7 {% if margin_month >= 0 %}bg-emerald-50 dark:bg-emerald-900/30{% else %}bg-red-50 dark:bg-red-900/30{% endif %} rounded-lg flex items-center justify-center shrink-0">
+        <i class="fa-solid fa-chart-line {% if margin_month >= 0 %}text-emerald-600{% else %}text-red-500{% endif %} text-xs"></i>
+      </div>
+      <p class="text-xs text-slate-500 dark:text-slate-400 truncate">Margem R$</p>
+    </div>
+    <p class="text-base font-extrabold {% if margin_month >= 0 %}text-emerald-700 dark:text-emerald-400{% else %}text-red-600 dark:text-red-400{% endif %} leading-none font-mono">{{ margin_month|currency }}</p>
+  </div>
+
+  {# Margem % #}
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm col-span-1">
+    <div class="flex items-center gap-2 mb-1">
+      <div class="w-7 h-7 {% if margin_pct >= 20 %}bg-emerald-50 dark:bg-emerald-900/30{% elif margin_pct >= 0 %}bg-amber-50 dark:bg-amber-900/30{% else %}bg-red-50 dark:bg-red-900/30{% endif %} rounded-lg flex items-center justify-center shrink-0">
+        <i class="fa-solid fa-percent {% if margin_pct >= 20 %}text-emerald-600{% elif margin_pct >= 0 %}text-amber-600{% else %}text-red-500{% endif %} text-xs"></i>
+      </div>
+      <p class="text-xs text-slate-500 dark:text-slate-400 truncate">Margem %</p>
+    </div>
+    <p class="text-base font-extrabold {% if margin_pct >= 20 %}text-emerald-700 dark:text-emerald-400{% elif margin_pct >= 0 %}text-amber-700 dark:text-amber-400{% else %}text-red-600 dark:text-red-400{% endif %} leading-none">{{ margin_pct }}%</p>
+    {% if delta_pct is not none %}
+    <p class="text-xs mt-1 {% if delta_pct >= 0 %}text-emerald-600{% else %}text-red-500{% endif %}">
+      {% if delta_pct >= 0 %}▲{% else %}▼{% endif %} {{ delta_pct|abs }}pp
+    </p>
+    {% endif %}
+  </div>
+
+  {# SOs Ativas #}
+  <a href="{{ url_for('orders.index') }}"
+     class="group bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm hover:shadow-md hover:ring-1 hover:ring-teal-200 transition-all col-span-1">
+    <div class="flex items-center gap-2 mb-1">
+      <div class="w-7 h-7 bg-teal-50 dark:bg-teal-900/30 rounded-lg flex items-center justify-center shrink-0">
+        <i class="fa-solid fa-bag-shopping text-teal-600 dark:text-teal-400 text-xs"></i>
+      </div>
+      <p class="text-xs text-slate-500 dark:text-slate-400 truncate">SOs Ativas</p>
+    </div>
+    <p class="text-2xl font-bold text-slate-800 dark:text-slate-100 leading-none">{{ active_so_count }}</p>
+  </a>
+
+  {# POs Abertas #}
+  <a href="{{ url_for('purchase_orders.index') }}"
+     class="group bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm hover:shadow-md hover:ring-1 hover:ring-violet-200 transition-all col-span-1">
+    <div class="flex items-center gap-2 mb-1">
+      <div class="w-7 h-7 bg-violet-50 dark:bg-violet-900/30 rounded-lg flex items-center justify-center shrink-0">
+        <i class="fa-solid fa-truck text-violet-600 dark:text-violet-400 text-xs"></i>
+      </div>
+      <p class="text-xs text-slate-500 dark:text-slate-400 truncate">POs Abertas</p>
+    </div>
+    <p class="text-2xl font-bold text-slate-800 dark:text-slate-100 leading-none">{{ open_po_count }}</p>
+  </a>
+
+  {# RFQs Pendentes #}
+  <a href="{{ url_for('quotes.index', status='pendente') }}"
+     class="group bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm hover:shadow-md hover:ring-1 hover:ring-amber-200 transition-all col-span-1">
+    <div class="flex items-center gap-2 mb-1">
+      <div class="w-7 h-7 bg-amber-50 dark:bg-amber-900/30 rounded-lg flex items-center justify-center shrink-0">
+        <i class="fa-solid fa-hourglass-half text-amber-600 dark:text-amber-400 text-xs"></i>
+      </div>
+      <p class="text-xs text-slate-500 dark:text-slate-400 truncate">RFQs Pend.</p>
+    </div>
+    <p class="text-2xl font-bold text-slate-800 dark:text-slate-100 leading-none">{{ pending_rfq_count }}</p>
+  </a>
+
+</div>
+
+{# ── ROW B — Chart + Pipeline + Dispatch ─────────────────────────────────── #}
+<div class="grid lg:grid-cols-3 gap-5 mb-5">
+
+  {# Revenue/Margin Chart (col-span-2) #}
+  <div class="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl shadow-sm p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="font-semibold text-slate-700 dark:text-slate-200 text-sm flex items-center gap-2">
+        <i class="fa-solid fa-chart-column text-blue-500 text-xs"></i>
+        Receita · Custo · Margem — 12 meses
+      </h2>
+    </div>
+    <div class="relative" style="height:220px;">
+      <canvas id="revenueChart"></canvas>
+    </div>
+  </div>
+
+  {# Pipeline + Dispatch (right column) #}
+  <div class="space-y-4">
+
+    {# Pipeline Funnel #}
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-semibold text-slate-700 dark:text-slate-200 text-sm flex items-center gap-2">
+          <i class="fa-solid fa-filter text-violet-500 text-xs"></i>
+          Pipeline (30 dias)
+        </h2>
+        <span class="text-xs bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full font-semibold">
+          {{ conversion_rate }}% conv.
+        </span>
+      </div>
+      {% set funnel_stages = [
+        ('fa-file-circle-plus',  'violet', 'RFQs Enviados',   funnel_sent_count,   funnel_sent_val),
+        ('fa-thumbs-up',         'blue',   'RFQs Aprovados',  funnel_appr_count,   funnel_appr_val),
+        ('fa-bag-shopping',      'teal',   'SOs Abertas',     funnel_so_count,     funnel_so_val),
+        ('fa-circle-check',      'emerald','SOs Concluídas',  funnel_closed_count, funnel_closed_val),
+      ] %}
+      {% set max_val = [funnel_sent_val, 1]|max %}
+      <div class="space-y-2">
+        {% for icon, color, label, cnt, val in funnel_stages %}
+        <div>
+          <div class="flex items-center justify-between text-xs mb-0.5">
+            <span class="text-slate-600 dark:text-slate-300 flex items-center gap-1">
+              <i class="fa-solid {{ icon }} text-{{ color }}-500 text-xs w-3"></i>{{ label }}
+              <span class="font-semibold text-{{ color }}-600 ml-1">{{ cnt }}</span>
+            </span>
+            <span class="font-mono text-slate-500">{{ val|currency }}</span>
           </div>
-          <p class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{{ os.passenger_name or '–' }}</p>
-          <p class="text-xs text-slate-400 truncate">{{ os.pickup_location or '–' }}</p>
+          <div class="h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+            <div class="h-full bg-{{ color }}-400 dark:bg-{{ color }}-500 rounded-full transition-all"
+                 style="width: {{ [((val / max_val) * 100)|round|int, 100]|min }}%"></div>
+          </div>
         </div>
-        <!-- Driver/Supplier -->
-        <div class="text-right shrink-0">
-          {% if os.assigned_driver %}
-          <p class="text-xs text-violet-600 dark:text-violet-400 font-medium">
-            <i class="fa-solid fa-id-card mr-1 opacity-60"></i>{{ os.assigned_driver.name.split(' ')[0] }}
-          </p>
-          {% elif os.supplier %}
-          <p class="text-xs text-purple-600 dark:text-purple-400 font-medium">
-            <i class="fa-solid fa-handshake mr-1 opacity-60"></i>{{ os.supplier.name[:15] }}
-          </p>
-          {% else %}
-          <span class="text-xs text-amber-500 bg-amber-50 dark:bg-amber-900/30 px-1.5 py-0.5 rounded">
-            <i class="fa-solid fa-circle-exclamation mr-0.5"></i>Sem atr.
-          </span>
-          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    {# Dispatch Status #}
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-semibold text-slate-700 dark:text-slate-200 text-sm flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+          Despacho Hoje
+        </h2>
+        <a href="{{ url_for('dispatch.index') }}" class="text-xs text-blue-500 hover:underline">Centro →</a>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="text-center p-3 bg-slate-50 dark:bg-slate-700/40 rounded-lg">
+          <p class="text-xl font-bold text-slate-800 dark:text-slate-100">{{ dispatch_summary.today_count }}</p>
+          <p class="text-xs text-slate-500 mt-0.5">OS hoje</p>
         </div>
+        <div class="text-center p-3 {% if dispatch_summary.pending_count > 0 %}bg-amber-50 dark:bg-amber-900/20{% else %}bg-slate-50 dark:bg-slate-700/40{% endif %} rounded-lg">
+          <p class="text-xl font-bold {% if dispatch_summary.pending_count > 0 %}text-amber-600{% else %}text-slate-800 dark:text-slate-100{% endif %}">{{ dispatch_summary.pending_count }}</p>
+          <p class="text-xs text-slate-500 mt-0.5">Sem atr.</p>
+        </div>
+        <div class="text-center p-3 {% if dispatch_summary.overdue_count > 0 %}bg-red-50 dark:bg-red-900/20{% else %}bg-slate-50 dark:bg-slate-700/40{% endif %} rounded-lg">
+          <p class="text-xl font-bold {% if dispatch_summary.overdue_count > 0 %}text-red-600{% else %}text-slate-800 dark:text-slate-100{% endif %}">{{ dispatch_summary.overdue_count }}</p>
+          <p class="text-xs text-slate-500 mt-0.5">Atrasadas</p>
+        </div>
+        <div class="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+          <p class="text-xl font-bold text-blue-600">{{ dispatch_summary.in_progress|length }}</p>
+          <p class="text-xs text-slate-500 mt-0.5">Em exec.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{# ── ROW C — Operational Grid ─────────────────────────────────────────────── #}
+<div class="grid lg:grid-cols-3 gap-5 mb-5">
+
+  {# Próximos Serviços (7 days) #}
+  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm flex flex-col">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+      <h2 class="font-semibold text-slate-700 dark:text-slate-200 text-sm flex items-center gap-2">
+        <i class="fa-solid fa-calendar-days text-cyan-500 text-xs"></i>
+        Próximas OS (7 dias)
+        {% if upcoming_os %}
+        <span class="text-xs bg-cyan-100 dark:bg-cyan-900/40 text-cyan-700 dark:text-cyan-300 px-2 py-0.5 rounded-full">{{ upcoming_os|length }}</span>
+        {% endif %}
+      </h2>
+      <a href="{{ url_for('dispatch.index') }}" class="text-xs text-blue-500 hover:underline">Ver tudo →</a>
+    </div>
+    {% if upcoming_os %}
+    <div class="divide-y divide-slate-50 dark:divide-slate-700/50 overflow-y-auto max-h-64">
+      {% for os in upcoming_os %}
+      <div class="flex items-center gap-3 px-5 py-2.5">
+        <div class="w-12 shrink-0 text-right">
+          <p class="text-xs font-bold text-slate-600 dark:text-slate-300">
+            {{ os.pickup_datetime.strftime('%d/%m') if os.pickup_datetime else '–' }}
+          </p>
+          <p class="text-xs text-slate-400">{{ os.pickup_datetime.strftime('%H:%M') if os.pickup_datetime else '' }}</p>
+        </div>
+        <div class="w-0.5 h-8 bg-slate-100 dark:bg-slate-700 rounded shrink-0"></div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-1.5">
+            <span class="font-mono text-xs font-semibold text-blue-600 dark:text-blue-400">{{ os.code }}</span>
+            <span class="text-xs {{ os.status|status_badge }} px-1.5 py-0 rounded-full">{{ os.status_label }}</span>
+          </div>
+          <p class="text-xs text-slate-500 dark:text-slate-400 truncate">{{ os.passenger_name or '–' }}</p>
+        </div>
+        {% if os.assigned_driver %}
+        <span class="text-xs text-violet-600 dark:text-violet-400 shrink-0 truncate max-w-[5rem]">
+          <i class="fa-solid fa-id-card mr-0.5 opacity-60"></i>{{ os.assigned_driver.name.split(' ')[0] }}
+        </span>
+        {% elif os.supplier_id %}
+        <span class="text-xs text-purple-500 shrink-0"><i class="fa-solid fa-handshake mr-0.5 opacity-60"></i>Forn.</span>
+        {% else %}
+        <span class="text-xs text-amber-500 shrink-0"><i class="fa-solid fa-circle-exclamation mr-0.5"></i>Sem</span>
+        {% endif %}
       </div>
       {% endfor %}
     </div>
     {% else %}
-    <div class="flex flex-col items-center justify-center py-16 text-slate-400">
-      <i class="fa-solid fa-calendar-xmark text-3xl mb-3 opacity-40"></i>
-      <p class="text-sm">Nenhuma operação programada para hoje.</p>
-      <a href="{{ url_for('purchase_orders.new') }}" class="mt-3 text-xs text-violet-500 hover:underline">Criar PO manual →</a>
+    <div class="flex flex-col items-center justify-center py-12 text-slate-400">
+      <i class="fa-solid fa-calendar-xmark text-2xl mb-2 opacity-40"></i>
+      <p class="text-sm">Nenhuma OS nos próximos 7 dias.</p>
     </div>
     {% endif %}
   </div>
 
-  <!-- Right Column -->
-  <div class="space-y-5">
-
-    <!-- Pending Quotes -->
-    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm">
-      <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700">
-        <h2 class="font-semibold text-slate-700 dark:text-slate-200 text-sm flex items-center gap-2">
-          <i class="fa-solid fa-hourglass-half text-violet-500 text-xs"></i>
-          Orçamentos Pendentes
-        </h2>
-        <a href="{{ url_for('quotes.index', status='pendente') }}" class="text-xs text-blue-500 hover:underline">Ver tudo →</a>
-      </div>
-      {% if pending_quotes %}
-      <div class="divide-y divide-slate-50 dark:divide-slate-700/50">
-        {% for q in pending_quotes %}
-        <a href="{{ url_for('quotes.detail', qid=q.id) }}"
-           class="flex items-center justify-between px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-          <div class="min-w-0">
-            <p class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{{ q.client_name or '–' }}</p>
-            <p class="text-xs text-slate-400">{{ q.number }}</p>
-          </div>
-          <p class="text-sm font-semibold text-slate-800 dark:text-slate-100 ml-2 shrink-0">{{ q.total_amount|currency }}</p>
-        </a>
-        {% endfor %}
-      </div>
-      {% else %}
-      <p class="text-sm text-slate-400 text-center py-8">Sem orçamentos pendentes.</p>
-      {% endif %}
+  {# Recebimentos Pendentes #}
+  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm flex flex-col">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+      <h2 class="font-semibold text-slate-700 dark:text-slate-200 text-sm flex items-center gap-2">
+        <i class="fa-solid fa-arrow-down-to-bracket text-green-500 text-xs"></i>
+        Recebimentos Pendentes
+        {% if alerts.overdue_recv > 0 %}
+        <span class="text-xs bg-red-100 dark:bg-red-900/40 text-red-600 px-2 py-0.5 rounded-full font-semibold">{{ alerts.overdue_recv }} vencido{{ 's' if alerts.overdue_recv > 1 }}</span>
+        {% endif %}
+      </h2>
     </div>
-
-    <!-- Upcoming Bookings -->
-    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm">
-      <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700">
-        <h2 class="font-semibold text-slate-700 dark:text-slate-200 text-sm flex items-center gap-2">
-          <i class="fa-solid fa-calendar-plus text-cyan-500 text-xs"></i>
-          Próximos Agendamentos
-        </h2>
-        <a href="{{ url_for('bookings.index') }}" class="text-xs text-blue-500 hover:underline">Ver tudo →</a>
-      </div>
-      {% if upcoming_bookings %}
-      <div class="divide-y divide-slate-50 dark:divide-slate-700/50">
-        {% for b in upcoming_bookings %}
-        <a href="{{ url_for('bookings.index') }}"
-           class="flex items-center justify-between px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-          <div class="min-w-0">
-            <p class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{{ b.passenger_name or b.client.name if b.client else '–' }}</p>
-            <p class="text-xs text-slate-400">{{ b.pickup_datetime|fdatetime if b.pickup_datetime else '–' }}</p>
-          </div>
-          <span class="text-xs bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 px-2 py-0.5 rounded-full ml-2 shrink-0">{{ b.status }}</span>
-        </a>
-        {% endfor %}
-      </div>
-      {% else %}
-      <p class="text-sm text-slate-400 text-center py-8">Sem agendamentos próximos.</p>
-      {% endif %}
+    {% if pending_receivables %}
+    <div class="divide-y divide-slate-50 dark:divide-slate-700/50 overflow-y-auto max-h-64">
+      {% for p in pending_receivables %}
+      {% set overdue = p.due_date and p.due_date < today %}
+      {% set due_today = p.due_date and p.due_date == today %}
+      <a href="{{ url_for('orders.detail', oid=p.order_id) }}"
+         class="flex items-center justify-between px-5 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors
+                {% if overdue %}bg-red-50/60 dark:bg-red-900/10{% elif due_today %}bg-amber-50/60 dark:bg-amber-900/10{% endif %}">
+        <div class="min-w-0">
+          <p class="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">
+            {{ p.order.client_name or p.order.number if p.order else '–' }}
+          </p>
+          <p class="text-xs {% if overdue %}text-red-500 font-semibold{% elif due_today %}text-amber-600 font-semibold{% else %}text-slate-400{% endif %}">
+            Venc: {{ p.due_date.strftime('%d/%m/%Y') if p.due_date else 'sem data' }}
+            {% if overdue %} · VENCIDO{% elif due_today %} · HOJE{% endif %}
+          </p>
+        </div>
+        <p class="text-sm font-bold text-slate-800 dark:text-slate-100 ml-2 shrink-0 font-mono">
+          {{ p.amount|currency }}
+        </p>
+      </a>
+      {% endfor %}
     </div>
+    {% else %}
+    <div class="flex flex-col items-center justify-center py-12 text-slate-400">
+      <i class="fa-solid fa-circle-check text-2xl mb-2 opacity-40 text-green-400"></i>
+      <p class="text-sm">Nenhum recebimento pendente.</p>
+    </div>
+    {% endif %}
+  </div>
 
+  {# Pagamentos Pendentes (PO) #}
+  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm flex flex-col">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+      <h2 class="font-semibold text-slate-700 dark:text-slate-200 text-sm flex items-center gap-2">
+        <i class="fa-solid fa-arrow-up-from-bracket text-rose-500 text-xs"></i>
+        Pagamentos Pendentes
+        {% if alerts.overdue_pay > 0 %}
+        <span class="text-xs bg-red-100 dark:bg-red-900/40 text-red-600 px-2 py-0.5 rounded-full font-semibold">{{ alerts.overdue_pay }} vencido{{ 's' if alerts.overdue_pay > 1 }}</span>
+        {% endif %}
+      </h2>
+    </div>
+    {% if pending_payables %}
+    <div class="divide-y divide-slate-50 dark:divide-slate-700/50 overflow-y-auto max-h-64">
+      {% for p in pending_payables %}
+      {% set overdue = p.due_date and p.due_date < today %}
+      {% set due_today = p.due_date and p.due_date == today %}
+      <a href="{{ url_for('purchase_orders.detail', po_id=p.purchase_order.id) }}"
+         class="flex items-center justify-between px-5 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors
+                {% if overdue %}bg-red-50/60 dark:bg-red-900/10{% elif due_today %}bg-amber-50/60 dark:bg-amber-900/10{% endif %}">
+        <div class="min-w-0">
+          <p class="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">
+            {{ p.purchase_order.supplier.name if p.purchase_order and p.purchase_order.supplier else (p.purchase_order.number if p.purchase_order else '–') }}
+          </p>
+          <p class="text-xs {% if overdue %}text-red-500 font-semibold{% elif due_today %}text-amber-600 font-semibold{% else %}text-slate-400{% endif %}">
+            Venc: {{ p.due_date.strftime('%d/%m/%Y') if p.due_date else 'sem data' }}
+            {% if overdue %} · VENCIDO{% elif due_today %} · HOJE{% endif %}
+          </p>
+        </div>
+        <p class="text-sm font-bold text-slate-800 dark:text-slate-100 ml-2 shrink-0 font-mono">
+          {{ p.amount|currency }}
+        </p>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="flex flex-col items-center justify-center py-12 text-slate-400">
+      <i class="fa-solid fa-circle-check text-2xl mb-2 opacity-40 text-green-400"></i>
+      <p class="text-sm">Nenhum pagamento pendente.</p>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+{# ── ROW D — Alerts Panel ─────────────────────────────────────────────────── #}
+{% if alerts.total > 0 %}
+<div x-data="{ open: true }" class="mb-20">
+  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
+    <button @click="open = !open"
+            class="w-full flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700 text-left hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+      <h2 class="font-semibold text-slate-700 dark:text-slate-200 text-sm flex items-center gap-2">
+        <i class="fa-solid fa-triangle-exclamation text-amber-500 text-xs"></i>
+        Alertas Operacionais
+        <span class="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{{ alerts.total }}</span>
+      </h2>
+      <i class="fa-solid fa-chevron-down text-slate-400 text-xs transition-transform" :class="open ? 'rotate-180' : ''"></i>
+    </button>
+    <div x-show="open" x-transition class="divide-y divide-slate-50 dark:divide-slate-700/50">
+
+      {% if alerts.unassigned_os > 0 %}
+      <a href="{{ url_for('dispatch.index') }}"
+         class="flex items-center gap-3 px-5 py-3 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors">
+        <span class="w-2 h-2 rounded-full bg-red-500 shrink-0"></span>
+        <p class="text-sm text-slate-700 dark:text-slate-200 flex-1">
+          <strong class="text-red-600">{{ alerts.unassigned_os }}</strong> OS sem motorista/fornecedor atribuído
+        </p>
+        <span class="text-xs text-red-500 shrink-0">→ Dispatch</span>
+      </a>
+      {% endif %}
+
+      {% if alerts.overdue_os > 0 %}
+      <a href="{{ url_for('dispatch.index') }}"
+         class="flex items-center gap-3 px-5 py-3 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors">
+        <span class="w-2 h-2 rounded-full bg-red-500 shrink-0"></span>
+        <p class="text-sm text-slate-700 dark:text-slate-200 flex-1">
+          <strong class="text-red-600">{{ alerts.overdue_os }}</strong> OS com pickup no passado não finalizadas
+        </p>
+        <span class="text-xs text-red-500 shrink-0">→ Dispatch</span>
+      </a>
+      {% endif %}
+
+      {% if alerts.overdue_recv > 0 %}
+      <a href="{{ url_for('orders.index') }}"
+         class="flex items-center gap-3 px-5 py-3 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-colors">
+        <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>
+        <p class="text-sm text-slate-700 dark:text-slate-200 flex-1">
+          <strong class="text-amber-600">{{ alerts.overdue_recv }}</strong> recebimento(s) vencido(s) em aberto
+        </p>
+        <span class="text-xs text-amber-500 shrink-0">→ Pedidos</span>
+      </a>
+      {% endif %}
+
+      {% if alerts.overdue_pay > 0 %}
+      <a href="{{ url_for('purchase_orders.index') }}"
+         class="flex items-center gap-3 px-5 py-3 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-colors">
+        <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>
+        <p class="text-sm text-slate-700 dark:text-slate-200 flex-1">
+          <strong class="text-amber-600">{{ alerts.overdue_pay }}</strong> pagamento(s) de fornecedor vencido(s)
+        </p>
+        <span class="text-xs text-amber-500 shrink-0">→ POs</span>
+      </a>
+      {% endif %}
+
+      {% if alerts.expiring_rfq > 0 %}
+      <a href="{{ url_for('quotes.index', status='pendente') }}"
+         class="flex items-center gap-3 px-5 py-3 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-colors">
+        <span class="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
+        <p class="text-sm text-slate-700 dark:text-slate-200 flex-1">
+          <strong class="text-amber-600">{{ alerts.expiring_rfq }}</strong> orçamento(s) expirando em 48h
+        </p>
+        <span class="text-xs text-amber-500 shrink-0">→ Orçamentos</span>
+      </a>
+      {% endif %}
+
+      {% if alerts.expiring_license > 0 %}
+      <a href="{{ url_for('drivers.index') }}"
+         class="flex items-center gap-3 px-5 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors">
+        <span class="w-2 h-2 rounded-full bg-blue-400 shrink-0"></span>
+        <p class="text-sm text-slate-700 dark:text-slate-200 flex-1">
+          <strong class="text-blue-600">{{ alerts.expiring_license }}</strong> CNH(s) vencendo nos próximos 30 dias
+        </p>
+        <span class="text-xs text-blue-500 shrink-0">→ Motoristas</span>
+      </a>
+      {% endif %}
+
+    </div>
   </div>
 </div>
-{% endblock %}
+{% else %}
+<div class="mb-20"></div>
+{% endif %}
 
+{# ── Quick Actions Bar (sticky bottom) ───────────────────────────────────── #}
+<div class="fixed bottom-0 left-0 right-0 z-30 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 shadow-lg">
+  <div class="max-w-screen-xl mx-auto px-4 py-2 flex items-center justify-end gap-3">
+    <span class="text-xs text-slate-400 mr-auto hidden sm:block">Ações rápidas</span>
+    <a href="{{ url_for('quotes.new') }}"
+       class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition-colors">
+      <i class="fa-solid fa-plus text-xs"></i><span class="hidden sm:inline">Orçamento</span>
+    </a>
+    <a href="{{ url_for('purchase_orders.new') }}"
+       class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-colors">
+      <i class="fa-solid fa-plus text-xs"></i><span class="hidden sm:inline">Nova PO</span>
+    </a>
+    <a href="{{ url_for('dispatch.index') }}"
+       class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors">
+      <i class="fa-solid fa-tower-broadcast text-xs"></i><span class="hidden sm:inline">Dispatch</span>
+    </a>
+    <a href="{{ url_for('financial.index') }}"
+       class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors">
+      <i class="fa-solid fa-coins text-xs"></i><span class="hidden sm:inline">Financeiro</span>
+    </a>
+  </div>
+</div>
+
+{# ── Chart.js ─────────────────────────────────────────────────────────────── #}
+<script src="{{ url_for('static', filename='vendor/chartjs.min.js') }}"></script>
+<script>
+(function() {
+  const raw = {{ chart_data_json|safe }};
+  const labels   = raw.map(r => r.month);
+  const revenue  = raw.map(r => r.revenue);
+  const cost     = raw.map(r => r.cost);
+  const marginPct = raw.map(r => r.margin_pct);
+
+  const isDark = document.documentElement.classList.contains('dark');
+  const gridColor = isDark ? 'rgba(148,163,184,0.15)' : 'rgba(148,163,184,0.3)';
+  const tickColor = isDark ? '#94a3b8' : '#64748b';
+
+  const ctx = document.getElementById('revenueChart');
+  if (!ctx) return;
+
+  new Chart(ctx, {
+    data: {
+      labels,
+      datasets: [
+        {
+          type: 'bar',
+          label: 'Receita SO',
+          data: revenue,
+          backgroundColor: 'rgba(59,130,246,0.7)',
+          borderColor:     'rgba(59,130,246,0.9)',
+          borderWidth: 1,
+          order: 2,
+          yAxisID: 'y',
+        },
+        {
+          type: 'bar',
+          label: 'Custo PO',
+          data: cost,
+          backgroundColor: 'rgba(244,63,94,0.6)',
+          borderColor:     'rgba(244,63,94,0.8)',
+          borderWidth: 1,
+          order: 3,
+          yAxisID: 'y',
+        },
+        {
+          type: 'line',
+          label: 'Margem %',
+          data: marginPct,
+          borderColor:     'rgba(16,185,129,0.9)',
+          backgroundColor: 'rgba(16,185,129,0.1)',
+          borderWidth: 2,
+          pointRadius: 3,
+          tension: 0.3,
+          fill: false,
+          order: 1,
+          yAxisID: 'y2',
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: tickColor, boxWidth: 12, padding: 12, font: { size: 11 } },
+        },
+        tooltip: {
+          callbacks: {
+            label(ctx) {
+              if (ctx.dataset.yAxisID === 'y2') return ` Margem: ${ctx.parsed.y.toFixed(1)}%`;
+              const v = ctx.parsed.y;
+              return ` ${ctx.dataset.label}: R$ ${v.toLocaleString('pt-BR',{minimumFractionDigits:2})}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid:  { color: gridColor },
+          ticks: { color: tickColor, font: { size: 10 } },
+        },
+        y: {
+          position: 'left',
+          grid: { color: gridColor },
+          ticks: {
+            color: tickColor, font: { size: 10 },
+            callback: v => 'R$ ' + (v/1000).toFixed(0) + 'k',
+          },
+        },
+        y2: {
+          position: 'right',
+          grid: { drawOnChartArea: false },
+          ticks: {
+            color: 'rgba(16,185,129,0.9)', font: { size: 10 },
+            callback: v => v.toFixed(0) + '%',
+          },
+        },
+      },
+    },
+  });
+})();
+</script>
+{% endblock %}

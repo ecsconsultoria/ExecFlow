@@ -69,13 +69,16 @@ def create_app(config_name: str | None = None) -> Flask:
     # Jinja2 filters
     from .utils import utc_to_br
     from .utils.helpers import (format_currency, format_date, format_datetime,
-                                billing_label, status_badge_class)
-    app.jinja_env.filters["to_br"]        = utc_to_br
-    app.jinja_env.filters["currency"]     = format_currency
-    app.jinja_env.filters["fdate"]        = format_date
-    app.jinja_env.filters["fdatetime"]    = format_datetime
-    app.jinja_env.filters["billing_label"]= billing_label
-    app.jinja_env.filters["status_badge"] = status_badge_class
+                                billing_label, status_badge_class,
+                                status_badge_style, status_dot_color)
+    app.jinja_env.filters["to_br"]           = utc_to_br
+    app.jinja_env.filters["currency"]        = format_currency
+    app.jinja_env.filters["fdate"]           = format_date
+    app.jinja_env.filters["fdatetime"]       = format_datetime
+    app.jinja_env.filters["billing_label"]   = billing_label
+    app.jinja_env.filters["status_badge"]    = status_badge_class
+    app.jinja_env.filters["status_badge_style"] = status_badge_style
+    app.jinja_env.filters["status_dot_color"]   = status_dot_color
 
     @app.context_processor
     def _inject_company():

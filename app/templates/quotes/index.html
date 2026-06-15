@@ -3,65 +3,119 @@
 {% block page_title %}<i class="fa-solid fa-file-invoice-dollar mr-2 text-violet-500"></i>Orçamentos{% endblock %}
 
 {% block content %}
-<div class="flex flex-wrap items-center gap-3 mb-5">
+
+{# ── Page header ── #}
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+  <div>
+    <h2 class="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">Orçamentos</h2>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Gerencie e acompanhe todos os orçamentos de clientes</p>
+  </div>
   {% if has_perm('quote.create') %}
   <a href="{{ url_for('quotes.new') }}"
-     class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg flex items-center gap-2">
+     class="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all whitespace-nowrap">
     <i class="fa-solid fa-plus"></i> Novo Orçamento
   </a>
   {% endif %}
-  <form class="flex gap-2" method="get">
-    <select name="status" class="border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none">
-      <option value="">Todos</option>
-      {% for s in QUOTE_STATUSES %}
-      <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s|title }}</option>
-      {% endfor %}
-    </select>
-    <button class="bg-slate-200 dark:bg-slate-600 rounded-lg px-3 py-2 text-sm"><i class="fa-solid fa-filter"></i></button>
-  </form>
 </div>
-<div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
+
+{# ── Filtros ── #}
+<div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm mb-4"
+     x-data="{open: true}">
+  <button type="button" @click="open = !open"
+          class="w-full flex items-center justify-between px-5 py-3.5 text-left">
+    <span class="flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
+      <i class="fa-solid fa-sliders text-slate-400 text-xs"></i> Filtros
+    </span>
+    <i class="fa-solid fa-chevron-down text-slate-400 text-xs transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
+  </button>
+  <div x-show="open" x-transition class="border-t border-slate-100 dark:border-slate-700 px-5 py-4">
+    <form class="flex flex-wrap gap-3 items-end" method="get">
+      <div class="flex flex-col gap-1.5">
+        <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</label>
+        <select name="status"
+                class="border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 min-w-[160px]">
+          <option value="">Todos os status</option>
+          {% for s in QUOTE_STATUSES %}
+          <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s|title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button class="inline-flex items-center gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg px-4 py-2 text-sm font-semibold transition-colors">
+        <i class="fa-solid fa-magnifying-glass text-xs"></i> Aplicar
+      </button>
+    </form>
+  </div>
+</div>
+
+{# ── Result count ── #}
+<div class="flex items-center text-sm mb-3 px-1">
+  <span class="text-slate-500 dark:text-slate-400">
+    <i class="fa-regular fa-file-lines mr-1.5 text-violet-400"></i>
+    <strong class="text-slate-700 dark:text-slate-200">{{ quotes|length }}</strong>
+    orçamento{{ 's' if quotes|length != 1 }} encontrado{{ 's' if quotes|length != 1 }}
+  </span>
+</div>
+
+{# ── Table ── #}
+<div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
   <table class="w-full text-sm">
-    <thead class="bg-slate-50 dark:bg-slate-700">
-      <tr>
-        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Número</th>
-        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Cliente</th>
-        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Data</th>
-        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Total</th>
-        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Status</th>
-        <th class="px-4 py-3"></th>
+    <thead>
+      <tr class="border-b-2 border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-700/50">
+        <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Número</th>
+        <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Cliente</th>
+        <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Data</th>
+        <th class="px-5 py-3.5 text-right text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider hidden md:table-cell">Total</th>
+        <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider hidden md:table-cell">Status</th>
+        <th class="px-5 py-3.5 text-right text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Ações</th>
       </tr>
     </thead>
-    <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+    <tbody class="divide-y divide-slate-100 dark:divide-slate-700/60">
       {% for q in quotes %}
-      <tr class="hover:bg-slate-50 dark:hover:bg-slate-700">
-        <td class="px-4 py-3 font-mono font-semibold text-violet-600">{{ q.number }}</td>
-        <td class="px-4 py-3 text-slate-700 dark:text-slate-200">{{ q.client_name or '–' }}</td>
-        <td class="px-4 py-3 text-slate-500">{{ q.created_at|fdate }}</td>
-        <td class="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200">{{ q.total_amount|currency }}</td>
-        <td class="px-4 py-3">
-          <span class="text-xs px-2 py-0.5 rounded-full {{ q.status|status_badge }}">{{ q.status }}</span>
-        </td>
-        <td class="px-4 py-3">
+      <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-700/30 transition-colors">
+        <td class="px-5 py-3.5">
           <a href="{{ url_for('quotes.detail', qid=q.id) }}"
-             title="Ver orçamento"
-             class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-500 hover:bg-blue-100 dark:hover:bg-blue-800/50 transition-colors">
-            <i class="fa-solid fa-eye text-xs"></i>
+             class="font-mono font-bold text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-200 transition-colors">
+            {{ q.number }}
           </a>
-          {% if has_perm('quote.delete') %}
-          <form method="post" action="{{ url_for('quotes.delete', qid=q.id) }}" class="inline"
-                onsubmit="return confirm('Excluir orçamento {{ q.number }}?')">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" title="Excluir"
-                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-500 hover:bg-red-100 dark:hover:bg-red-800/50 transition-colors">
-              <i class="fa-solid fa-trash text-xs"></i>
-            </button>
-          </form>
-          {% endif %}
+        </td>
+        <td class="px-5 py-3.5 font-medium text-slate-700 dark:text-slate-200">{{ q.client_name or '–' }}</td>
+        <td class="px-5 py-3.5 text-slate-500 dark:text-slate-400 whitespace-nowrap">{{ q.created_at|fdate }}</td>
+        <td class="px-5 py-3.5 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap hidden md:table-cell">{{ q.total_amount|currency }}</td>
+        <td class="px-5 py-3.5 hidden md:table-cell">
+          <span style="{{ q.status|status_badge_style }}"><span style="width:6px;height:6px;border-radius:50%;background:{{ q.status|status_dot_color }};flex-shrink:0;display:inline-block"></span> {{ q.status }}</span>
+        </td>
+        <td class="px-5 py-3.5">
+          <div class="flex items-center justify-end gap-1.5">
+            <a href="{{ url_for('quotes.detail', qid=q.id) }}"
+               title="Ver orçamento"
+               class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-violet-50 dark:bg-violet-900/30 text-violet-500 hover:bg-violet-100 dark:hover:bg-violet-800/40 transition-colors">
+              <i class="fa-solid fa-eye text-xs"></i>
+            </a>
+            {% if has_perm('quote.delete') %}
+            <form method="post" action="{{ url_for('quotes.delete', qid=q.id) }}" class="inline"
+                  onsubmit="return confirm('Excluir orçamento {{ q.number }}?')">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" title="Excluir"
+                      class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-400 hover:bg-red-100 dark:hover:bg-red-800/40 transition-colors">
+                <i class="fa-solid fa-trash text-xs"></i>
+              </button>
+            </form>
+            {% endif %}
+          </div>
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="6" class="px-4 py-10 text-center text-slate-400">Nenhum orçamento.</td></tr>
+      <tr>
+        <td colspan="6" class="px-5 py-16 text-center">
+          <div class="flex flex-col items-center gap-3">
+            <div class="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
+              <i class="fa-regular fa-file-lines text-2xl text-slate-300 dark:text-slate-500"></i>
+            </div>
+            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Nenhum orçamento encontrado</p>
+            <p class="text-xs text-slate-400 dark:text-slate-500">Tente ajustar os filtros ou crie um novo orçamento</p>
+          </div>
+        </td>
+      </tr>
       {% endfor %}
     </tbody>
   </table>

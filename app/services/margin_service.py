@@ -41,6 +41,12 @@ def recalculate_order(order):
     """
     from ..extensions import db  # local import avoids circular imports
 
+    if getattr(order, 'status', None) == 'cancelado':
+        order.margin_amount = 0.0
+        order.total_po_cost = 0.0
+        db.session.flush()
+        return
+
     _revenue, cost, margin = calculate_order_margin(order)
     order.total_po_cost = cost
     order.margin_amount = margin

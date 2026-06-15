@@ -24,7 +24,6 @@ class Company(db.Model, TimestampMixin):
     drivers        = db.relationship("Driver",        backref="company", lazy="dynamic")
     vehicles       = db.relationship("Vehicle",       backref="company", lazy="dynamic")
     quotes         = db.relationship("Quote",         backref="company", lazy="dynamic")
-    bookings       = db.relationship("Booking",       backref="company", lazy="dynamic")
     service_orders = db.relationship("ServiceOrder",  backref="company", lazy="dynamic")
 
     def __repr__(self):

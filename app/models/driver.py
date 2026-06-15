@@ -19,8 +19,6 @@ class Driver(db.Model, TimestampMixin, SoftDeleteMixin):
     notes          = db.Column(db.Text)
     is_active      = db.Column(db.Boolean, default=True)
 
-    bookings = db.relationship("Booking", backref="driver", lazy="dynamic")
-
     @property
     def language_label(self):
         return "Motorista Bilíngue" if self.language == "bilingual" else "Motorista Monolíngue"

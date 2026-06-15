@@ -56,15 +56,22 @@ def index():
     f_driver  = request.args.get("f_driver",  "")
     f_state   = request.args.get("f_state",   "")
 
-    pricing_rows = _build_rows(f_service, f_vehicle, f_driver, f_state)
-    states       = State.query.order_by(State.code).all()
-    categories   = VehicleCategory.query.filter_by(is_active=True).order_by(VehicleCategory.name).all()
+    pricing_rows    = _build_rows(f_service, f_vehicle, f_driver, f_state)
+    states          = State.query.order_by(State.code).all()
+    categories      = VehicleCategory.query.filter_by(is_active=True).order_by(VehicleCategory.name).all()
+    service_objects = (Service.query
+                       .filter((Service.company_id == current_user.company_id) |
+                               (Service.company_id.is_(None)))
+                       .filter_by(is_active=True)
+                       .order_by(Service.name)
+                       .all())
     return render_template("services/index.html",
                            pricing_rows=pricing_rows,
                            states=states, categories=categories,
                            driver_types=DRIVER_TYPES,
                            f_service=f_service, f_vehicle=f_vehicle,
-                           f_driver=f_driver, f_state=f_state)
+                           f_driver=f_driver, f_state=f_state,
+                           service_objects=service_objects)
 
 
 @services_bp.route("/add", methods=["POST"])
@@ -115,10 +122,37 @@ def add():
 @require_permission("catalog.manage")
 def edit(pid):
     p = _get_pricing_or_404(pid)
-    p.price_cost = float(request.form.get("price_cost") or 0)
-    p.price_base = float(request.form.get("price_base") or 0)
+    p.price_cost      = float(request.form.get("price_cost")      or 0)
+    p.price_base      = float(request.form.get("price_base")      or 0)
+    p.price_nf        = float(request.form.get("price_nf")        or 0)
+    p.price_cartao    = float(request.form.get("price_cartao")    or 0)
+    p.price_nf_cartao = float(request.form.get("price_nf_cartao") or 0)
     db.session.commit()
-    flash("Preço atualizado.", "success")
+    flash("Preços atualizados.", "success")
+    return redirect(url_for("services.index"))
+
+
+@services_bp.route("/flags/<int:sid>", methods=["POST"])
+@login_required
+@require_permission("catalog.manage")
+def edit_flags(sid):
+    """Toggle individual operational flags on a Service."""
+    svc = (Service.query
+           .filter_by(id=sid)
+           .filter((Service.company_id == current_user.company_id) |
+                   (Service.company_id.is_(None)))
+           .first_or_404())
+    flag = request.json.get("flag") if request.is_json else request.form.get("flag")
+    val  = request.json.get("value") if request.is_json else (request.form.get("value") == "true")
+    allowed = {"is_operational", "requires_route", "requires_passenger",
+               "requires_vehicle", "requires_dispatch", "requires_schedule"}
+    if flag not in allowed:
+        return ({"error": "invalid flag"}, 400) if request.is_json else ("invalid", 400)
+    setattr(svc, flag, bool(val))
+    db.session.commit()
+    if request.is_json:
+        return {"ok": True, "flag": flag, "value": bool(val)}
+    flash(f"Flag '{flag}' atualizada.", "success")
     return redirect(url_for("services.index"))
 
 

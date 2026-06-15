@@ -103,17 +103,23 @@ class PurchaseOrder(db.Model, TimestampMixin, SoftDeleteMixin):
                                        order_by="POItem.sort_order")
 
     @property
-    def computed_total(self) -> float:
+    def subtotal(self) -> float:
+        """Soma dos itens + frete + outros custos, SEM desconto."""
         if self.items:
             base = sum(i.total_cost or 0 for i in self.items)
         else:
             base = self.amount or 0.0
+        return base + (self.freight_amount or 0) + (self.other_costs_amount or 0)
+
+    @property
+    def computed_total(self) -> float:
+        base = self.subtotal
         disc = self.discount_value or 0
         if (self.discount_type or "R$") == "%":
             disc_amount = base * (disc / 100)
         else:
             disc_amount = disc
-        return base - disc_amount + (self.freight_amount or 0) + (self.other_costs_amount or 0)
+        return base - disc_amount
 
     def total_paid(self) -> float:
         return sum(p.paid_amount or 0 for p in self.payments)

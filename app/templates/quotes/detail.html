@@ -56,7 +56,7 @@
 {% block page_title %}
   <a href="{{ url_for('quotes.index') }}" class="text-slate-400 hover:text-blue-500 mr-2 text-sm"><i class="fa-solid fa-arrow-left"></i></a>
   Cotação {{ quote.number }}
-  <span class="ml-2 text-xs px-2 py-0.5 rounded-full {{ quote.status|status_badge }}">{{ quote.status }}</span>
+  <span class="ml-2" style="{{ quote.status|status_badge_style }}"><span style="width:7px;height:7px;border-radius:50%;background:{{ quote.status|status_dot_color }};flex-shrink:0;display:inline-block"></span> {{ quote.status }}</span>
 {% endblock %}
 
 {% block content %}
@@ -123,7 +123,7 @@
   <div class="space-y-4">
 
     {# Card: Histórico #}
-    <div x-data="{ histOpen: {{ 'false' if audit_logs else 'true' }} }"
+    <div x-data="{ histOpen: false }"
          class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
       {# Toggle header #}
       <button type="button" @click="histOpen = !histOpen"
@@ -200,7 +200,7 @@
         </form>
         <form method="post" action="{{ url_for('quotes.reject', qid=quote.id) }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="aq-btn bg-red-500 hover:bg-red-600" data-tip="Rejeitar">
+          <button type="submit" class="aq-btn bg-red-600 hover:bg-red-700" data-tip="Rejeitar">
             <i class="fa-solid fa-xmark"></i>
           </button>
         </form>
@@ -209,86 +209,81 @@
         {% if quote.status in ('aprovado', 'pago') and not quote_order and has_perm('so.create') %}
         <form method="post" action="{{ url_for('orders.create', qid=quote.id) }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="aq-btn bg-teal-600 hover:bg-teal-700" data-tip="Criar PV/SO">
+          <button type="submit" class="aq-btn bg-blue-600 hover:bg-blue-700" data-tip="Criar PV/SO">
             <i class="fa-solid fa-bag-shopping"></i>
           </button>
         </form>
         {% endif %}
 
         {% if quote_order %}
-        <a href="{{ url_for('orders.detail', oid=quote_order.id) }}" class="aq-btn bg-teal-600 hover:bg-teal-700" data-tip="Ver Pedido {{ quote_order.number }}">
+        <a href="{{ url_for('orders.detail', oid=quote_order.id) }}" class="aq-btn bg-slate-500 hover:bg-slate-600" data-tip="Ver Pedido {{ quote_order.number }}">
           <i class="fa-solid fa-bag-shopping"></i>
         </a>
         {% endif %}
 
         {% if has_perm('quote.edit') %}
-<a href="{{ url_for('quotes.edit', qid=quote.id) }}" class="aq-btn bg-slate-500 hover:bg-slate-600" data-tip="Editar Orçamento">
+<a href="{{ url_for('quotes.edit', qid=quote.id) }}" class="aq-btn bg-blue-600 hover:bg-blue-700" data-tip="Editar Orçamento">
           <i class="fa-solid fa-pen"></i>
         </a>
-        {% endif %}
-
-        {% if has_perm('quote.delete') %}
-        <button @click="confirmDelete=true" class="aq-btn bg-red-600 hover:bg-red-700" data-tip="Excluir Orçamento">
-          <i class="fa-solid fa-trash"></i>
-        </button>
         {% endif %}
 
         {% set _em = (quote.client.email if quote.client and quote.client.email else quote.email) %}
         {% set _ph = (quote.client.whatsapp if quote.client and quote.client.whatsapp else quote.phone) %}
 
-        {# PT dropdown: PDF + Email + WhatsApp #}
+        {# PDF unified dropdown: PT + EN — Baixar, Email, WhatsApp #}
         <div class="relative" x-data="{open:false}" @click.outside="open=false">
-          <button @click="open=!open" class="aq-btn aq-pdf bg-rose-600 hover:bg-rose-700" data-tip="Português">
-            <i class="fa-solid fa-file-pdf"></i><span>PT</span>
+          <button @click="open=!open" class="aq-btn aq-pdf bg-slate-600 hover:bg-slate-700" data-tip="PDF / Enviar">
+            <i class="fa-solid fa-file-pdf"></i><span>PDF</span>
           </button>
           <div x-show="open" x-cloak
-               class="absolute left-0 bottom-full mb-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 min-w-[148px] py-1 overflow-hidden">
-            <a href="{{ url_for('quotes.pdf', qid=quote.id, lang='pt') }}"
-               @click="open=false"
-               class="flex items-center gap-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
-              <i class="fa-solid fa-download text-rose-500"></i> Baixar PDF
-            </a>
+               class="absolute left-0 top-full mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 py-1 overflow-hidden"
+               style="min-width:200px">
+            <div style="display:grid;grid-template-columns:1fr 1fr">
+              <a href="{{ url_for('quotes.pdf', qid=quote.id, lang='pt') }}"
+                 @click="open=false"
+                 class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
+                <i class="fa-solid fa-download text-rose-500"></i> PDF PT
+              </a>
+              <a href="{{ url_for('quotes.pdf', qid=quote.id, lang='en') }}"
+                 @click="open=false"
+                 class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
+                <i class="fa-solid fa-download text-rose-700"></i> PDF EN
+              </a>
+            </div>
             {% if _em %}
-            <button onclick="sendEmail('pt')" @click="open=false"
-                    class="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
-              <i class="fa-solid fa-envelope text-blue-500"></i> Enviar Email
-            </button>
+            <hr class="my-1 border-slate-100 dark:border-slate-700">
+            <div style="display:grid;grid-template-columns:1fr 1fr">
+              <button onclick="sendEmail('pt')" @click="open=false"
+                      class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
+                <i class="fa-solid fa-envelope text-blue-500"></i> Email PT
+              </button>
+              <button onclick="sendEmail('en')" @click="open=false"
+                      class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
+                <i class="fa-solid fa-envelope text-blue-700"></i> Email EN
+              </button>
+            </div>
             {% endif %}
             {% if _ph %}
-            <button onclick="openWhatsApp('pt')" @click="open=false"
-                    class="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
-              <i class="fa-brands fa-whatsapp text-green-500"></i> WhatsApp
-            </button>
+            <hr class="my-1 border-slate-100 dark:border-slate-700">
+            <div style="display:grid;grid-template-columns:1fr 1fr">
+              <button onclick="openWhatsApp('pt')" @click="open=false"
+                      class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
+                <i class="fa-brands fa-whatsapp text-green-500"></i> WA PT
+              </button>
+              <button onclick="openWhatsApp('en')" @click="open=false"
+                      class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
+                <i class="fa-brands fa-whatsapp text-green-600"></i> WA EN
+              </button>
+            </div>
             {% endif %}
           </div>
         </div>
 
-        {# EN dropdown: PDF + Email + WhatsApp #}
-        <div class="relative" x-data="{open:false}" @click.outside="open=false">
-          <button @click="open=!open" class="aq-btn aq-pdf bg-rose-800 hover:bg-rose-900" data-tip="English">
-            <i class="fa-solid fa-file-pdf"></i><span>EN</span>
-          </button>
-          <div x-show="open" x-cloak
-               class="absolute left-0 bottom-full mb-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 min-w-[148px] py-1 overflow-hidden">
-            <a href="{{ url_for('quotes.pdf', qid=quote.id, lang='en') }}"
-               @click="open=false"
-               class="flex items-center gap-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
-              <i class="fa-solid fa-download text-rose-700"></i> Download PDF
-            </a>
-            {% if _em %}
-            <button onclick="sendEmail('en')" @click="open=false"
-                    class="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
-              <i class="fa-solid fa-envelope text-blue-700"></i> Send Email
-            </button>
-            {% endif %}
-            {% if _ph %}
-            <button onclick="openWhatsApp('en')" @click="open=false"
-                    class="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
-              <i class="fa-brands fa-whatsapp text-green-600"></i> WhatsApp
-            </button>
-            {% endif %}
-          </div>
-        </div>
+        {% if has_perm('quote.delete') %}
+        <button @click="confirmDelete=true" class="aq-btn bg-red-800 hover:bg-red-900" data-tip="Excluir Orçamento">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+        {% endif %}
 
       </div>
     </div>
@@ -302,6 +297,39 @@
   </div>
 </div>
 
+<!-- Modal de confirmação de exclusão -->
+<template x-teleport="body">
+  <div x-show="confirmDelete" x-cloak
+       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+       @keydown.escape.window="confirmDelete=false">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4"
+         @click.outside="confirmDelete=false">
+      <div class="flex items-center gap-3 mb-4">
+        <span class="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
+          <i class="fa-solid fa-trash text-red-600 dark:text-red-400"></i>
+        </span>
+        <div>
+          <h3 class="font-semibold text-slate-800 dark:text-slate-100">Excluir Orçamento</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400">{{ quote.number }} · {{ quote.client_name or '–' }}</p>
+        </div>
+      </div>
+      <p class="text-sm text-slate-600 dark:text-slate-300 mb-5">Esta ação não pode ser desfeita. Deseja continuar?</p>
+      <div class="flex gap-3">
+        <button @click="confirmDelete=false"
+                class="flex-1 px-4 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+          Cancelar
+        </button>
+        <form method="post" action="{{ url_for('quotes.delete', qid=quote.id) }}" class="flex-1">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit"
+                  class="w-full px-4 py-2 text-sm font-semibold bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
+            <i class="fa-solid fa-trash mr-1"></i> Excluir
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</template>
 
 {% endblock %}
 
@@ -342,37 +370,3 @@
 })();
 </script>
 {% endblock %}
-
-<!-- Modal de confirmação de exclusão -->
-<template x-teleport="body">
-  <div x-show="confirmDelete" x-cloak
-       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-       @keydown.escape.window="confirmDelete=false">
-    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4"
-         @click.outside="confirmDelete=false">
-      <div class="flex items-center gap-3 mb-4">
-        <span class="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
-          <i class="fa-solid fa-trash text-red-600 dark:text-red-400"></i>
-        </span>
-        <div>
-          <h3 class="font-semibold text-slate-800 dark:text-slate-100">Excluir Orçamento</h3>
-          <p class="text-xs text-slate-500 dark:text-slate-400">{{ quote.number }} · {{ quote.client_name or '–' }}</p>
-        </div>
-      </div>
-      <p class="text-sm text-slate-600 dark:text-slate-300 mb-5">Esta ação não pode ser desfeita. Deseja continuar?</p>
-      <div class="flex gap-3">
-        <button @click="confirmDelete=false"
-                class="flex-1 px-4 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-          Cancelar
-        </button>
-        <form method="post" action="{{ url_for('quotes.delete', qid=quote.id) }}" class="flex-1">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit"
-                  class="w-full px-4 py-2 text-sm font-semibold bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors">
-            <i class="fa-solid fa-trash mr-1"></i> Excluir
-          </button>
-        </form>
-      </div>
-    </div>
-  </div>
-</template>

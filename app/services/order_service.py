@@ -9,12 +9,31 @@ from datetime import date, datetime, timedelta
 from ..extensions import db
 from ..models.order import Order, OrderItem, OrderPayment, ORDER_STATUSES  # noqa: F401
 from ..utils import now_br
+from ..utils.helpers import parse_brl
 from . import margin_service
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Criação
 # ─────────────────────────────────────────────────────────────────────────────
+
+def create_manual(company_id: int, user_id: int) -> Order:
+    """Cria um Pedido em branco (sem orçamento vinculado)."""
+    from . import numbering_service
+
+    order = Order(
+        company_id   = company_id,
+        number       = numbering_service.next_order(company_id),
+        status       = "novo",
+        billing_type = "recibo",
+        total_amount = 0,
+        emission_date= now_br().date(),
+        created_by   = user_id,
+    )
+    db.session.add(order)
+    db.session.flush()
+    return order
+
 
 def create_from_quote(quote, user_id: int) -> Order:
     """Cria um Pedido (SO-AAMMDD-NNN) a partir de um Orçamento aprovado."""
@@ -107,6 +126,7 @@ def update_adjustments(order: Order, data: dict) -> None:
     order.freight_amount     = _parse_float(data.get("freight_amount", 0))
     order.other_costs_amount = _parse_float(data.get("other_costs_amount", 0))
     order.other_costs_label  = data.get("other_costs_label", "") or ""
+    margin_service.recalculate_order(order)
     db.session.commit()
 
 
@@ -119,9 +139,26 @@ def update_payment_inline(payment: OrderPayment, data: dict) -> None:
             pass
     if "notes" in data:
         payment.notes = data["notes"] or ""
+    amount_changed = False
     if data.get("amount"):
-        payment.amount = _parse_float(data["amount"])
+        new_amount = _parse_float(data["amount"])
+        if abs(new_amount - (payment.amount or 0)) > 0.001:
+            payment.amount = new_amount
+            amount_changed = True
     db.session.commit()
+    # Sincroniza o lançamento financeiro pendente quando o valor muda
+    if amount_changed and not payment.is_paid:
+        try:
+            from ..models.financial import FinancialRecord
+            _ref = f"order_payment:{payment.id}"
+            fr = FinancialRecord.query.filter_by(
+                company_id=payment.order.company_id, reference=_ref
+            ).first()
+            if fr and fr.status != "pago":
+                fr.amount = payment.amount or 0
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -165,13 +202,58 @@ def fechar(order: Order, user_id: int) -> None:
 
 
 def cancel(order: Order, reason: str, user_id: int) -> None:
-    if order.status == "fechado":
-        raise ValueError("Não é possível cancelar pedido já fechado")
+    if order.status in ("concluido", "cancelado"):
+        raise ValueError(f"Não é possível cancelar pedido com status '{order.status}'")
+    if order.payments and all(p.is_paid for p in order.payments):
+        raise ValueError("Não é possível cancelar pedido com todas as parcelas pagas")
+    if not (reason or "").strip():
+        raise ValueError("Informe o motivo do cancelamento")
+
     order.status        = "cancelado"
     order.cancelled_at  = now_br()
     order.cancelled_by  = user_id
-    order.cancel_reason = reason or ""
-    db.session.commit()
+    order.cancel_reason = reason.strip()
+
+    # Cancela FinancialRecords vinculados às parcelas do pedido
+    from ..models.financial import FinancialRecord
+    payment_refs = [f"order_payment:{p.id}" for p in order.payments]
+    if payment_refs:
+        frs = FinancialRecord.query.filter(
+            FinancialRecord.company_id == order.company_id,
+            FinancialRecord.deleted_at.is_(None),
+            FinancialRecord.status.notin_(("cancelado", "pago")),
+            FinancialRecord.reference.in_(payment_refs),
+        ).all()
+        for fr in frs:
+            fr.status = "cancelado"
+
+    # Cancela AccountReceivable vinculados ao orçamento
+    if order.quote_id:
+        from ..models.financial import AccountReceivable
+        ars = AccountReceivable.query.filter_by(
+            company_id=order.company_id,
+            quote_id=order.quote_id,
+            status="pendente",
+        ).all()
+        for ar in ars:
+            ar.status = "cancelado"
+
+    # Cascade para POs — Option A: cancela POs canceláveis, pula os demais (log de auditoria)
+    from . import purchase_order_service as _pos
+    from ..utils.audit import log_activity as _log
+    _CANCELLABLE = ("rascunho", "aberto", "enviado", "aprovado")
+    for po in order.purchase_orders:
+        if po.status in _CANCELLABLE:
+            _pos.cancel(po, user_id, reason=f"Cascade SO {order.number}: {reason.strip()}")
+            _log("purchase_order", po.id, po.company_id,
+                 f"Cancelada por cascade — SO {order.number}", user_id)
+        else:
+            _log("purchase_order", po.id, po.company_id,
+                 f"PO {po.number} em status '{po.status}' — cancelamento manual necessário "
+                 f"(SO {order.number} cancelado)", user_id)
+
+    margin_service.recalculate_order(order)
+    # Nota: db.session.commit() é responsabilidade da rota (não do serviço)
 
 
 def reabrir(order: Order, user_id: int) -> None:
@@ -298,9 +380,18 @@ def delete_payment(payment: OrderPayment) -> None:
     db.session.commit()
 
 
-def baixa(payment: OrderPayment, paid_amount: float, user_id: int) -> None:
+def baixa(payment: OrderPayment, paid_amount: float, user_id: int, paid_date: date | None = None) -> None:
+    """Liquida uma parcela de Order.
+
+    Toda a operação é atômica: o pagamento, o espelho financeiro,
+    o recálculo de margem e o sync de parcelas pendentes são commitados
+    juntos. Se qualquer etapa falhar, nada persiste.
+    """
+    _paid_date = paid_date if paid_date else now_br().date()
+    _now = now_br()
+    _paid_at = _now.replace(year=_paid_date.year, month=_paid_date.month, day=_paid_date.day)
     payment.paid_amount = paid_amount
-    payment.paid_at     = now_br()
+    payment.paid_at     = _paid_at
     payment.paid_by     = user_id
 
     order = payment.order
@@ -308,72 +399,84 @@ def baixa(payment: OrderPayment, paid_amount: float, user_id: int) -> None:
     if all(p.is_paid for p in order.payments) and order.status not in ("concluido", "cancelado"):
         order.status    = "concluido"
         order.closed_at = now_br()
-        margin_service.recalculate_order(order)
+
+    margin_service.recalculate_order(order)
+
+    # Espelho financeiro — criado ANTES do commit para atomicidade
+    _sync_payment_financial_record(payment, order, _paid_date, paid_amount)
+    _sync_order_pending_financials(order)
 
     db.session.commit()
 
-    # Lançamento de receita no módulo financeiro (best-effort)
-    try:
-        from ..models.financial import FinancialRecord
-        _ref  = f"order_payment:{payment.id}"
-        fr = FinancialRecord.query.filter_by(company_id=order.company_id, reference=_ref).first()
-        if fr:
-            fr.amount    = paid_amount
-            fr.paid_date = now_br().date()
-            fr.status    = "pago"
-        else:
-            total_inst = len(order.payments)
-            fr = FinancialRecord(
-                company_id     = order.company_id,
-                type           = "revenue",
-                category       = "receita_servico",
-                description    = f"{order.number} — parcela {payment.installment_no}/{total_inst}",
-                amount         = paid_amount,
-                status         = "pago",
-                payment_method = order.payment_method or "",
-                paid_date      = now_br().date(),
-                reference      = _ref,
-            )
-            db.session.add(fr)
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
+
+def _sync_payment_financial_record(payment: OrderPayment, order, paid_date, paid_amount) -> None:
+    """Cria/atualiza o FinancialRecord de uma parcela paga (receita).
+
+    Chamado ANTES do commit principal para garantir atomicidade.
+    """
+    from ..models.financial import FinancialRecord
+    _ref = f"order_payment:{payment.id}"
+    fr = FinancialRecord.query.filter_by(
+        company_id=order.company_id, reference=_ref
+    ).filter(FinancialRecord.deleted_at.is_(None)).first()
+    if fr:
+        fr.amount        = paid_amount
+        fr.paid_date     = paid_date
+        fr.emission_date = order.emission_date
+        fr.status        = "pago"
+    else:
+        total_inst = len(order.payments)
+        db.session.add(FinancialRecord(
+            company_id     = order.company_id,
+            type           = "revenue",
+            category       = "receita_servico",
+            description    = f"{order.number} — parcela {payment.installment_no}/{total_inst}",
+            amount         = paid_amount,
+            status         = "pago",
+            payment_method = order.payment_method or "",
+            emission_date  = order.emission_date,
+            paid_date      = paid_date,
+            reference      = _ref,
+        ))
 
 
 def _sync_order_pending_financials(order: Order) -> None:
-    """Cria/atualiza lançamentos pendentes de receita para parcelas em aberto do SO."""
-    try:
-        from ..models.financial import FinancialRecord
-        total_inst = len(order.payments)
-        for p in order.payments:
-            if p.is_paid:
-                continue
-            _ref = f"order_payment:{p.id}"
-            fr = FinancialRecord.query.filter_by(company_id=order.company_id, reference=_ref).first()
-            if fr:
-                fr.type           = "revenue"
-                fr.category       = "receita_servico"
-                fr.description    = f"{order.number} — parcela {p.installment_no}/{total_inst}"
-                fr.amount         = p.amount or 0
-                fr.status         = "pendente"
-                fr.payment_method = order.payment_method or ""
-                fr.due_date       = p.due_date
-                fr.paid_date      = None
-            else:
-                db.session.add(FinancialRecord(
-                    company_id     = order.company_id,
-                    type           = "revenue",
-                    category       = "receita_servico",
-                    description    = f"{order.number} — parcela {p.installment_no}/{total_inst}",
-                    amount         = p.amount or 0,
-                    status         = "pendente",
-                    payment_method = order.payment_method or "",
-                    due_date       = p.due_date,
-                    reference      = _ref,
-                ))
-    except Exception:
-        # Não bloqueia faturamento por falha do espelho financeiro.
-        db.session.rollback()
+    """Cria/atualiza lançamentos pendentes de receita para parcelas em aberto do SO.
+
+    Não faz rollback — o caller gerencia a transação.
+    """
+    from ..models.financial import FinancialRecord
+    total_inst = len(order.payments)
+    for p in order.payments:
+        if p.is_paid:
+            continue
+        _ref = f"order_payment:{p.id}"
+        fr = FinancialRecord.query.filter_by(
+            company_id=order.company_id, reference=_ref
+        ).filter(FinancialRecord.deleted_at.is_(None)).first()
+        if fr and fr.status != "pago":
+            fr.type           = "revenue"
+            fr.category       = "receita_servico"
+            fr.description    = f"{order.number} — parcela {p.installment_no}/{total_inst}"
+            fr.amount         = p.amount or 0
+            fr.status         = "pendente"
+            fr.payment_method = order.payment_method or ""
+            fr.emission_date  = order.emission_date
+            fr.due_date       = p.due_date
+            fr.paid_date      = None
+        elif not fr:
+            db.session.add(FinancialRecord(
+                company_id     = order.company_id,
+                type           = "revenue",
+                category       = "receita_servico",
+                description    = f"{order.number} — parcela {p.installment_no}/{total_inst}",
+                amount         = p.amount or 0,
+                status         = "pendente",
+                payment_method = order.payment_method or "",
+                emission_date  = order.emission_date,
+                due_date       = p.due_date,
+                reference      = _ref,
+            ))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -382,7 +485,7 @@ def _sync_order_pending_financials(order: Order) -> None:
 
 def _parse_float(value) -> float:
     try:
-        return float(str(value).replace(",", "."))
+        return parse_brl(value)
     except (TypeError, ValueError):
         return 0.0
 
@@ -427,7 +530,9 @@ def add_item(order: Order, data: dict) -> OrderItem:
     )
     db.session.add(item)
     db.session.flush()
+    db.session.expire(order, ['items'])  # força reload para incluir o novo item no total
     order.total_amount = sum(i.total_price or 0 for i in order.items)
+    margin_service.recalculate_order(order)
     db.session.commit()
     return item
 
@@ -443,6 +548,7 @@ def update_item(item: OrderItem, data: dict) -> None:
     item.total_price = round((item.unit_price or 0) * (item.quantity or 1), 2)
     order = item.order
     order.total_amount = sum(i.total_price or 0 for i in order.items)
+    margin_service.recalculate_order(order)
     db.session.commit()
 
 
@@ -476,5 +582,7 @@ def delete_item(item: OrderItem) -> None:
     order = item.order
     db.session.delete(item)
     db.session.flush()
+    db.session.expire(order, ['items'])  # força reload para excluir o item deletado do total
     order.total_amount = sum(i.total_price or 0 for i in order.items)
+    margin_service.recalculate_order(order)
     db.session.commit()

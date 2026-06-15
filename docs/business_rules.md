@@ -130,13 +130,9 @@ criado ──▶ agendado ──▶ atribuido ──▶ em_execucao ──▶ fi
 - Apenas uma atribuição ativa por vez (`is_current=True`)
 - Atribuir fornecedor cria automaticamente `SupplierPayment` e `OperationCost`
 
-### 2.5 Booking (Legado)
+### 2.5 Booking
 
-```
-pendente ──▶ confirmado ──▶ em_andamento ──▶ concluido
-```
-
-Em processo de substituição pelo modelo ServiceOrder.
+> **REMOVIDO em 05/06/2026.** O modelo Booking foi completamente removido do sistema. O fluxo atual é Quote → Order → ServiceOrder diretamente, sem Booking intermediário.
 
 ---
 
@@ -249,7 +245,7 @@ Modelos com `SoftDeleteMixin`:
 | Order | `SO-` | YYMMDD | company_id |
 | ServiceOrder | `OS-` | YYMMDD | company_id |
 | PurchaseOrder | `PO-` | YYMMDD | company_id |
-| Booking | `RES-` | YYYY | company_id |
+| ~~Booking~~ | `RES-` | YYYY | **REMOVIDO** |
 
 **Algoritmo:** Busca último registro da empresa com `LIKE "PREFIX-*"`, extrai sequência, incrementa.
 

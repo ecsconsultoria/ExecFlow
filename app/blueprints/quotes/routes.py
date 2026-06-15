@@ -13,7 +13,6 @@ from ...models.company import Company
 from ...extensions import db
 from ...utils.decorators import require_permission
 from ...services.quote_service   import QuoteService
-from ...services.booking_service import BookingService
 from ...utils import now_br, make_client_token
 from ...utils.audit import log_activity
 from ...models.service_order import ServiceOrder
@@ -185,6 +184,12 @@ def edit(qid):
         "payment_method": quote.payment_method or "",
         "payment_terms":  quote.payment_terms  or "",
         "obs": quote.obs or "",
+        "inclusions": [{"text_pt": inc.text_pt, "text_en": inc.text_en or "",
+                         "included": inc.included, "sort_order": inc.sort_order}
+                        for inc in sorted(quote.inclusions, key=lambda x: x.sort_order or 0)]
+                      or [{"text_pt": d["text_pt"], "text_en": d["text_en"],
+                            "included": True, "sort_order": i}
+                           for i, d in enumerate(DEFAULT_INCLUSIONS)],
         "items": [{"service_id": it.service_id, "category_id": it.category_id,
                    "ref_note": it.ref_note or "", "description": it.description or "",
                    "vehicle_description": it.vehicle_description or "",
@@ -255,19 +260,6 @@ def reject(qid):
     flash("Orçamento reprovado.", "info")
     return redirect(url_for("quotes.index"))
 
-
-@quotes_bp.route("/<int:qid>/confirm-booking", methods=["POST"])
-@login_required
-@require_permission("quote.approve")
-def confirm_booking(qid):
-    """Confirma orçamento aprovado → cria Booking + OS automaticamente."""
-    quote = Quote.query.filter_by(id=qid, company_id=current_user.company_id, deleted_at=None).first_or_404()
-    if quote.status not in ("aprovado", "pago"):
-        flash("Orçamento precisa estar aprovado para gerar reserva.", "warning")
-        return redirect(url_for("quotes.detail", qid=qid))
-    booking = BookingService.create_from_quote(quote, user_id=current_user.id)
-    flash(f"Reserva {booking.number} criada com Ordem de Serviço.", "success")
-    return redirect(url_for("bookings.detail", bid=booking.id))
 
 
 @quotes_bp.route("/<int:qid>/create-os", methods=["POST"])

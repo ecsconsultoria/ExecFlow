@@ -50,7 +50,6 @@ class Quote(db.Model, TimestampMixin, SoftDeleteMixin):
                                   cascade="all, delete-orphan", order_by="QuoteItem.sort_order")
     inclusions = db.relationship("QuoteInclusion", backref="quote", lazy="select",
                                   cascade="all, delete-orphan", order_by="QuoteInclusion.sort_order")
-    booking    = db.relationship("Booking",        backref="quote", uselist=False)
 
     def recalculate_total(self):
         self.total_amount = sum(i.total_price or 0 for i in self.items)

@@ -6,7 +6,6 @@ from sqlalchemy import func
 from . import reports_bp
 from ...utils import now_br
 from ...models.quote    import Quote
-from ...models.booking  import Booking
 from ...models.financial import FinancialRecord
 from ...models.service_order import ServiceOrder
 from ...extensions import db
@@ -30,10 +29,6 @@ def index():
     approved_quotes = Quote.query.filter_by(company_id=cid, status="aprovado", deleted_at=None).count()
     confirmed       = Quote.query.filter_by(company_id=cid, status="reserva_confirmada", deleted_at=None).count()
 
-    booking_stats = (db.session.query(Booking.status, func.count(Booking.id))
-                     .filter_by(company_id=cid, deleted_at=None)
-                     .group_by(Booking.status).all())
-
     os_stats = (db.session.query(ServiceOrder.status, func.count(ServiceOrder.id))
                 .filter_by(company_id=cid)
                 .filter(ServiceOrder.deleted_at.is_(None))
@@ -52,6 +47,6 @@ def index():
 
     return render_template("reports/index.html", month=month,
                            total_quotes=total_quotes, approved_quotes=approved_quotes,
-                           confirmed=confirmed, booking_stats=dict(booking_stats),
+                           confirmed=confirmed,
                            os_stats=dict(os_stats),
                            revenue=revenue, costs=costs, profit=revenue - costs)

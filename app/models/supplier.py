@@ -21,7 +21,6 @@ class Supplier(db.Model, TimestampMixin, SoftDeleteMixin):
     is_active     = db.Column(db.Boolean, default=True)
 
     drivers        = db.relationship("Driver",         backref="supplier",  lazy="dynamic")
-    bookings       = db.relationship("Booking",        backref="supplier",  lazy="dynamic")
     service_orders = db.relationship("ServiceOrder",   backref="supplier",  lazy="dynamic",
                                      foreign_keys="ServiceOrder.supplier_id")
 

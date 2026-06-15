@@ -12,11 +12,18 @@ from ...models.service_order import ServiceOrder
 from ...models.order import Order, OrderItem
 from ...extensions import db
 from ...services import purchase_order_service as pos
+from ...services import margin_service
 from ...utils.audit import log_activity
 from ...utils.decorators import require_permission
+from ...utils.helpers import parse_brl
 
 
-# ─── List ────────────────────────────────────────────────────────────────────
+def _void_po_financial_records(po):
+    """Soft-delete todos os FinancialRecords vinculados às parcelas da PO."""
+    from ...services.financial_service import void_payment_financial_records
+    void_payment_financial_records(po.payments, "po_payment")
+
+
 
 @purchase_orders_bp.route("/")
 @login_required
@@ -99,10 +106,7 @@ def new():
 
         # Numeric conversions
         if data.get("amount"):
-            try:
-                data["amount"] = float(data["amount"].replace(".", "").replace(",", "."))
-            except ValueError:
-                data["amount"] = 0.0
+            data["amount"] = parse_brl(data["amount"])
         if data.get("pax_count"):
             try:
                 data["pax_count"] = int(data["pax_count"])
@@ -111,6 +115,8 @@ def new():
 
         po = pos.create(cid, data, current_user.id)
         log_activity("po", po.id, po.company_id, "Criada", current_user.id)
+        if po.order_id and po.order:
+            margin_service.recalculate_order(po.order)
         db.session.commit()
         flash(f"PO {po.number} criada com sucesso.", "success")
         return redirect(url_for("purchase_orders.detail", po_id=po.id))
@@ -121,6 +127,7 @@ def new():
         linked_order = Order.query.filter_by(id=order_id, company_id=cid).first_or_404()
         po = pos.create_from_order(linked_order, current_user.id)
         log_activity("po", po.id, po.company_id, "Criada a partir de SO", current_user.id)
+        margin_service.recalculate_order(linked_order)
         db.session.commit()
         flash(f"PO {po.number} criada a partir do pedido {linked_order.number}.", "success")
         return redirect(url_for("purchase_orders.detail", po_id=po.id))
@@ -161,7 +168,7 @@ def pdf(po_id):
     buf.seek(0)
     gc.collect()
     return send_file(buf, mimetype="application/pdf",
-                     download_name=f"{po.number}-{lang}.pdf",
+                     download_name=f"{po.number}.pdf",
                      as_attachment=False)
 
 
@@ -219,9 +226,12 @@ def save_all(po_id):
             if raw in (None, ""):
                 data[f] = 0.0
                 continue
+            if isinstance(raw, (int, float)):
+                data[f] = float(raw)
+                continue
             try:
-                data[f] = float(str(raw).replace(".", "").replace(",", "."))
-            except ValueError:
+                data[f] = parse_brl(raw)
+            except (ValueError, TypeError):
                 data[f] = 0.0
 
         raw_pax = data.get("pax_count", None)
@@ -235,8 +245,23 @@ def save_all(po_id):
 
         data["discount_type"] = (data.get("discount_type") or "R$")
 
+        # Emissão editável → atualiza created_at
+        emission_raw = data.pop("emission_date", "")
+        if emission_raw:
+            from datetime import datetime
+            try:
+                dt = datetime.strptime(str(emission_raw).strip(), "%Y-%m-%d")
+                po.created_at = dt.replace(
+                    hour=po.created_at.hour if po.created_at else 0,
+                    minute=po.created_at.minute if po.created_at else 0,
+                )
+            except ValueError:
+                pass
+
         pos._apply_data(po, data)
         log_activity("po", po.id, po.company_id, "Dados salvos", current_user.id)
+        if po.order_id and po.order:
+            margin_service.recalculate_order(po.order)
         db.session.commit()
         flash("PO salva.", "success")
     except Exception as e:
@@ -266,6 +291,8 @@ def update_adjustments(po_id):
     po.other_costs_amount = _pf(d.get("other_costs_amount"))
     po.other_costs_label  = d.get("other_costs_label", "") or ""
     log_activity("po", po.id, po.company_id, "Ajustes financeiros atualizados", current_user.id)
+    if po.order_id and po.order:
+        margin_service.recalculate_order(po.order)
     db.session.commit()
     flash("Ajustes financeiros salvos.", "success")
     return redirect(url_for("purchase_orders.detail", po_id=po_id))
@@ -287,12 +314,17 @@ def edit(po_id):
 @require_permission("po.edit")
 def open_po(po_id):
     po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
+    # Salva supplier_id se o usuário selecionou no form antes de clicar Abrir
+    sid = request.form.get("supplier_id", type=int)
+    if sid:
+        po.supplier_id = sid
     try:
         pos.open_po(po, current_user.id)
         log_activity("po", po.id, po.company_id, "PO aberta", current_user.id)
         db.session.commit()
         flash(f"PO {po.number} aberta com sucesso.", "success")
     except ValueError as e:
+        db.session.rollback()
         flash(str(e), "warning")
     return redirect(url_for("purchase_orders.detail", po_id=po_id))
 
@@ -377,6 +409,7 @@ def cancel(po_id):
     reason = request.form.get("reason", "")
     try:
         pos.cancel(po, current_user.id, reason)
+        _void_po_financial_records(po)
         log_activity("po", po.id, po.company_id, "Cancelada", current_user.id)
         db.session.commit()
         flash(f"PO {po.number} cancelada.", "info")
@@ -405,10 +438,7 @@ def generate_payments(po_id):
     custom_total = None
     raw_custom = request.form.get("custom_amount", "").strip()
     if raw_custom:
-        try:
-            custom_total = float(raw_custom.replace(".", "").replace(",", "."))
-        except ValueError:
-            pass
+        custom_total = parse_brl(raw_custom)
     pmts = pos.generate_payments(po, custom_total=custom_total)
     log_activity("po", po.id, po.company_id, "Parcelas geradas", current_user.id)
     db.session.commit()
@@ -499,7 +529,10 @@ def baixa(pid):
     try:
         raw         = request.form.get("paid_amount", "")
         paid_amount = float(str(raw).replace(",", ".")) if raw else (pmt.amount or 0)
-        pos.baixa(pmt, paid_amount, current_user.id)
+        paid_date_str = request.form.get("paid_date", "")
+        from datetime import date as _date_type
+        paid_date = _date_type.fromisoformat(paid_date_str) if paid_date_str else None
+        pos.baixa(pmt, paid_amount, current_user.id, paid_date=paid_date)
         log_activity("po", po.id, po.company_id, f"Parcela {pmt.installment_no} baixada", current_user.id)
         db.session.commit()
         flash("Pagamento registrado.", "success")
@@ -517,6 +550,8 @@ def add_item(po_id):
     po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
     pos.add_item(po, request.form.to_dict())
     log_activity("po", po.id, po.company_id, "Item adicionado", current_user.id)
+    if po.order_id and po.order:
+        margin_service.recalculate_order(po.order)
     db.session.commit()
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         items_data = [{
@@ -542,6 +577,8 @@ def update_item(item_id):
         return jsonify({"ok": False, "error": "Não autorizado"}), 403
     pos.update_item(item, request.form.to_dict())
     log_activity("po", po.id, po.company_id, "Item atualizado", current_user.id)
+    if po.order_id and po.order:
+        margin_service.recalculate_order(po.order)
     db.session.commit()
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return jsonify({"ok": True, "total_cost": item.total_cost, "computed_total": po.computed_total})
@@ -582,6 +619,8 @@ def delete_item(item_id):
         return jsonify({"ok": False, "error": "Não autorizado"}), 403
     pos.delete_item(item)
     log_activity("po", po.id, po.company_id, "Item removido", current_user.id)
+    if po.order_id and po.order:
+        margin_service.recalculate_order(po.order)
     db.session.commit()
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return jsonify({"ok": True, "computed_total": po.computed_total})
@@ -599,6 +638,10 @@ def delete(po_id):
         PurchaseOrder.status != "excluido"
     ).first_or_404()
     po.status = "excluido"
+    _void_po_financial_records(po)
+    # Recalcula margem do SO vinculado, se houver
+    if po.order_id and po.order:
+        margin_service.recalculate_order(po.order)
     log_activity("po", po.id, po.company_id, "Excluída", current_user.id)
     db.session.commit()
     flash(f"PO {po.number} excluída.", "info")

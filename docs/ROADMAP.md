@@ -1,8 +1,9 @@
 # ROADMAP.md — App_Orcamentos_V2
 
-> **Data:** 04/06/2026
+> **Data:** 05/06/2026 (atualizado)
 > **Fonte:** BACKLOG.md (48 itens)
 > **Regra de priorização:** 1. Estabilidade → 2. Segurança → 3. Performance → 4. Refatoração
+> **Status:** ✅ Sprint 1 CONCLUÍDA (7/7 itens + Booking removido + Menu reestruturado)
 > **Duração dos sprints:** Variável por item (esforço estimado em horas)
 
 ---
@@ -100,14 +101,16 @@
 
 | Item | Descrição | Esforço | Status |
 |------|-----------|--------|--------|
-| 1.1 | `parse_brl()` | — | ✅ DONE |
-| 1.2 | `is_deleted` dead code | 1h | 🔴 TODO |
-| 1.3 | Reset confirmação | 3h-4h | 🔴 TODO |
-| 1.4 | Transações uniformes | 8h-12h | 🔴 TODO |
-| 1.5 | Cascade financeiro | 4h-6h | 🔴 TODO |
-| 1.6 | Mass assignment | 1h-2h | 🔴 TODO |
-| 1.7 | Cross-tenant | 1h-2h | 🔴 TODO |
-| **Total** | | **18h-27h** | |
+| 1.1 | `parse_brl()` | — | ✅ DONE 04/06 |
+| 1.2 | `is_deleted` dead code | 1h | ✅ DONE 05/06 |
+| 1.3 | Reset confirmação | 3h-4h | ✅ DONE 05/06 |
+| 1.4 | Transações uniformes | 8h-12h | ✅ DONE 05/06 |
+| 1.5 | Cascade financeiro | 4h-6h | ✅ DONE 05/06 |
+| 1.6 | Mass assignment | 1h-2h | ✅ DONE 05/06 |
+| 1.7 | Cross-tenant | 1h-2h | ✅ DONE 05/06 |
+| — | Remoção do Booking | — | ✅ DONE 05/06 |
+| — | Menu reestruturado | — | ✅ DONE 05/06 |
+| **Total** | | **18h-27h** | ✅ CONCLUÍDO | |
 
 ---
 

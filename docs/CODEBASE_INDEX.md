@@ -1,7 +1,7 @@
 # CODEBASE_INDEX.md — App_Orcamentos_V2
 
 > **Mapeamento completo de todos os arquivos do projeto com responsabilidades.**
-> **Data:** 04/06/2026
+> **Data:** 05/06/2026 (atualizado após remoção do Booking e reestruturação do menu)
 
 ---
 
@@ -63,7 +63,7 @@
 | `models/order.py` | `Order`, `OrderItem`, `OrderPayment` | `orders`, `order_items`, `order_payments` | Pedido de Venda (SO). Itens, parcelas, `computed_total`, 6 status timestamps + users. |
 | `models/purchase_order.py` | `PurchaseOrder`, `POItem`, `POPayment` | `purchase_orders`, `po_items`, `po_payments` | Ordem de Compra. Itens, parcelas, `computed_total`, 5 status timestamps. |
 | `models/service_order.py` | `ServiceOrder` | `service_orders` | Ordem de Serviço. Despacho, atribuição, eventos, custos, receitas, margem. Soft delete. |
-| `models/booking.py` | `Booking` | `bookings` | Reserva (legado). Soft delete. Sendo substituído por ServiceOrder. |
+| ~~`models/booking.py`~~ | ~~`Booking`~~ | — | **REMOVIDO em 05/06/2026.** Substituído pelo fluxo Order → ServiceOrder. |
 
 ### 3.5 Financeiro (V4)
 
@@ -108,7 +108,7 @@
 | `orders` | `orders/routes.py` | `/orders/`, `/new`, `/create/<qid>`, `/<id>`, `/<id>/open`, `/faturar`, `/fechar`, `/cancel`, `/reabrir`, `/payments/*`, `/items/*` | CRUD pedidos. Transições de status. Pagamentos. Itens. |
 | `purchase_orders` | `purchase_orders/routes.py` | `/purchase-orders/`, `/new`, `/<id>`, `/<id>/pdf`, `/<id>/save`, `/<id>/open`, `/send`, `/approve`, `/start`, `/conclude`, `/faturar`, `/cancel`, `/payments/*`, `/items/*` | CRUD POs. Transições de status. Pagamentos. Itens. |
 | `dispatch` | `dispatch/routes.py` | `/dispatch/` | Dashboard de despacho. OS do dia, pendentes, em execução. |
-| `bookings` | `bookings/routes.py` | `/bookings/`, `/<id>`, `/update-info`, `/assign-driver`, `/complete`, `/cancel` | Reservas (legado). Atribuição de motorista. |
+| ~~`bookings`~~ | — | — | **REMOVIDO em 05/06/2026.** |
 | `clients` | `clients/routes.py` | `/clients/`, `/new`, `/<id>/edit`, `/<id>/delete`, `/api/new`, `/search` | CRUD clientes. API de busca. Soft delete. |
 | `drivers` | `drivers/routes.py` | `/drivers/`, `/new`, `/<id>/edit`, `/<id>/delete` | CRUD motoristas. Soft delete. |
 | `vehicles` | `vehicles/routes.py` | `/vehicles/`, `/new`, `/<id>/edit`, `/<id>/delete` | CRUD veículos. |
@@ -134,7 +134,7 @@
 | `services/purchase_order_service.py` | Gestão de POs: `create`, `create_from_order`, `create_from_service_order`, `open_po`, `send`, `approve`, `start_execution`, `conclude`, `faturar`, `cancel`, `generate_payments`, `update_payment_inline`, `delete_payment`, `baixa`, `add_item`, `update_item`, `delete_item`. | Ativo |
 | `services/purchase_order_pdf.py` | Geração de PDF de PO (ReportLab). Fornecedor, itens, parcelas. | Ativo |
 | `services/service_order_service.py` | Gestão de OS: `create_from_booking`, `create_manual`, `create_from_quote`, `assign_driver`, `assign_supplier`, `add_cost`, `recalculate_margin`, `update_status`, `add_event`, `close`, `send_driver_info`. | Ativo |
-| `services/booking_service.py` | Criação de booking a partir de quote aprovado. | Ativo (legado) |
+| ~~`services/booking_service.py`~~ | Criação de booking a partir de quote. | **REMOVIDO em 05/06/2026.** |
 | `services/dispatch_service.py` | Consultas de despacho: `get_today`, `get_pending_assignment`, `get_in_progress`, `get_overdue`, `get_summary`. | Ativo |
 | `services/financial_service.py` | Criação de `FinancialRecord` + `AccountReceivable` para booking. | **Dead code** — não chamado desde V2/V4 |
 | `services/margin_service.py` | Cálculo de margem: `calculate_order_margin(revenue, cost, margin)`, `recalculate_order()` para write-back. | Ativo |
@@ -174,14 +174,14 @@
 | `orders/` | `index.html` (lista com filtros), `detail.html` (tabs: header, itens, pagamentos, POs, OS) |
 | `purchase_orders/` | `index.html` (lista com filtros), `detail.html` |
 | `dispatch/` | `index.html` (cards de OS por status), `_os_card.html` (partial) |
-| `bookings/` | `index.html`, `detail.html` |
+| ~~`bookings/`~~ | — | **REMOVIDO em 05/06/2026.** |
 | `clients/` | `index.html`, `form.html` |
 | `drivers/` | `index.html`, `form.html` |
 | `vehicles/` | `index.html`, `form.html` |
 | `suppliers/` | `index.html`, `form.html` |
 | `services/` | `index.html` (catálogo com precificação) |
 | `categories/` | `index.html` |
-| `financial/` | `index.html` (lista com filtros), `form.html` |
+| `financial/` | `index.html` (lista com filtros), `form.html`, `payables.html` (painel Contas a Pagar) |
 | `reports/` | `index.html` (métricas mensais) |
 | `users/` | `index.html`, `form.html` |
 | `roles/` | `index.html` (roles + permissões) |

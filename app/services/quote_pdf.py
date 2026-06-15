@@ -63,10 +63,10 @@ _T: dict[str, dict[str, str]] = {
     "total_price_col":  {"pt": "VALOR TOTAL",              "en": "TOTAL PRICE"},
     "incluso_hdr":      {"pt": "Serviços Inclusos",        "en": "Included Services"},
     "info_hdr":         {"pt": "Informações Importantes",  "en": "Important Information"},
-    "add_info":         {"pt": "INFORMAÇÕES ADICIONAIS",   "en": "ADDITIONAL INFORMATION"},
+    "add_info":         {"pt": "Informações Importantes",   "en": "Important Information"},
     "cancel_policy":    {"pt": "POLÍTICA DE CANCELAMENTO", "en": "CANCELLATION POLICY"},
-    "cancel_intro":     {"pt": "Em caso de cancelamento da reserva:",
-                         "en": "In case of booking cancellation:"},
+    "cancel_intro":     {"pt": "Em caso de cancelamento do serviço:",
+                         "en": "In case of service cancellation:"},
     "cancel_72":        {"pt": "72 horas antes do evento, será cobrada uma taxa de 10%.",
                          "en": "72 hours before the event, a fee of 10% will be charged."},
     "cancel_48":        {"pt": "48 horas antes do evento, será cobrada uma taxa de 50%.",
@@ -610,20 +610,22 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
     story.append(Spacer(1, 5 * mm))
 
     # ── Included Services ───────────────────────────────────────────────────
-    incluso_list = _INCLUSO.get(lang, _INCLUSO["pt"])
     story.append(Paragraph(f"<b>{_t('incluso_hdr', lang)}</b>", sec_hdr))
+    db_inclusions = sorted(quote.inclusions, key=lambda x: x.sort_order or 0) if quote.inclusions else []
+    active_inclusions = [inc for inc in db_inclusions if inc.included]
+    if active_inclusions:
+        incluso_list = [
+            (inc.text_en if lang == "en" and inc.text_en else inc.text_pt)
+            for inc in active_inclusions
+        ]
+    else:
+        incluso_list = _INCLUSO.get(lang, _INCLUSO["pt"])
     for item in incluso_list:
         story.append(Paragraph(f"• {item}", bullet_st))
     story.append(Spacer(1, 4 * mm))
 
     # ── Additional info (obs) ─────────────────────────────────────────────
     story.append(Paragraph(f"<b>{_t('add_info', lang)}:</b>", sec_hdr))
-    hora_extra_txt = (
-        "Hora Extra: 10% sobre o valor total da diária, a partir de 30 minutos de despera."
-        if lang == "pt" else
-        "Overtime: 10% of the total daily rate, after 30 minutes of waiting."
-    )
-    story.append(Paragraph(f"• {hora_extra_txt}", bullet_st))
     obs = quote.obs or getattr(quote, "notes", None)
     if obs:
         for line in obs.splitlines():
@@ -638,7 +640,6 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
     story.append(HRFlowable(width=W, thickness=0.5,
                              color=colors.HexColor("#cccccc"), spaceAfter=3 * mm))
     story.append(Paragraph(f"<b>{_t('cancel_policy', lang)}</b>", sec_hdr))
-    story.append(Paragraph(_t("cancel_intro", lang), normal))
     for k in ("cancel_72", "cancel_48", "cancel_24"):
         story.append(Paragraph(f"  • {_t(k, lang)}", bullet_st))
     story.append(Spacer(1, 4 * mm))

@@ -106,7 +106,7 @@ App_Orcamentos_V2/
 │   │   ├── order.py             # Order, OrderItem, OrderPayment
 │   │   ├── purchase_order.py    # PurchaseOrder, POItem, POPayment
 │   │   ├── service_order.py     # ServiceOrder (soft delete)
-│   │   ├── booking.py           # Booking (legacy, soft delete)
+│   │   ├── booking.py           # REMOVIDO em 05/06/2026
 │   │   ├── financial.py         # FinancialRecord, AccountReceivable (legacy)
 │   │   ├── financial_entry.py   # FinancialEntry (V4)
 │   │   ├── revenue_entry.py     # RevenueEntry (V4)
@@ -124,7 +124,7 @@ App_Orcamentos_V2/
 │   │   ├── orders/routes.py     # CRUD pedidos + status + pagamentos
 │   │   ├── purchase_orders/routes.py # CRUD POs + status + pagamentos
 │   │   ├── dispatch/routes.py   # Despacho (service orders)
-│   │   ├── bookings/routes.py   # Reservas (legado)
+│   │   ├── bookings/routes.py   # REMOVIDO em 05/06/2026
 │   │   ├── clients/routes.py    # CRUD clientes
 │   │   ├── drivers/routes.py    # CRUD motoristas
 │   │   ├── vehicles/routes.py   # CRUD veículos
@@ -144,7 +144,7 @@ App_Orcamentos_V2/
 │   │   ├── purchase_order_service.py # Gestão de POs
 │   │   ├── purchase_order_pdf.py     # PDF de PO
 │   │   ├── service_order_service.py  # Gestão de OS
-│   │   ├── booking_service.py   # Criação de booking
+│   │   ├── booking_service.py   # REMOVIDO em 05/06/2026
 │   │   ├── dispatch_service.py  # Consultas de despacho
 │   │   ├── financial_service.py # (dead code) Registros financeiros
 │   │   ├── margin_service.py    # Cálculo de margem
@@ -168,7 +168,7 @@ App_Orcamentos_V2/
 │   │   ├── orders/              # Lista, detalhe
 │   │   ├── purchase_orders/     # Lista, detalhe
 │   │   ├── dispatch/            # Despacho + _os_card.html partial
-│   │   ├── bookings/            # Lista, detalhe
+│   │   ├── bookings/            # REMOVIDO em 05/06/2026
 │   │   ├── clients/             # Lista, formulário
 │   │   ├── drivers/             # Lista, formulário
 │   │   ├── vehicles/            # Lista, formulário
@@ -257,7 +257,7 @@ TimestampMixin              SoftDeleteMixin
 | POItem | po_items | — | — |
 | POPayment | po_payments | — | — |
 | ServiceOrder | service_orders | `OS-` + YYMMDD + seq | criado, agendado, atribuido, confirmado_cliente, em_execucao, finalizado, cancelado |
-| Booking | bookings | `RES-` + YYYY + seq | pendente, confirmado, em_andamento, concluido |
+| ~~Booking~~ | ~~bookings~~ | **REMOVIDO 05/06/2026** |
 
 #### Financeiro (V4)
 
@@ -301,7 +301,6 @@ Company (1) ────── (N) ServiceOrder
 
 Quote (1) ────── (N) QuoteItem
 Quote (1) ────── (N) QuoteInclusion
-Quote (1) ────── (1) Booking (legacy)
 Quote (1) ────── (N) Order
 
 Order (1) ────── (N) OrderItem

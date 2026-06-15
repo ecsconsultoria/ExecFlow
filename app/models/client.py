@@ -24,7 +24,6 @@ class Client(db.Model, TimestampMixin, SoftDeleteMixin):
     is_active      = db.Column(db.Boolean, default=True)
 
     quotes   = db.relationship("Quote",        backref="client", lazy="dynamic")
-    bookings = db.relationship("Booking",      backref="client", lazy="dynamic")
     service_orders = db.relationship("ServiceOrder", backref="client", lazy="dynamic")
 
     def __repr__(self):

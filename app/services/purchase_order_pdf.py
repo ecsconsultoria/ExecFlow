@@ -86,10 +86,10 @@ _LABELS: dict[str, dict[str, str]] = {
     "op_pickup":       {"pt": "Data / Hora Pickup",            "en": "Pickup Date/Time"},
     "op_pickup_date":  {"pt": "Data Pickup",                  "en": "Pickup Date"},
     "op_pickup_time":  {"pt": "Hora Pickup",                  "en": "Pickup Time"},
-    "op_from":         {"pt": "Local de Embarque",             "en": "Pickup Location"},
-    "op_to":           {"pt": "Local de Desembarque",          "en": "Dropoff Location"},
+    "op_from":         {"pt": "Embarque",                        "en": "Pickup Location"},
+    "op_to":           {"pt": "Desembarque",                     "en": "Dropoff Location"},
     "op_passenger":    {"pt": "Passageiro",                   "en": "Passenger"},
-    "op_pax_phone":    {"pt": "Fone do Passageiro",            "en": "Passenger Phone"},
+    "op_pax_phone":    {"pt": "Fone Pax",                      "en": "Passenger Phone"},
     "op_flight":       {"pt": "Nº Voo",                       "en": "Flight No."},
     "op_pax":          {"pt": "PAX",                          "en": "PAX"},
     "op_obs":          {"pt": "Observações",                  "en": "Notes"},
@@ -224,7 +224,15 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
 
     pickup_str = "–"
     if getattr(po, "pickup_datetime", None):
-        pickup_str = _fmt_datetime(po.pickup_datetime, lang)
+        pickup_str = _fmt_date(po.pickup_datetime, lang)
+    else:
+        # fallback: primeiro item com op_pickup_datetime
+        items_list = list(getattr(po, "items", None) or [])
+        for _it in items_list:
+            _dt = getattr(_it, "op_pickup_datetime", None)
+            if _dt:
+                pickup_str = _fmt_date(_dt, lang)
+                break
 
     linked_so_num = ""
     if getattr(po, "order", None):
@@ -273,7 +281,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
             "CNPJ/CPF" if lang == "pt" else "Tax ID"]],
          [Paragraph(v, cell_body_c) for v in [
             sup_name, sup_contact, sup_email, sup_phone, sup_doc]]],
-        colWidths=[W * 0.28, W * 0.18, W * 0.24, W * 0.16, W * 0.14],
+        colWidths=[W * 0.22, W * 0.17, W * 0.23, W * 0.16, W * 0.22],
     )
     sup_tbl.setStyle(TableStyle([
         ("BACKGROUND",    (0, 0), (-1, 0), BRAND_DARK),
@@ -498,14 +506,17 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
     story.append(Paragraph(_t("notes_hdr", lang), sec_hdr))
     story.append(HRFlowable(width=W, thickness=1, color=BRAND_GOLD, spaceAfter=3))
     bullet_st = ParagraphStyle("obs_bullet", parent=normal, leftIndent=12, firstLineIndent=-8)
-    hora_extra_txt = (
-        "Hora Extra: 10% sobre o valor total da diária, a partir de 30 minutos de despera."
-        if lang == "pt" else
-        "Overtime: 10% of the total daily rate, after 30 minutes of waiting."
-    )
-    story.append(Paragraph(f"• {hora_extra_txt}", bullet_st))
+    if po.status != "faturado":
+        hora_extra_txt = (
+            "Hora Extra: 10% sobre o valor total da diária, a partir de 30 minutos de despera."
+            if lang == "pt" else
+            "Overtime: 10% of the total daily rate, after 30 minutes of waiting."
+        )
+        story.append(Paragraph(f"• {hora_extra_txt}", bullet_st))
     if obs:
-        for line in obs.splitlines():
+        from ..utils.translate import translate_obs
+        obs_text = translate_obs(obs, lang) if lang != "pt" else obs
+        for line in obs_text.splitlines():
             safe = line.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
             if not safe.strip():
                 story.append(Spacer(1, 3))
@@ -529,30 +540,32 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
     items_sorted = sorted(po.items, key=lambda it: (getattr(it, "sort_order", 0) or 0, it.id))
     item_index   = {it.id: i + 1 for i, it in enumerate(items_sorted)}
 
+    # Dados operacionais omitidos no PDF pós-faturamento
     op_groups: list[tuple[tuple, list]] = []  # [(key_tuple, [items])]
-    for it in items_sorted:
-        op_pickup_dt = getattr(it, "op_pickup_datetime", None)
-        pax_cnt      = getattr(it, "op_pax_count", None)
-        key = (
-            op_pickup_dt.isoformat() if op_pickup_dt else "",
-            (getattr(it, "op_pickup_location", "") or "").strip(),
-            (getattr(it, "op_dropoff_location", "") or "").strip(),
-            (getattr(it, "op_passenger_name", "") or "").strip(),
-            (getattr(it, "op_passenger_phone", "") or "").strip(),
-            (getattr(it, "op_flight_number", "") or "").strip(),
-            str(pax_cnt) if pax_cnt else "",
-            (getattr(it, "op_notes", "") or "").strip(),
-        )
-        if not any(key):
-            continue
-        matched = False
-        for k, lst in op_groups:
-            if k == key:
-                lst.append(it)
-                matched = True
-                break
-        if not matched:
-            op_groups.append((key, [it]))
+    if po.status != "faturado":
+        for it in items_sorted:
+            op_pickup_dt = getattr(it, "op_pickup_datetime", None)
+            pax_cnt      = getattr(it, "op_pax_count", None)
+            key = (
+                op_pickup_dt.isoformat() if op_pickup_dt else "",
+                (getattr(it, "op_pickup_location", "") or "").strip(),
+                (getattr(it, "op_dropoff_location", "") or "").strip(),
+                (getattr(it, "op_passenger_name", "") or "").strip(),
+                (getattr(it, "op_passenger_phone", "") or "").strip(),
+                (getattr(it, "op_flight_number", "") or "").strip(),
+                str(pax_cnt) if pax_cnt else "",
+                (getattr(it, "op_notes", "") or "").strip(),
+            )
+            if not any(key):
+                continue
+            matched = False
+            for k, lst in op_groups:
+                if k == key:
+                    lst.append(it)
+                    matched = True
+                    break
+            if not matched:
+                op_groups.append((key, [it]))
 
     total_items = len(items_sorted)
 
@@ -605,55 +618,57 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
         story.append(hdr_tbl)
 
         # Tabela compacta — 4 colunas (label: valor) por linha
+        # op_obs é separado para ocupar linha inteira
+        obs_entry = next(((lk, v) for lk, v in filled if lk == "op_obs"), None)
+        filled_main = [(lk, v) for lk, v in filled if lk != "op_obs"]
+
         COLS = 4
         cells = []
-        for lk, v in filled:
+        for lk, v in filled_main:
             label = _t(lk, lang)
             safe = (v or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
             cells.append(Paragraph(f"<b>{label}:</b> {safe}", op_value_st))
 
-        while len(cells) % COLS != 0:
-            cells.append(Paragraph("", op_value_st))
-        rows = [cells[i:i + COLS] for i in range(0, len(cells), COLS)]
+        if cells:
+            while len(cells) % COLS != 0:
+                cells.append(Paragraph("", op_value_st))
+            rows = [cells[i:i + COLS] for i in range(0, len(cells), COLS)]
 
-        cw = W / COLS
-        info_tbl = Table(rows, colWidths=[cw] * COLS)
-        info_tbl.setStyle(TableStyle([
-            ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#f8fafc")),
-            ("BOX",           (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
-            ("INNERGRID",     (0, 0), (-1, -1), 0.3, colors.HexColor("#e2e8f0")),
-            ("TOPPADDING",    (0, 0), (-1, -1), 3),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-            ("LEFTPADDING",   (0, 0), (-1, -1), 5),
-            ("RIGHTPADDING",  (0, 0), (-1, -1), 5),
-            ("VALIGN",        (0, 0), (-1, -1), "TOP"),
-        ]))
-        story.append(info_tbl)
+            cw = W / COLS
+            info_tbl = Table(rows, colWidths=[cw] * COLS)
+            info_tbl.setStyle(TableStyle([
+                ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#f8fafc")),
+                ("BOX",           (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
+                ("INNERGRID",     (0, 0), (-1, -1), 0.3, colors.HexColor("#e2e8f0")),
+                ("TOPPADDING",    (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ("LEFTPADDING",   (0, 0), (-1, -1), 5),
+                ("RIGHTPADDING",  (0, 0), (-1, -1), 5),
+                ("VALIGN",        (0, 0), (-1, -1), "TOP"),
+            ]))
+            story.append(info_tbl)
+
+        if obs_entry:
+            obs_label = _t(obs_entry[0], lang)
+            obs_safe  = (obs_entry[1] or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            obs_tbl = Table(
+                [[Paragraph(f"<b>{obs_label}:</b> {obs_safe}", op_value_st)]],
+                colWidths=[W],
+            )
+            obs_tbl.setStyle(TableStyle([
+                ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#f8fafc")),
+                ("BOX",           (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
+                ("TOPPADDING",    (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ("LEFTPADDING",   (0, 0), (-1, -1), 5),
+                ("RIGHTPADDING",  (0, 0), (-1, -1), 5),
+                ("VALIGN",        (0, 0), (-1, -1), "TOP"),
+            ]))
+            story.append(obs_tbl)
         story.append(Spacer(1, 2 * mm))
 
     if op_groups:
         story.append(Spacer(1, 3 * mm))
-
-    # ── Signature area ────────────────────────────────────────────────────────
-    story.append(Spacer(1, 12))
-    sig_data = [[
-        Paragraph(f"___________________________<br/><font size='7' color='#94a3b8'>"
-                  f"{_t('approved_by', lang)}</font>",
-                  ParagraphStyle("sg1", fontName="Helvetica", fontSize=9, alignment=TA_CENTER)),
-        Paragraph(f"___________________________<br/><font size='7' color='#94a3b8'>"
-                  f"{_t('supplier_sig', lang)}</font>",
-                  ParagraphStyle("sg2", fontName="Helvetica", fontSize=9, alignment=TA_CENTER)),
-        Paragraph(f"___________________________<br/><font size='7' color='#94a3b8'>"
-                  f"{_t('date_sig', lang)}</font>",
-                  ParagraphStyle("sg3", fontName="Helvetica", fontSize=9, alignment=TA_CENTER)),
-    ]]
-    sig_tbl = Table(sig_data, colWidths=[W / 3, W / 3, W / 3])
-    sig_tbl.setStyle(TableStyle([
-        ("TOPPADDING",    (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-        ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
-    ]))
-    story.append(sig_tbl)
 
     # ── Footer callback ───────────────────────────────────────────────────────
     from datetime import datetime as _dt  # noqa: PLC0415

@@ -86,6 +86,30 @@ def delete(cid):
     return redirect(url_for("clients.index"))
 
 
+@clients_bp.route("/api/new", methods=["POST"])
+@login_required
+@require_permission("clients.edit")
+def api_new():
+    """Criação inline de cliente via AJAX (usado na SO detail)."""
+    data = request.get_json(silent=True) or {}
+    name = (data.get("name") or "").strip()
+    if not name:
+        return jsonify({"ok": False, "error": "Nome é obrigatório."}), 400
+    client = Client(
+        company_id = current_user.company_id,
+        name       = name,
+        contact    = data.get("contact") or None,
+        phone      = data.get("phone") or None,
+        email      = data.get("email") or None,
+        document   = data.get("document") or None,
+    )
+    db.session.add(client)
+    db.session.commit()
+    log_activity("client", client.id, current_user.company_id, f"Cliente {client.name!r} criado inline", current_user.id)
+    return jsonify({"ok": True, "id": client.id, "name": client.name,
+                    "email": client.email or "", "phone": client.phone or ""})
+
+
 @clients_bp.route("/search")
 @login_required
 @require_permission("clients.view")

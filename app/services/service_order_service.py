@@ -1,7 +1,6 @@
 """ServiceOrderService — lógica de negócio central da OS.
 
 Métodos principais:
-- create_from_booking(booking, quote, user_id)
 - create_manual(company_id, data, user_id)
 - assign_driver(os, driver_id, vehicle_id, user_id)
 - assign_supplier(os, supplier_id, data, user_id)
@@ -36,60 +35,24 @@ def _next_os_code(company_id: int) -> str:
 # Criação
 # ─────────────────────────────────────────────────────────────────────────────
 
-def create_from_booking(booking, quote, user_id: int) -> ServiceOrder:
-    """Cria OS automaticamente a partir de um Booking confirmado."""
-    os = ServiceOrder(
-        code        = _next_os_code(booking.company_id),
-        company_id  = booking.company_id,
-        booking_id  = booking.id,
-        quote_id    = quote.id if quote else None,
-        client_id   = booking.client_id,
-        created_by  = user_id,
-
-        passenger_name  = (booking.client.name if booking.client else ""),
-        passenger_phone = (booking.client.phone if booking.client else ""),
-        passenger_email = (booking.client.email if booking.client else ""),
-        pax_count       = booking.pax_count or 1,
-        language        = (booking.client.language if booking.client else "pt"),
-
-        pickup_datetime  = booking.service_date,
-        pickup_location  = booking.pickup_address,
-        dropoff_location = booking.dropoff_address,
-        flight_number    = booking.flight_number,
-        notes            = booking.notes,
-        status           = "agendado",
-
-        revenue_amount = quote.total_amount if quote else 0.0,
-    )
-    db.session.add(os)
-    db.session.flush()  # get os.id
-
-    # RevenueEntry inicial
-    re = RevenueEntry(
-        service_order_id = os.id,
-        company_id       = os.company_id,
-        client_id        = os.client_id,
-        created_by       = user_id,
-        amount           = os.revenue_amount,
-        billing_type     = quote.billing_type if quote else "recibo",
-        description      = f"Receita gerada do orçamento {quote.number}" if quote else "Receita da OS",
-        status           = "pendente",
-    )
-    db.session.add(re)
-
-    add_event(os, "criado", f"OS criada a partir do booking {booking.number}", user_id)
-    recalculate_margin(os)
-    return os
-
-
 def create_manual(company_id: int, data: dict, user_id: int) -> ServiceOrder:
     """Cria OS manualmente (sem booking/orçamento)."""
+    # Allowlist explícita — impede mass assignment de campos sensíveis
+    # como revenue_amount, margin_amount, total_cost_amount ou status.
+    _allowed_fields = {
+        "service_id", "category_id", "client_id", "quote_id",
+        "passenger_name", "passenger_phone", "passenger_email", "pax_count",
+        "language", "pickup_datetime", "pickup_location", "dropoff_location",
+        "flight_number", "vehicle_description", "notes",
+        "internal_notes", "dispatch_notes",
+    }
+    _filtered = {k: v for k, v in data.items() if k in _allowed_fields}
     os = ServiceOrder(
         code       = _next_os_code(company_id),
         company_id = company_id,
         created_by = user_id,
         status     = "criado",
-        **{k: v for k, v in data.items() if hasattr(ServiceOrder, k)},
+        **_filtered,
     )
     db.session.add(os)
     db.session.flush()

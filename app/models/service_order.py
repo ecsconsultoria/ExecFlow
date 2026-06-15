@@ -29,7 +29,6 @@ class ServiceOrder(db.Model, TimestampMixin, SoftDeleteMixin):
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"),     nullable=True)
 
     # ── Vínculos comerciais ────────────────────────────────────────────────────
-    booking_id  = db.Column(db.Integer, db.ForeignKey("bookings.id"),  nullable=True)
     quote_id    = db.Column(db.Integer, db.ForeignKey("quotes.id"),    nullable=True)
     client_id   = db.Column(db.Integer, db.ForeignKey("clients.id"),   nullable=True)
     service_id  = db.Column(db.Integer, db.ForeignKey("services.id"),  nullable=True)
@@ -122,8 +121,13 @@ class ServiceOrder(db.Model, TimestampMixin, SoftDeleteMixin):
         return colors.get(self.status, "slate")
 
     def recalculate_margin(self):
-        """margin = revenue - total_operational_costs (includes supplier costs)."""
-        self.total_cost_amount = sum(c.amount for c in self.costs if not getattr(c, 'is_deleted', False))
+        """margin = revenue - total_operational_costs (includes supplier costs).
+
+        OperationCost não herda SoftDeleteMixin — não há soft delete para custos.
+        O filtro getattr(c, 'is_deleted', False) era código morto (sempre False)
+        e foi removido em 2026-06-04.
+        """
+        self.total_cost_amount = sum(c.amount for c in self.costs)
         self.margin_amount = round((self.revenue_amount or 0) - (self.total_cost_amount or 0), 2)
 
     def __repr__(self):

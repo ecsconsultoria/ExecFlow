@@ -1,6 +1,11 @@
 """Roles & Permissions — read-only listing (Phase 3).
 
 Gestão de roles customizadas será adicionada futuramente atrás de roles.manage.
+
+IMPORTANTE: Role e Permission são tabelas GLOBAIS (sem company_id).
+Roles e permissões são definidas em nível de sistema, não por tenant.
+Esta é uma decisão de design intencional — todos os tenants compartilham
+o mesmo catálogo de permissões e roles canônicas.
 """
 from collections import OrderedDict
 from flask import render_template
@@ -14,6 +19,7 @@ from ...utils.decorators import require_permission
 @login_required
 @require_permission("users.manage")
 def index():
+    # Tabelas globais — roles e permissões são compartilhadas entre tenants
     roles = Role.query.order_by(Role.code).all()
 
     # Agrupa permissions por categoria para exibir na UI

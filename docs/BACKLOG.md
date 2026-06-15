@@ -1,8 +1,8 @@
 # BACKLOG.md — App_Orcamentos_V2
 
-> **Data:** 04/06/2026
+> **Data:** 05/06/2026 (atualizado)
 > **Fonte:** RELATORIO_ARQUITETURA.md + análise completa do código
-> **Total de itens:** 48
+> **Total de itens:** 48 | **Concluídos:** 8 (Sprint 1) + Booking + Menu
 
 ---
 

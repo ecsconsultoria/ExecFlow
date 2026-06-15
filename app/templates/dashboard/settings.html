@@ -107,25 +107,25 @@
     action: null,
     actions: {
       transactional: {
-        label: 'Limpar SO, PO e Or\u00e7amentos',
+        label: 'Limpar SO, PO e Orçamentos',
         url:   '{{ url_for("dashboard.reset_transactional") }}',
         color: 'bg-orange-600 hover:bg-orange-700',
-        items: ['Ordens de Servi\u00e7o (SO) \u2014 itens e parcelas','Purchase Orders (PO) \u2014 itens e parcelas','Or\u00e7amentos e seus itens','Reservas (bookings)'],
-        note:  'Financeiro, cadastros e usu\u00e1rios preservados.'
+        items: ['Ordens de Serviço (SO) — itens e parcelas','Purchase Orders (PO) — itens e parcelas','Orçamentos e seus itens'],
+        note:  'Financeiro, cadastros e usuários preservados.'
       },
       financial: {
         label: 'Limpar Financeiro',
         url:   '{{ url_for("dashboard.reset_financial") }}',
         color: 'bg-red-500 hover:bg-red-600',
-        items: ['Registros financeiros e contas a receber','Lan\u00e7amentos financeiros','Entradas de receita','Custos operacionais','Pagamentos a fornecedores'],
-        note:  'SO, PO, Or\u00e7amentos e cadastros preservados.'
+        items: ['Registros financeiros e contas a receber','Lançamentos financeiros','Entradas de receita','Custos operacionais','Pagamentos a fornecedores'],
+        note:  'SO, PO, Orçamentos e cadastros preservados.'
       },
       all: {
         label: 'Zerar Sistema Completo',
         url:   '{{ url_for("dashboard.reset_all") }}',
         color: 'bg-red-700 hover:bg-red-800',
-        items: ['Tudo acima +','Ordens de Despacho (service_orders)','Eventos e atribui\u00e7\u00f5es de despacho','Logs de auditoria'],
-        note:  'Preserva apenas: empresa, usu\u00e1rios, clientes, motoristas, ve\u00edculos, fornecedores e tabela de pre\u00e7os.'
+        items: ['Tudo acima +','Ordens de Despacho (service_orders)','Eventos e atribuições de despacho','Logs de auditoria'],
+        note:  'Preserva apenas: empresa, usuários, clientes, motoristas, veículos, fornecedores e tabela de preços.'
       }
     }
   }" class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-red-200 dark:border-red-900 p-6">
@@ -133,13 +133,13 @@
       <i class="fa-solid fa-triangle-exclamation mr-2"></i>Zona de Risco
     </h2>
     <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
-      A\u00e7\u00f5es irrevers\u00edveis. Os cadastros base (clientes, servi\u00e7os, ve\u00edculos, motoristas) s\u00e3o preservados.
+      Ações irreversíveis. Os cadastros base (clientes, serviços, veículos, motoristas) são preservados.
     </p>
 
     <div class="flex flex-wrap gap-3">
       <button type="button" @click="action='transactional'"
               class="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-        <i class="fa-solid fa-file-circle-xmark"></i> Limpar SO / PO / Or\u00e7amentos
+        <i class="fa-solid fa-file-circle-xmark"></i> Limpar SO / PO / Orçamentos
       </button>
       <button type="button" @click="action='financial'"
               class="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
@@ -151,7 +151,7 @@
       </button>
     </div>
 
-    <!-- Modal din\u00e2mico -->
+    <!-- Modal dinâmico -->
     <div x-show="action !== null" x-cloak
          class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
       <div @click.outside="action=null"
@@ -160,7 +160,7 @@
           <i class="fa-solid fa-triangle-exclamation mr-2"></i>
           <span x-text="action ? actions[action].label : ''"></span>
         </h3>
-        <p class="text-sm text-slate-600 dark:text-slate-300 mb-3">Ser\u00e3o apagados <strong>todos</strong> os registros de:</p>
+        <p class="text-sm text-slate-600 dark:text-slate-300 mb-3">Serão apagados <strong>todos</strong> os registros de:</p>
         <ul class="text-sm text-slate-500 dark:text-slate-400 list-disc list-inside mb-3 space-y-0.5">
           <template x-for="item in (action ? actions[action].items : [])" :key="item">
             <li x-text="item"></li>
@@ -174,6 +174,15 @@
           </button>
           <form :action="action ? actions[action].url : '#'" method="post">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="mb-4">
+              <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                <i class="fa-solid fa-lock mr-1"></i>Digite sua senha para confirmar:
+              </label>
+              <input type="password" name="confirm_password" required autocomplete="current-password"
+                     class="w-full px-3 py-2 text-sm border border-red-200 dark:border-red-800 rounded-lg bg-red-50 dark:bg-red-950
+                            focus:ring-2 focus:ring-red-400 focus:border-red-400 outline-none"
+                     placeholder="Senha do administrador">
+            </div>
             <button type="submit"
                     :class="action ? actions[action].color : 'bg-red-600'"
                     class="px-5 py-2 text-sm font-semibold rounded-lg text-white transition-colors">
