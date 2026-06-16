@@ -31,8 +31,17 @@ def create(company_id: int, data: dict, user_id: int) -> PurchaseOrder:
 
 
 def create_from_order(order, user_id: int) -> PurchaseOrder:
-    """Cria PO a partir de uma Order (SO), copiando itens e ajustes financeiros."""
+    """Cria PO a partir de uma Order (SO), copiando itens e ajustes financeiros.
+
+    Se já existir uma PO em rascunho para esta Order, retorna a existente
+    em vez de criar duplicata. Rascunhos só aparecem na listagem após salvar.
+    """
     from ..models.order import Order
+    existing = PurchaseOrder.query.filter_by(
+        order_id=order.id, status="rascunho",
+    ).filter(PurchaseOrder.deleted_at.is_(None)).first()
+    if existing:
+        return existing
     po = PurchaseOrder(
         number             = numbering_service.next_po(order.company_id),
         company_id         = order.company_id,
@@ -47,15 +56,29 @@ def create_from_order(order, user_id: int) -> PurchaseOrder:
     )
     db.session.add(po)
     db.session.flush()
+
+    # Resolve preço de custo da tabela ServicePricing
+    from ..models.service import ServicePricing
     for idx, item in enumerate(order.items):
+        cost_price = item.unit_price or 0
+        if item.service_id and item.category_id:
+            driver_type = item.driver_name or ""
+            pricing = ServicePricing.query.filter_by(
+                service_id=item.service_id,
+                category_id=item.category_id,
+                driver_type=driver_type,
+            ).first()
+            if pricing and pricing.price_cost:
+                cost_price = pricing.price_cost
+        qty = item.quantity or 1
         poi = POItem(
             po_id       = po.id,
             service_id  = item.service_id,
             category_id = item.category_id,
             description = item.description or "",
-            quantity    = item.quantity or 1,
-            unit_cost   = item.unit_price or 0,
-            total_cost  = item.total_price or 0,
+            quantity    = qty,
+            unit_cost   = cost_price,
+            total_cost  = round(cost_price * qty, 2),
             sort_order  = idx,
         )
         db.session.add(poi)
@@ -483,12 +506,31 @@ def _parse_cost(val) -> float:
 
 
 def add_item(po: PurchaseOrder, data: dict) -> POItem:
-    """Adiciona um POItem à PO e atualiza o total."""
+    """Adiciona um POItem à PO e atualiza o total.
+
+    Se service_id + category_id forem informados, busca o price_cost
+    da tabela ServicePricing (respeitando driver_type se informado).
+    Caso contrário, usa o unit_cost do formulário.
+    """
     service_id  = int(data["service_id"])  if data.get("service_id")  else None
     category_id = int(data["category_id"]) if data.get("category_id") else None
+    driver_type = (data.get("driver_type") or "").strip()
     qty         = max(int(data.get("quantity") or 1), 1)
     unit_cost   = _parse_cost(data.get("unit_cost", 0))
-    total_cost  = round(unit_cost * qty, 2)
+
+    # Se não foi informado custo manual, busca o price_cost da tabela
+    if unit_cost == 0 and service_id and category_id:
+        from ..models.service import ServicePricing
+        q_pricing = ServicePricing.query.filter_by(
+            service_id=service_id, category_id=category_id, is_active=True,
+        )
+        if driver_type:
+            pricing = q_pricing.filter_by(driver_type=driver_type).first()
+        else:
+            pricing = q_pricing.first()
+        if pricing and pricing.price_cost:
+            unit_cost = pricing.price_cost
+    total_cost = round(unit_cost * qty, 2)
 
     # Default description = nome do serviço se não informado
     description = (data.get("description") or "").strip()

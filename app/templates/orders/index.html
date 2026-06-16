@@ -91,7 +91,7 @@
           {% else %}<span class="text-slate-400">–</span>{% endif %}
         </td>
         <td class="px-5 py-3.5 text-slate-500 dark:text-slate-400 whitespace-nowrap">{{ o.created_at|fdate }}</td>
-        <td class="px-5 py-3.5 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap hidden md:table-cell">{{ o.total_amount|currency }}</td>
+        <td class="px-5 py-3.5 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap hidden md:table-cell">{{ o.computed_total|currency }}</td>
         <td class="px-5 py-3.5 hidden md:table-cell">
           <span style="{{ o.status|status_badge_style }}"><span style="width:6px;height:6px;border-radius:50%;background:{{ o.status|status_dot_color }};flex-shrink:0;display:inline-block"></span> {{ o.status_label }}</span>
         </td>

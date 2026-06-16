@@ -1072,6 +1072,15 @@
               {% endif %}
             </select>
           </div>
+          <div>
+            <label class="lbl">Tipo de Motorista</label>
+            <select name="driver_type" id="ai-driver" class="fi"
+                    onchange="poFetchItemCost()">
+              <option value="">– Indiferente –</option>
+              <option value="Monolíngue">Monolíngue</option>
+              <option value="Bilíngue">Bilíngue</option>
+            </select>
+          </div>
         </div>
         <div>
           <label class="lbl">Descrição</label>
@@ -1462,9 +1471,12 @@ function fillAddItemDesc(svcId) {
 function poFetchItemCost() {
   const svcId = document.getElementById('ai-service')?.value;
   const catId = document.getElementById('ai-category')?.value;
+  const driver = document.getElementById('ai-driver')?.value || '';
   const costInput = document.getElementById('ai-unit');
   if (!svcId || !catId || !costInput) return;
-  fetch(`/services/pricing?service_id=${svcId}&category_id=${catId}&billing_type=recibo`)
+  let url = `/services/pricing?service_id=${svcId}&category_id=${catId}&billing_type=recibo`;
+  if (driver) url += `&driver_type=${encodeURIComponent(driver)}`;
+  fetch(url)
     .then(r => r.json())
     .then(d => {
       if (d.price_cost > 0 && (!costInput.value || costInput.value === '0,00')) {

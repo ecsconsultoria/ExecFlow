@@ -50,7 +50,8 @@ def index():
     if status:
         query = query.filter_by(status=status)
     else:
-        query = query.filter(PurchaseOrder.status != "excluido")
+        # Exclui rascunhos não salvos e POs excluídas da listagem padrão
+        query = query.filter(PurchaseOrder.status.notin_(["excluido", "rascunho"]))
     if q:
         query = query.filter(
             PurchaseOrder.number.ilike(f"%{q}%") |

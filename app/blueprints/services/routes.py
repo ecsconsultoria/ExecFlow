@@ -326,13 +326,19 @@ def export_excel():
 @login_required
 @require_permission("catalog.view")
 def pricing():
-    """JSON endpoint: pricing for quote builder."""
-    svc_id  = request.args.get("service_id", type=int)
-    cat_id  = request.args.get("category_id", type=int)
-    billing = request.args.get("billing_type", "recibo")
+    """JSON endpoint: pricing for quote builder and PO item cost lookup."""
+    svc_id      = request.args.get("service_id", type=int)
+    cat_id      = request.args.get("category_id", type=int)
+    billing     = request.args.get("billing_type", "recibo")
+    driver_type = request.args.get("driver_type", "").strip()
     if not svc_id or not cat_id:
         return jsonify({"price": 0, "price_cost": 0})
-    p = ServicePricing.query.filter_by(service_id=svc_id, category_id=cat_id, is_active=True).first()
+    # Busca exata por service + category + driver_type
+    q = ServicePricing.query.filter_by(service_id=svc_id, category_id=cat_id, is_active=True)
+    if driver_type:
+        p = q.filter_by(driver_type=driver_type).first()
+    else:
+        p = q.first()
     if not p:
         return jsonify({"price": 0, "price_cost": 0})
     return jsonify({"price": p.effective_price(billing), "price_cost": p.price_cost or 0,
