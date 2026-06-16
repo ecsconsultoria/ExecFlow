@@ -15,6 +15,7 @@ from ...services import purchase_order_service as pos
 from ...services import margin_service
 from ...utils.audit import log_activity
 from ...utils.decorators import require_permission
+from ...utils import now_br
 from ...utils.helpers import parse_brl
 
 
@@ -260,6 +261,10 @@ def save_all(po_id):
                 pass
 
         pos._apply_data(po, data)
+        # Ao salvar um rascunho, promove para "aberto" (visível na listagem)
+        if po.status == "rascunho":
+            po.status = "aberto"
+            po.opened_at = now_br()
         log_activity("po", po.id, po.company_id, "Dados salvos", current_user.id)
         if po.order_id and po.order:
             margin_service.recalculate_order(po.order)
