@@ -66,9 +66,9 @@
   <table class="w-full text-sm">
     <thead>
       <tr class="border-b-2 border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-700/50">
-        <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Nº Pedido</th>
+        <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Nº SO</th>
+        <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Nº RFQ</th>
         <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Cliente</th>
-        <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider hidden md:table-cell">Orçamento</th>
         <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Data</th>
         <th class="px-5 py-3.5 text-right text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider hidden md:table-cell">Total</th>
         <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider hidden md:table-cell">Status</th>
@@ -84,12 +84,15 @@
             {{ o.number }}
           </a>
         </td>
-        <td class="px-5 py-3.5 font-medium text-slate-700 dark:text-slate-200">{{ o.client_name or '–' }}</td>
-        <td class="px-5 py-3.5 text-xs font-mono hidden md:table-cell">
+        <td class="px-5 py-3.5">
           {% if o.quote %}
-          <a href="{{ url_for('quotes.detail', qid=o.quote_id) }}" class="text-violet-500 hover:text-violet-700 dark:hover:text-violet-300 transition-colors">{{ o.quote.number }}</a>
+          <a href="{{ url_for('quotes.detail', qid=o.quote_id) }}"
+             class="font-mono font-semibold text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-200 transition-colors">
+            {{ o.quote.number }}
+          </a>
           {% else %}<span class="text-slate-400">–</span>{% endif %}
         </td>
+        <td class="px-5 py-3.5 font-medium text-slate-700 dark:text-slate-200">{{ o.client_name or '–' }}</td>
         <td class="px-5 py-3.5 text-slate-500 dark:text-slate-400 whitespace-nowrap">{{ o.created_at|fdate }}</td>
         <td class="px-5 py-3.5 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap hidden md:table-cell">{{ o.computed_total|currency }}</td>
         <td class="px-5 py-3.5 hidden md:table-cell">

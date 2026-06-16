@@ -261,6 +261,21 @@ def _ensure_schema_columns():
                     ))
                 log.info('Schema patch applied: financial_records.deleted_at')
 
+        # ── purchase_orders: reopened_at / reopened_by (2026-06-16) ──────────
+        if 'purchase_orders' in table_names:
+            existing_po = {c['name'] for c in insp.get_columns('purchase_orders')}
+            _po_new_cols = [
+                ('reopened_at', 'TIMESTAMP'),
+                ('reopened_by', 'INTEGER'),
+            ]
+            with db.engine.begin() as conn:
+                for col_name, col_type in _po_new_cols:
+                    if col_name not in existing_po:
+                        conn.execute(_text(
+                            f'ALTER TABLE purchase_orders ADD COLUMN {col_name} {col_type}'
+                        ))
+                        log.info('Schema patch applied: purchase_orders.%s', col_name)
+
         # ── service_pricing: fix driver_type typo 'Bilingue' → 'Bilíngue' ────
         if 'service_pricing' in table_names:
             with db.engine.begin() as conn:

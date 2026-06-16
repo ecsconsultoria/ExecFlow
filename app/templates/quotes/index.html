@@ -61,7 +61,8 @@
   <table class="w-full text-sm">
     <thead>
       <tr class="border-b-2 border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-700/50">
-        <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Número</th>
+        <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Nº RFQ</th>
+        <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Nº SO</th>
         <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Cliente</th>
         <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Data</th>
         <th class="px-5 py-3.5 text-right text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider hidden md:table-cell">Total</th>
@@ -77,6 +78,14 @@
              class="font-mono font-bold text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-200 transition-colors">
             {{ q.number }}
           </a>
+        </td>
+        <td class="px-5 py-3.5">
+          {% if q.order %}
+          <a href="{{ url_for('orders.detail', oid=q.order.id) }}"
+             class="font-mono font-semibold text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-200 transition-colors">
+            {{ q.order.number }}
+          </a>
+          {% else %}–{% endif %}
         </td>
         <td class="px-5 py-3.5 font-medium text-slate-700 dark:text-slate-200">{{ q.client_name or '–' }}</td>
         <td class="px-5 py-3.5 text-slate-500 dark:text-slate-400 whitespace-nowrap">{{ q.created_at|fdate }}</td>
@@ -106,7 +115,7 @@
       </tr>
       {% else %}
       <tr>
-        <td colspan="6" class="px-5 py-16 text-center">
+        <td colspan="7" class="px-5 py-16 text-center">
           <div class="flex flex-col items-center gap-3">
             <div class="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
               <i class="fa-regular fa-file-lines text-2xl text-slate-300 dark:text-slate-500"></i>
