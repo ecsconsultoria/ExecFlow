@@ -152,6 +152,19 @@ def conclude(po: PurchaseOrder, user_id: int) -> PurchaseOrder:
     return po
 
 
+def reabrir(po: PurchaseOrder, user_id: int) -> PurchaseOrder:
+    """Reabre uma PO faturada, voltando para status 'aberto'."""
+    if po.status != "faturado":
+        raise ValueError(f"Somente POs faturadas podem ser reabertas (status atual: '{po.status}')")
+    po.status       = "aberto"
+    po.reopened_at  = now_br()
+    po.reopened_by  = user_id
+    po.invoiced_at  = None
+    po.invoiced_by  = None
+    db.session.commit()
+    return po
+
+
 def faturar(po: PurchaseOrder, user_id: int) -> PurchaseOrder:
     """Fatura a PO — nota fiscal do fornecedor recebida."""
     if po.status in ("faturado", "cancelado", "excluido"):

@@ -866,6 +866,16 @@
         </div>
       </div>
 
+      {# Reabrir #}
+      {% if po.status == 'faturado' and has_perm('po.edit') %}
+      <form method="post" action="{{ url_for('purchase_orders.reopen', po_id=po.id) }}" class="w-full">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="sb-btn bg-amber-600 hover:bg-amber-700 w-full">
+          <i class="fa-solid fa-rotate-left mr-1.5"></i> Reabrir PO
+        </button>
+      </form>
+      {% endif %}
+
       {# Cancelar #}
       {% if po.status not in ('concluido', 'faturado', 'pago', 'cancelado') and has_perm('po.cancel') %}
       <button type="button"

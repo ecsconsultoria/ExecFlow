@@ -85,6 +85,8 @@ class PurchaseOrder(db.Model, TimestampMixin, SoftDeleteMixin):
     cancelled_at   = db.Column(db.DateTime)
     invoiced_at    = db.Column(db.DateTime)
     invoiced_by    = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    reopened_at    = db.Column(db.DateTime)
+    reopened_by    = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
 
     # ── Relacionamentos ───────────────────────────────────────────────────────
     creator          = db.relationship("User",           foreign_keys=[created_by],           lazy="joined")

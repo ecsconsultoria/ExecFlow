@@ -407,6 +407,20 @@ def faturar(po_id):
     return redirect(url_for("purchase_orders.detail", po_id=po_id))
 
 
+@purchase_orders_bp.route("/<int:po_id>/reopen", methods=["POST"])
+@login_required
+@require_permission("po.edit")
+def reopen(po_id):
+    po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
+    try:
+        pos.reabrir(po, current_user.id)
+        log_activity("po", po.id, po.company_id, "PO reaberta", current_user.id)
+        flash("PO reaberta com sucesso.", "success")
+    except ValueError as e:
+        flash(str(e), "warning")
+    return redirect(url_for("purchase_orders.detail", po_id=po_id))
+
+
 @purchase_orders_bp.route("/<int:po_id>/cancel", methods=["POST"])
 @login_required
 @require_permission("po.cancel")
