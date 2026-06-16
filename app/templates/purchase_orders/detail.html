@@ -868,12 +868,11 @@
 
       {# Reabrir #}
       {% if po.status == 'faturado' and has_perm('po.edit') %}
-      <form method="post" action="{{ url_for('purchase_orders.reopen', po_id=po.id) }}" class="w-full">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="sb-btn bg-amber-600 hover:bg-amber-700 w-full">
-          <i class="fa-solid fa-rotate-left mr-1.5"></i> Reabrir PO
-        </button>
-      </form>
+      <button type="button" onclick="document.getElementById('po-reabrir-form').submit()"
+              data-tip="Reabrir"
+              class="act-btn bg-sky-500 hover:bg-sky-600">
+        <i class="fa-solid fa-rotate-left"></i>
+      </button>
       {% endif %}
 
       {# Cancelar #}
@@ -895,6 +894,12 @@
         <i class="fa-solid fa-trash"></i>
       </button>
       {% endif %}
+
+    {# Form independente — Reabrir PO (faturado → aberto) #}
+    <form id="po-reabrir-form" method="post"
+          action="{{ url_for('purchase_orders.reopen', po_id=po.id) }}" class="hidden">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    </form>
 
     {% else %}
     {# Nova PO — botão voltar #}
