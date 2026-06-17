@@ -577,7 +577,7 @@
                 id="baixa-o-td-{{ pmt.id }}"
                 data-url="{{ url_for('orders.baixa', pid=pmt.id) }}"
                 data-amount="{{ '%.2f'|format(pmt.amount or 0)|replace('.', ',') }}">
-              {% if order.status != 'cancelado' %}
+              {% if order.status not in ('cancelado', 'novo', 'rascunho') %}
               <button type="button" onclick="openBaixaO({{ pmt.id }})"
                       class="p-1 rounded text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-900/30"
                       title="Dar baixa">

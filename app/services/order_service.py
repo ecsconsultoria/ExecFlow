@@ -188,6 +188,10 @@ def faturar(order: Order, data: dict, user_id: int) -> None:
             pass
     margin_service.recalculate_order(order)
     _sync_order_pending_financials(order)
+    # Se todas as parcelas já estão pagas, conclui automaticamente
+    if order.payments and all(p.is_paid for p in order.payments):
+        order.status    = "concluido"
+        order.closed_at = now_br()
     db.session.commit()
 
 

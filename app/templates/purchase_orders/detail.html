@@ -567,11 +567,13 @@
                 id="baixa-td-{{ pmt.id }}"
                 data-url="{{ url_for('purchase_orders.baixa', pid=pmt.id) }}"
                 data-amount="{{ '%.2f'|format(pmt.amount or 0)|replace('.', ',') }}">
+              {% if po.status not in ('rascunho', 'cancelado') %}
               <button type="button" onclick="openBaixa({{ pmt.id }})"
                       class="p-1 rounded text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-900/30"
                       title="Dar baixa">
                 <i class="fa-solid fa-circle-check"></i>
               </button>
+              {% endif %}
             </td>
             <td class="px-2 py-1.5 text-center text-slate-400">–</td>
             <td class="px-2 py-1.5 text-center">
