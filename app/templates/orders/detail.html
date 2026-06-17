@@ -974,7 +974,9 @@
     if (!td) return;
     document.getElementById('baixa-o-form').action = td.dataset.url;
     document.getElementById('baixa-o-amount').value = td.dataset.amount;
-    document.getElementById('baixa-o-date').value = new Date().toISOString().split('T')[0];
+    var today = new Date().toISOString().split('T')[0];
+    document.getElementById('baixa-o-date').value = today;
+    document.getElementById('baixa-o-date').max = today;
     const modal = document.getElementById('baixa-o-modal');
     modal.style.display = 'flex';
     setTimeout(() => document.getElementById('baixa-o-date').focus(), 50);

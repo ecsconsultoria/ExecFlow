@@ -1639,7 +1639,9 @@ function openBaixa(pid) {
   if (!td) return;
   document.getElementById('baixa-form').action = td.dataset.url;
   document.getElementById('baixa-amount').value = td.dataset.amount;
-  document.getElementById('baixa-date').value = new Date().toISOString().split('T')[0];
+  var today = new Date().toISOString().split('T')[0];
+  document.getElementById('baixa-date').value = today;
+  document.getElementById('baixa-date').max = today;
   const modal = document.getElementById('baixa-modal');
   modal.style.display = 'flex';
   setTimeout(() => document.getElementById('baixa-date').focus(), 50);
