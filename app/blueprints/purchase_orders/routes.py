@@ -1,6 +1,6 @@
 """Purchase Orders blueprint routes."""
 import json
-from flask import render_template, request, redirect, url_for, flash, send_file, jsonify
+from flask import make_response, render_template, request, redirect, url_for, flash, send_file, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy.orm import joinedload, selectinload, lazyload
 from . import purchase_orders_bp
@@ -135,13 +135,17 @@ def new():
         return redirect(url_for("purchase_orders.detail", po_id=po.id))
     linked_order = None
     suppliers, services, categories, suppliers_json, services_json = _build_context(cid)
-    return render_template("purchase_orders/detail.html",
+    resp = make_response(render_template("purchase_orders/detail.html",
                            po=None,
                            linked_order=linked_order,
                            suppliers=suppliers, services=services, categories=categories,
                            suppliers_json=suppliers_json, services_json=services_json,
                            PO_STATUSES=PO_STATUSES,
-                           audit_logs=[])
+                           audit_logs=[]))
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
 
 
 # ─── PDF ─────────────────────────────────────────────────────────────────────
@@ -195,13 +199,17 @@ def detail(po_id):
     cid = current_user.company_id
     suppliers, services, categories, suppliers_json, services_json = _build_context(cid)
     audit_logs = AuditLog.query.filter_by(entity="po", entity_id=po.id).order_by(AuditLog.created_at.asc()).all()
-    return render_template("purchase_orders/detail.html",
+    resp = make_response(render_template("purchase_orders/detail.html",
                            po=po,
                            suppliers=suppliers, services=services, categories=categories,
                            suppliers_json=suppliers_json, services_json=services_json,
                            linked_order=po.order,
                            PO_STATUSES=PO_STATUSES,
-                           audit_logs=audit_logs)
+                           audit_logs=audit_logs))
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
 
 
 # ─── Save All ────────────────────────────────────────────────────────────────

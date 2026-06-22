@@ -1,7 +1,7 @@
 """blueprints/orders/routes.py — Rotas do módulo Pedidos (Orders)."""
 from datetime import datetime
 
-from flask import render_template, request, redirect, url_for, flash, abort, send_file, jsonify
+from flask import make_response, render_template, request, redirect, url_for, flash, abort, send_file, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy.orm import lazyload, joinedload, selectinload
 
@@ -177,7 +177,7 @@ def detail(oid):
     audit_logs = AuditLog.query.filter_by(entity="order", entity_id=order.id).order_by(AuditLog.created_at.asc()).all()
     clients    = Client.query.filter_by(company_id=current_user.company_id, deleted_at=None).order_by(Client.name).all()
 
-    return render_template(
+    resp = make_response(render_template(
         "orders/detail.html",
         order=order,
         linked_os=linked_os,
@@ -189,7 +189,11 @@ def detail(oid):
         company=company,
         audit_logs=audit_logs,
         clients=clients,
-    )
+    ))
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
 
 
 # ─────────────────────────────────────────────────────────────────────────────
