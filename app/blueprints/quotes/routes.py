@@ -143,11 +143,13 @@ def detail(qid):
     quote_order = Order.query.filter_by(quote_id=quote.id, deleted_at=None).filter(
         Order.status.notin_(["cancelado", "excluido"])
     ).first()
+    # Histórico completo de SOs vinculadas (inclui canceladas)
+    all_orders = Order.query.filter_by(quote_id=quote.id, deleted_at=None).order_by(Order.id.desc()).all()
     service_order = ServiceOrder.query.filter_by(quote_id=quote.id).filter(ServiceOrder.deleted_at.is_(None)).first()
     audit_logs    = AuditLog.query.filter_by(entity="quote", entity_id=quote.id).order_by(AuditLog.created_at.asc()).all()
     resp = make_response(render_template("quotes/detail.html", quote=quote, billing_types=BILLING_TYPES,
                            service_order=service_order, quote_order=quote_order,
-                           audit_logs=audit_logs))
+                           all_orders=all_orders, audit_logs=audit_logs))
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     resp.headers["Pragma"] = "no-cache"
     resp.headers["Expires"] = "0"
