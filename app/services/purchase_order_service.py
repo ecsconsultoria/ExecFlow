@@ -179,8 +179,11 @@ def faturar(po: PurchaseOrder, user_id: int) -> PurchaseOrder:
     if po.order_id and po.order:
         margin_service.recalculate_order(po.order)
     _sync_po_pending_financials(po)
-    # Se todas as parcelas já estão pagas, conclui automaticamente
-    if list(po.payments) and all(p.is_paid for p in po.payments):
+    # Se todas as parcelas estão pagas e o total cobre a PO, conclui automaticamente
+    payments_list = list(po.payments)
+    if (payments_list
+            and all(p.is_paid for p in payments_list)
+            and sum(p.paid_amount or 0 for p in payments_list) >= (po.computed_total or 0)):
         po.status       = "concluido"
         po.concluded_at = now_br()
     return po

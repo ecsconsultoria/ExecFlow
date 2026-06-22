@@ -188,8 +188,10 @@ def faturar(order: Order, data: dict, user_id: int) -> None:
             pass
     margin_service.recalculate_order(order)
     _sync_order_pending_financials(order)
-    # Se todas as parcelas já estão pagas, conclui automaticamente
-    if order.payments and all(p.is_paid for p in order.payments):
+    # Se todas as parcelas estão pagas e o total cobre o pedido, conclui automaticamente
+    if (order.payments
+            and all(p.is_paid for p in order.payments)
+            and sum(p.paid_amount or 0 for p in order.payments) >= (order.computed_total or 0)):
         order.status    = "concluido"
         order.closed_at = now_br()
     db.session.commit()
@@ -400,7 +402,10 @@ def baixa(payment: OrderPayment, paid_amount: float, user_id: int, paid_date: da
 
     order = payment.order
 
-    if all(p.is_paid for p in order.payments) and order.status not in ("concluido", "cancelado"):
+    total_paid = sum(p.paid_amount or 0 for p in order.payments)
+    if (all(p.is_paid for p in order.payments)
+            and total_paid >= (order.computed_total or 0)
+            and order.status not in ("concluido", "cancelado")):
         order.status    = "concluido"
         order.closed_at = now_br()
 
