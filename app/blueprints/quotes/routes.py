@@ -1,6 +1,6 @@
 import json
 import os
-from flask import render_template, request, redirect, url_for, flash, jsonify, current_app, abort, send_file
+from flask import make_response, render_template, request, redirect, url_for, flash, jsonify, current_app, abort, send_file
 from flask_login import login_required, current_user
 from sqlalchemy.orm import lazyload
 from . import quotes_bp
@@ -145,9 +145,13 @@ def detail(qid):
     ).first()
     service_order = ServiceOrder.query.filter_by(quote_id=quote.id).filter(ServiceOrder.deleted_at.is_(None)).first()
     audit_logs    = AuditLog.query.filter_by(entity="quote", entity_id=quote.id).order_by(AuditLog.created_at.asc()).all()
-    return render_template("quotes/detail.html", quote=quote, billing_types=BILLING_TYPES,
+    resp = make_response(render_template("quotes/detail.html", quote=quote, billing_types=BILLING_TYPES,
                            service_order=service_order, quote_order=quote_order,
-                           audit_logs=audit_logs)
+                           audit_logs=audit_logs))
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
 
 
 @quotes_bp.route("/<int:qid>/edit", methods=["GET", "POST"])
