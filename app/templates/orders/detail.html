@@ -863,7 +863,7 @@
       </button>
       {% endif %}
 
-      {% if order.status == 'faturado' and has_perm('so.reopen') %}
+      {% if order.status == 'faturado' and has_role('ADMIN') %}
       <button type="button" onclick="document.getElementById('reabrir-form').submit()"
               data-tip="Reabrir"
               class="act-btn bg-amber-500 hover:bg-amber-600">

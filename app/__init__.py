@@ -136,7 +136,15 @@ def create_app(config_name: str | None = None) -> Flask:
             except Exception:
                 return False
 
-        return {"has_perm": _has_perm, "has_any_perm": _has_any_perm}
+        def _has_role(code):
+            try:
+                if not current_user.is_authenticated:
+                    return False
+                return current_user.has_role(code)
+            except Exception:
+                return False
+
+        return {"has_perm": _has_perm, "has_any_perm": _has_any_perm, "has_role": _has_role}
 
     with app.app_context():
         from . import models  # noqa

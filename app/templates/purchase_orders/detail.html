@@ -869,7 +869,7 @@
       </div>
 
       {# Reabrir #}
-      {% if po.status == 'faturado' and has_perm('po.edit') %}
+      {% if po.status == 'faturado' and has_role('ADMIN') %}
       <button type="button" onclick="document.getElementById('po-reabrir-form').submit()"
               data-tip="Reabrir"
               class="act-btn bg-sky-500 hover:bg-sky-600">
