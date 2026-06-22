@@ -139,7 +139,10 @@ def detail(qid):
     from ...models.order import Order
     from ...models.audit import AuditLog
     quote = Quote.query.filter_by(id=qid, company_id=current_user.company_id, deleted_at=None).first_or_404()
-    quote_order   = Order.query.filter_by(quote_id=quote.id, deleted_at=None).first()
+    # SO ativa (não cancelada, não excluída) — usada para bloquear nova criação
+    quote_order = Order.query.filter_by(quote_id=quote.id, deleted_at=None).filter(
+        Order.status.notin_(["cancelado", "excluido"])
+    ).first()
     service_order = ServiceOrder.query.filter_by(quote_id=quote.id).filter(ServiceOrder.deleted_at.is_(None)).first()
     audit_logs    = AuditLog.query.filter_by(entity="quote", entity_id=quote.id).order_by(AuditLog.created_at.asc()).all()
     return render_template("quotes/detail.html", quote=quote, billing_types=BILLING_TYPES,

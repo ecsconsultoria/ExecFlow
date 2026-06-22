@@ -263,8 +263,35 @@ def cancel(order: Order, reason: str, user_id: int) -> None:
 
 
 def reabrir(order: Order, user_id: int) -> None:
+    """Reabre um pedido faturado, desde que sem impacto financeiro.
+
+    Bloqueia a reabertura se houver:
+    - Parcelas já pagas (exige estorno primeiro)
+    - Lançamentos financeiros vinculados (exige cancelamento primeiro)
+    """
     if order.status != "faturado":
         raise ValueError(f"Somente pedidos faturados podem ser reabertos (status atual: '{order.status}')")
+    # Validação financeira
+    if order.payments:
+        paid = [p for p in order.payments if p.is_paid]
+        if paid:
+            raise ValueError(
+                f"Existe(m) {len(paid)} parcela(s) já paga(s). "
+                "Estorne os recebimentos antes de reabrir o pedido."
+            )
+    # Verifica lançamentos financeiros vinculados
+    from ..models.financial import FinancialRecord
+    refs = [f"order_payment:{p.id}" for p in order.payments]
+    if refs:
+        fr_count = FinancialRecord.query.filter(
+            FinancialRecord.reference.in_(refs),
+            FinancialRecord.deleted_at.is_(None),
+        ).count()
+        if fr_count > 0:
+            raise ValueError(
+                f"Existe(m) {fr_count} lançamento(s) financeiro(s) vinculado(s). "
+                "Cancele os lançamentos financeiros antes de reabrir o pedido."
+            )
     order.status         = "aberto"
     order.reopened_at    = now_br()
     order.reopened_by    = user_id

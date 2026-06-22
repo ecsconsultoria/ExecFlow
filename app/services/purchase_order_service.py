@@ -153,9 +153,36 @@ def conclude(po: PurchaseOrder, user_id: int) -> PurchaseOrder:
 
 
 def reabrir(po: PurchaseOrder, user_id: int) -> PurchaseOrder:
-    """Reabre uma PO faturada, voltando para status 'aberto'."""
+    """Reabre uma PO faturada, desde que sem impacto financeiro.
+
+    Bloqueia a reabertura se houver:
+    - Parcelas já pagas (exige estorno primeiro)
+    - Lançamentos financeiros vinculados (exige cancelamento primeiro)
+    """
     if po.status != "faturado":
         raise ValueError(f"Somente POs faturadas podem ser reabertas (status atual: '{po.status}')")
+    # Validação financeira
+    payments_list = list(po.payments)
+    if payments_list:
+        paid = [p for p in payments_list if p.is_paid]
+        if paid:
+            raise ValueError(
+                f"Existe(m) {len(paid)} parcela(s) já paga(s). "
+                "Estorne os pagamentos antes de reabrir a PO."
+            )
+    # Verifica lançamentos financeiros vinculados
+    from ..models.financial import FinancialRecord
+    refs = [f"po_payment:{p.id}" for p in payments_list]
+    if refs:
+        fr_count = FinancialRecord.query.filter(
+            FinancialRecord.reference.in_(refs),
+            FinancialRecord.deleted_at.is_(None),
+        ).count()
+        if fr_count > 0:
+            raise ValueError(
+                f"Existe(m) {fr_count} lançamento(s) financeiro(s) vinculado(s). "
+                "Cancele os lançamentos financeiros antes de reabrir a PO."
+            )
     po.status       = "aberto"
     po.reopened_at  = now_br()
     po.reopened_by  = user_id

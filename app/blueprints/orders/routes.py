@@ -104,9 +104,9 @@ def create(qid):
         flash("Orçamento precisa estar aprovado para criar Pedido.", "warning")
         return redirect(url_for("quotes.detail", qid=qid))
 
-    # Evita duplicatas (ignora SOs excluídos)
+    # Evita duplicatas (ignora SOs cancelados ou excluídos)
     existing = Order.query.filter_by(quote_id=qid).filter(
-        Order.status != "excluido"
+        Order.status.notin_(["cancelado", "excluido"])
     ).first()
     if existing:
         flash(f"Pedido {existing.number} já existe para este orçamento.", "info")
