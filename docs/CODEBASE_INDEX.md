@@ -1,4 +1,4 @@
-# CODEBASE_INDEX.md — App_Orcamentos_V2
+# CODEBASE_INDEX.md — ExecFlow_ERP_V2
 
 > **Mapeamento completo de todos os arquivos do projeto com responsabilidades.**
 > **Data:** 05/06/2026 (atualizado após remoção do Booking e reestruturação do menu)

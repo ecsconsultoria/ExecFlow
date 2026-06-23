@@ -1,4 +1,4 @@
-# Architecture — App_Orcamentos_V2
+# Architecture — ExecFlow_ERP_V2
 
 > Documentação completa da arquitetura do sistema baseada no código real.
 
@@ -77,7 +77,7 @@ O entry point [`app_v2.py`](../app_v2.py) chama `create_app()` e aplica migraç�
 ## 3. Estrutura de Diretórios
 
 ```
-App_Orcamentos_V2/
+ExecFlow_ERP_V2/
 │
 ├── app_v2.py                    # Entry point Flask
 ├── config.py                    # Config classes (Dev/Prod/Test)

@@ -22,7 +22,7 @@
 
 ```bash
 # 1. Clonar / entrar no projeto
-cd App_Orcamentos_V2
+cd ExecFlow_ERP_V2
 
 # 2. Criar e ativar venv
 python -m venv venv

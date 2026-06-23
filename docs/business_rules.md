@@ -1,4 +1,4 @@
-# Business Rules — App_Orcamentos_V2
+# Business Rules — ExecFlow_ERP_V2
 
 > Regras de negócio extraídas do código real. Nada foi inventado.
 

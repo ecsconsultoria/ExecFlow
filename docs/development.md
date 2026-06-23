@@ -1,4 +1,4 @@
-# Development Guide — App_Orcamentos_V2
+# Development Guide — ExecFlow_ERP_V2
 
 > Guia completo para desenvolvimento local.
 
@@ -18,8 +18,8 @@
 
 ```bash
 # 1. Clonar o projeto
-git clone <repo-url> App_Orcamentos_V2
-cd App_Orcamentos_V2
+git clone <repo-url> ExecFlow_ERP_V2
+cd ExecFlow_ERP_V2
 
 # 2. Criar virtual environment
 python -m venv venv

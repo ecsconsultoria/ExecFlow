@@ -1,9 +1,9 @@
-# 🧪 RELATÓRIO DE QA — App_Orcamentos_V4
+# 🧪 RELATÓRIO DE QA — ExecFlow_ERP_V4
 **Data de execução:** 18/05/2026 às 02:35 (horário de Brasília)  
 **Testador:** GitHub Copilot (Agente QA Automatizado)  
 **Servidor testado:** `http://127.0.0.1:5004`  
 **Banco de dados:** `instance/erp_v4.db` (SQLite)  
-**Versão do app:** App_Orcamentos_V4  
+**Versão do app:** ExecFlow_ERP_V4  
 
 ---
 

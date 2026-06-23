@@ -6,7 +6,7 @@
 
 ## 1. Visão Geral
 
-**App_Orcamentos_V2** é um ERP web para gestão de orçamentos e operações de transporte executivo (empresa: Executive Car SP). Stack:
+**ExecFlow_ERP_V2** é um ERP web para gestão de orçamentos e operações de transporte executivo (empresa: Executive Car SP). Stack:
 
 | Camada | Tecnologia |
 |--------|-----------|
@@ -26,7 +26,7 @@
 ## 2. Estrutura de Diretórios
 
 ```
-App_Orcamentos_V2/
+ExecFlow_ERP_V2/
 ├── app_v2.py                 # Entry point — cria app, roda migrações
 ├── config.py                 # Config classes: Dev / Prod / Test
 ├── requirements.txt          # Dependências de produção

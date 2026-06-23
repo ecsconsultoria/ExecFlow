@@ -1,4 +1,4 @@
-# 🔍 Relatório de Arquitetura & Qualidade — App_Orcamentos_V2
+# 🔍 Relatório de Arquitetura & Qualidade — ExecFlow_ERP_V2
 
 **Data:** 04/06/2026
 **Escopo:** Análise completa do código-fonte (modelos, rotas, serviços, utilitários, templates, testes)
@@ -40,7 +40,7 @@
 ### Estrutura de Diretórios
 
 ```
-App_Orcamentos_V2/
+ExecFlow_ERP_V2/
 ├── app_v2.py                    # Entry point
 ├── config.py                    # Config (dev/prod/test)
 ├── app/

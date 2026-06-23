@@ -1,4 +1,4 @@
-# ROADMAP.md — App_Orcamentos_V2
+# ROADMAP.md — ExecFlow_ERP_V2
 
 > **Data:** 05/06/2026 (atualizado)
 > **Fonte:** BACKLOG.md (48 itens)
