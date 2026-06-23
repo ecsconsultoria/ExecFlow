@@ -112,7 +112,7 @@ class Order(db.Model, TimestampMixin, SoftDeleteMixin):
     client  = db.relationship("Client",  foreign_keys=[client_id])
     quote   = db.relationship(
         "Quote", foreign_keys=[quote_id],
-        backref=db.backref("order", uselist=False),
+        backref=db.backref("orders", uselist=True),
     )
     creator   = db.relationship("User", foreign_keys=[created_by],   lazy="joined")
     opener    = db.relationship("User", foreign_keys=[opened_by],    lazy="joined")
