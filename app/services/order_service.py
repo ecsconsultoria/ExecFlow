@@ -425,6 +425,14 @@ def baixa(payment: OrderPayment, paid_amount: float, user_id: int, paid_date: da
 
     margin_service.recalculate_order(order)
 
+    # Auto-conclui apenas se faturado E todas as parcelas pagas cobrem o total
+    if order.status == "faturado":
+        total_paid = sum(p.paid_amount or 0 for p in order.payments)
+        if (all(p.is_paid for p in order.payments)
+                and total_paid >= (order.computed_total or 0)):
+            order.status    = "concluido"
+            order.closed_at = now_br()
+
     # Espelho financeiro — criado ANTES do commit para atomicidade
     _sync_payment_financial_record(payment, order, _paid_date, paid_amount)
     _sync_order_pending_financials(order)
