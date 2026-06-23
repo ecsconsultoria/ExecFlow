@@ -863,6 +863,17 @@
       </button>
       {% endif %}
 
+      {# Concluir #}
+      {% if order.status in ('faturado', 'aberto') and has_perm('so.close') %}
+      <form method="post" action="{{ url_for('orders.fechar', oid=order.id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" data-tip="Concluir"
+                class="act-btn bg-emerald-600 hover:bg-emerald-700">
+          <i class="fa-solid fa-check"></i>
+        </button>
+      </form>
+      {% endif %}
+
       {% if order.status == 'faturado' and has_role('ADMIN') %}
       <button type="button" onclick="document.getElementById('reabrir-form').submit()"
               data-tip="Reabrir"
