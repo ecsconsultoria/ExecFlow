@@ -1553,7 +1553,6 @@ function submitGenPayments() {
     const total = data.total_count;
     const updUrl = '{{ url_for("purchase_orders.update_payment", pid=0) }}';
     const baixaUrl   = '{{ url_for("purchase_orders.baixa", pid=0) }}';
-    const estornoUrl = '{{ url_for("purchase_orders.estornar", pid=0) }}';
 
     data.installments.forEach(p => {
       const tr = document.createElement('tr');
@@ -1668,7 +1667,8 @@ document.getElementById('baixa-modal').addEventListener('click', function(e) {
 
 async function estornarPmt(pid) {
   if (!confirm('Estornar este pagamento? O valor voltara a ficar pendente.')) return;
-  const url  = estornoUrl.replace('/0/', '/' + pid + '/');
+  var tpl = '{{ url_for("purchase_orders.estornar", pid=0) }}';
+  var url = tpl.replace('/0/', '/' + pid + '/');
   const resp = await fetch(url, {method: 'POST', headers: {'X-Requested-With': 'XMLHttpRequest'}});
   const d    = await resp.json();
   if (!d.ok) { alert(d.error || 'Erro ao estornar.'); return; }
