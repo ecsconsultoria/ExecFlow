@@ -80,10 +80,11 @@
           </a>
         </td>
         <td class="px-5 py-3.5">
-          {% if q.order %}
-          <a href="{{ url_for('orders.detail', oid=q.order.id) }}"
+          {% set active_so = q.orders|rejectattr('status', 'in', ['cancelado','excluido'])|list|first if q.orders else none %}
+          {% if active_so %}
+          <a href="{{ url_for('orders.detail', oid=active_so.id) }}"
              class="font-mono font-semibold text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-200 transition-colors">
-            {{ q.order.number }}
+            {{ active_so.number }}
           </a>
           {% else %}–{% endif %}
         </td>
