@@ -5,38 +5,6 @@
 <style>
   [x-cloak]{ display:none!important }
 
-  .aq-btn{
-    position:relative; display:inline-flex; align-items:center; justify-content:center;
-    gap:5px; padding:0 14px; height:36px; border-radius:8px; color:#fff;
-    font-size:13px; font-weight:600; cursor:pointer;
-    transition:filter .15s, transform .1s; border:none; text-decoration:none; white-space:nowrap;
-  }
-  .aq-btn:hover{ filter:brightness(1.1); transform:translateY(-1px) }
-
-  .sb-btn{
-    display:flex; align-items:center; justify-content:center;
-    gap:6px; width:100%; height:38px; border-radius:8px; color:#fff;
-    font-size:13px; font-weight:600; cursor:pointer;
-    transition:filter .15s; border:none; text-decoration:none; white-space:nowrap;
-  }
-  .sb-btn:hover{ filter:brightness(1.12) }
-
-  .act-btn{
-    position:relative; display:inline-flex; align-items:center; justify-content:center;
-    flex:1 1 0; min-width:0; height:36px; border-radius:8px; color:#fff; font-size:14px;
-    cursor:pointer; transition:filter .15s, transform .1s; border:none;
-    text-decoration:none;
-  }
-  .act-btn:hover{ filter:brightness(1.18); transform:translateY(-2px); }
-  .act-btn::after{
-    content:attr(data-tip); position:absolute; bottom:calc(100% + 6px);
-    left:50%; transform:translateX(-50%);
-    background:#1e293b; color:#fff; font-size:11px; font-weight:600;
-    padding:3px 8px; border-radius:5px; white-space:nowrap;
-    pointer-events:none; opacity:0; transition:opacity .15s; z-index:60;
-  }
-  .act-btn:hover::after{ opacity:1; }
-
   .fi{
     border:1px solid #e2e8f0; border-radius:6px; padding:5px 9px;
     font-size:12px; background:#fff; width:100%;
@@ -54,16 +22,261 @@
 {% endblock %}
 
 {% block page_title %}
-  <a href="{{ url_for('purchase_orders.index') }}"
-     class="text-slate-400 hover:text-violet-500 mr-2 text-sm font-normal">
-    <i class="fa-solid fa-arrow-left"></i>
-  </a>
-  {% if po %}
-  Purchase Order <span class="font-mono font-bold">{{ po.number }}</span>
-  <span class="ml-2" style="{{ po.status|status_badge_style }}"><span style="width:7px;height:7px;border-radius:50%;background:{{ po.status|status_dot_color }};flex-shrink:0;display:inline-block"></span> {{ po.status_label }}</span>
-  {% else %}
-  <i class="fa-solid fa-cart-flatbed mr-2 text-violet-500"></i>Nova Purchase Order
-  {% endif %}
+<div class="w-full">
+  <div class="flex flex-wrap items-center gap-2">
+    <a href="{{ url_for('purchase_orders.index') }}"
+       class="text-slate-400 hover:text-violet-500 text-sm font-normal">
+      <i class="fa-solid fa-arrow-left"></i>
+    </a>
+    {% if po %}
+    <span class="whitespace-nowrap">Purchase Order <span class="font-mono font-bold">{{ po.number }}</span></span>
+    <span class="whitespace-nowrap" style="{{ po.status|status_badge_style }}"><span style="width:7px;height:7px;border-radius:50%;background:{{ po.status|status_dot_color }};flex-shrink:0;display:inline-block"></span> {{ po.status_label }}</span>
+    {% else %}
+    <span class="whitespace-nowrap"><i class="fa-solid fa-cart-flatbed mr-2 text-violet-500"></i>Nova Purchase Order</span>
+    {% endif %}
+
+    {# Salvar (visível quando não bloqueado) #}
+    {% if not locked and has_perm('po.edit' if po else 'po.create') %}
+    <button type="submit" form="main-form"
+            class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-blue-600 hover:bg-blue-700 text-white">
+      <i class="fa-solid fa-floppy-disk text-[11px]"></i> {{ 'Salvar' if po else 'Criar PO' }}
+    </button>
+    {% endif %}
+
+    {% if po %}
+      {# Abrir PO #}
+      {% if po.status == 'rascunho' and has_perm('po.edit') %}
+      <button type="button"
+              onclick="
+                const sel = document.getElementById('supplier-select');
+                if (sel && sel.value) document.getElementById('open-supplier-id').value = sel.value;
+                document.getElementById('po-open-form').submit();
+              "
+              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-blue-600 hover:bg-blue-700 text-white">
+        <i class="fa-solid fa-folder-open text-[11px]"></i> Abrir PO
+      </button>
+      {% endif %}
+
+      {# Iniciar execução #}
+      {% if po.status == 'aprovado' and has_perm('po.edit') %}
+      <button type="button"
+              onclick="document.getElementById('po-start-form').submit()"
+              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-amber-600 hover:bg-amber-700 text-white">
+        <i class="fa-solid fa-play text-[11px]"></i> Iniciar
+      </button>
+      {% endif %}
+
+      {# Concluir #}
+      {% if po.status in ('aprovado', 'em_execucao') and has_perm('po.close') %}
+      <button type="button"
+              onclick="if(confirm('Concluir esta PO?'))document.getElementById('po-conclude-form').submit()"
+              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-emerald-600 hover:bg-emerald-700 text-white">
+        <i class="fa-solid fa-flag-checkered text-[11px]"></i> Concluir
+      </button>
+      {% endif %}
+
+      {# Faturar #}
+      {% if po.status not in ('faturado', 'pago', 'cancelado') and has_perm('financial.manage') %}
+      <button type="button"
+              @click="
+                const sid = document.querySelector('[name=supplier_id]');
+                if (!sid || !sid.value) {
+                  alert('Selecione o Fornecedor antes de faturar.');
+                  return;
+                }
+                const pmtWrap = document.getElementById('pmt-table-wrap');
+                if (!pmtWrap || pmtWrap.style.display === 'none') {
+                  alert('Gere as contas a pagar antes de faturar.');
+                  return;
+                }
+                document.getElementById('faturar-supplier-id').value = sid.value;
+                document.getElementById('po-faturar-form').submit();
+              "
+              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-emerald-600 hover:bg-emerald-700 text-white">
+        <i class="fa-solid fa-file-invoice text-[11px]"></i> Faturar
+      </button>
+      {% endif %}
+
+      {% set _em = (po.supplier.email if po and po.supplier and po.supplier.email else '') %}
+      {% set _ph = (po.supplier.phone if po and po.supplier and po.supplier.phone else '') %}
+
+      {# PDF unified dropdown #}
+      <div class="relative" x-data="{open:false}" @click.outside="open=false">
+        <button type="button" @click="open=!open" class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-600 hover:bg-slate-700 text-white">
+          <i class="fa-solid fa-file-pdf text-[11px]"></i> PDF
+        </button>
+        <div x-show="open" x-cloak
+             class="absolute left-0 top-full mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 py-1 overflow-hidden"
+             style="min-width:200px">
+          <div style="display:grid;grid-template-columns:1fr 1fr">
+            <a href="{{ url_for('purchase_orders.pdf', po_id=po.id, lang='pt') }}" target="_blank"
+               @click="open=false"
+               class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
+              <i class="fa-solid fa-download text-rose-500"></i> PDF PT
+            </a>
+            <a href="{{ url_for('purchase_orders.pdf', po_id=po.id, lang='en') }}" target="_blank"
+               @click="open=false"
+               class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
+              <i class="fa-solid fa-download text-rose-700"></i> PDF EN
+            </a>
+          </div>
+          {% if _em %}
+          <hr class="my-1 border-slate-100 dark:border-slate-700">
+          <div style="display:grid;grid-template-columns:1fr 1fr">
+            <button type="button" onclick="poSendEmail('pt')" @click="open=false"
+                    class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
+              <i class="fa-solid fa-envelope text-blue-500"></i> Email PT
+            </button>
+            <button type="button" onclick="poSendEmail('en')" @click="open=false"
+                    class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
+              <i class="fa-solid fa-envelope text-blue-700"></i> Email EN
+            </button>
+          </div>
+          {% endif %}
+          {% if _ph %}
+          <hr class="my-1 border-slate-100 dark:border-slate-700">
+          <div style="display:grid;grid-template-columns:1fr 1fr">
+            <button type="button" onclick="poWhatsApp('pt')" @click="open=false"
+                    class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
+              <i class="fa-brands fa-whatsapp text-green-500"></i> WA PT
+            </button>
+            <button type="button" onclick="poWhatsApp('en')" @click="open=false"
+                    class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
+              <i class="fa-brands fa-whatsapp text-green-600"></i> WA EN
+            </button>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      {# Reabrir #}
+      {% if po.status == 'faturado' and has_role('ADMIN') %}
+      <button type="button" onclick="document.getElementById('po-reabrir-form').submit()"
+              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-amber-600 hover:bg-amber-700 text-white">
+        <i class="fa-solid fa-rotate-left text-[11px]"></i> Reabrir
+      </button>
+      {% endif %}
+
+      {# Cancelar #}
+      {% if po.status not in ('concluido', 'faturado', 'pago', 'cancelado') and has_perm('po.cancel') %}
+      <button type="button"
+              onclick="window.dispatchEvent(new CustomEvent('open-po-cancel-modal'))"
+              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-red-500 hover:bg-red-600 text-white">
+        <i class="fa-solid fa-ban text-[11px]"></i> Cancelar
+      </button>
+      {% endif %}
+
+      {# Excluir #}
+      {% if has_perm('po.delete') %}
+      <button type="button"
+              onclick="window.dispatchEvent(new CustomEvent('open-po-delete-modal'))"
+              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-red-700 hover:bg-red-800 text-white">
+        <i class="fa-solid fa-trash text-[11px]"></i> Excluir
+      </button>
+      {% endif %}
+
+    {# Form independente — Reabrir PO (faturado → aberto) #}
+    <form id="po-reabrir-form" method="post"
+          action="{{ url_for('purchase_orders.reopen', po_id=po.id) }}" class="hidden">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    </form>
+
+    {% else %}
+    {# Nova PO — botão voltar #}
+    <a href="{{ url_for('orders.detail', oid=linked_order.id) if linked_order else url_for('purchase_orders.index') }}"
+       class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-600 hover:bg-slate-700 text-white">
+      <i class="fa-solid fa-xmark text-[11px]"></i> Cancelar
+    </a>
+    {% endif %}
+
+    {# ── Histórico dropdown ── #}
+    <div class="relative ml-auto" x-data="{ histOpen: false }">
+      <button type="button" @click="histOpen = !histOpen"
+              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600">
+        <i class="fa-solid fa-clock-rotate-left text-[11px]"></i>
+        <span>Histórico</span>
+        {% if po and audit_logs %}
+        <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-300 dark:bg-slate-500 text-slate-600 dark:text-slate-200">{{ audit_logs|length }}</span>
+        {% endif %}
+        <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200" :class="histOpen ? 'rotate-180' : ''"></i>
+      </button>
+      <div x-show="histOpen"
+           @click.outside="histOpen = false"
+           x-transition:enter="transition ease-out duration-200"
+           x-transition:enter-start="opacity-0 -translate-y-1"
+           x-transition:enter-end="opacity-100 translate-y-0"
+           x-transition:leave="transition ease-in duration-150"
+           x-transition:leave-start="opacity-100 translate-y-0"
+           x-transition:leave-end="opacity-0 -translate-y-1"
+           class="absolute right-0 top-full mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 py-3 px-4 min-w-[320px] max-h-[70vh] overflow-y-auto">
+        {% if po and audit_logs %}
+        <ol class="relative border-l border-slate-200 dark:border-slate-600 ml-2 space-y-3">
+          {% for log in audit_logs %}
+          <li class="ml-4">
+            <span class="absolute -left-1.5 mt-1 w-3 h-3 rounded-full bg-slate-300 dark:bg-slate-500 border-2 border-white dark:border-slate-800"></span>
+            <p class="text-xs font-medium text-slate-700 dark:text-slate-200">{{ log.action }}</p>
+            <p class="text-[11px] text-slate-400">{{ log.created_at|fdatetime }}{% if log.user %} · {{ log.user.name }}{% endif %}</p>
+          </li>
+          {% endfor %}
+        </ol>
+        {% elif po %}
+        <dl class="space-y-1.5 text-xs">
+          <div class="flex justify-between gap-2">
+            <dt class="text-slate-500">Criado</dt>
+            <dd class="text-slate-600 dark:text-slate-300">{{ po.created_at|fdatetime if po.created_at else '–' }}{% if po.creator %} <span class="text-slate-400">· {{ po.creator.name }}</span>{% endif %}</dd>
+          </div>
+          {% if po.sent_at %}
+          <div class="flex justify-between gap-2">
+            <dt class="text-slate-500">Aberto</dt>
+            <dd class="text-blue-500">{{ po.sent_at|fdatetime }}</dd>
+          </div>
+          {% endif %}
+          {% if po.approved_at %}
+          <div class="flex justify-between gap-2">
+            <dt class="text-slate-500">Aprovado</dt>
+            <dd class="text-green-500">{{ po.approved_at|fdatetime }}</dd>
+          </div>
+          {% endif %}
+          {% if po.concluded_at %}
+          <div class="flex justify-between gap-2">
+            <dt class="text-slate-500">Executado</dt>
+            <dd class="text-teal-500">{{ po.concluded_at|fdatetime }}</dd>
+          </div>
+          {% endif %}
+          {% if po.paid_at %}
+          <div class="flex justify-between gap-2">
+            <dt class="text-slate-500">Concluído</dt>
+            <dd class="text-emerald-500">{{ po.paid_at|fdatetime }}</dd>
+          </div>
+          {% endif %}
+          {% if po.cancelled_at %}
+          <div class="flex justify-between gap-2">
+            <dt class="text-slate-500">Cancelado</dt>
+            <dd class="text-red-500">{{ po.cancelled_at|fdatetime }}</dd>
+          </div>
+          {% endif %}
+        </dl>
+        {% else %}
+        <p class="text-xs text-slate-400 leading-relaxed">O número da PO será gerado automaticamente após salvar.</p>
+        {% endif %}
+        {% if po and po.order %}
+        <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700">
+          <p class="lbl">SO Vinculado</p>
+          <a href="{{ url_for('orders.detail', oid=po.order.id) }}"
+             class="text-xs font-mono text-teal-600 hover:underline">{{ po.order.number }}</a>
+        </div>
+        {% endif %}
+        {% if linked_order and not po %}
+        <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700">
+          <p class="lbl">SO Vinculado</p>
+          <a href="{{ url_for('orders.detail', oid=linked_order.id) }}"
+             class="text-xs font-mono text-teal-600 hover:underline">{{ linked_order.number }}</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block content %}
@@ -121,7 +334,9 @@
     this.opNotes           = d.opNotes || '';
     this.showOpItemModal = true;
   },
-}" x-cloak>
+}" x-cloak
+  @open-po-cancel-modal.window="showCancelModal = true"
+  @open-po-delete-modal.window="showDeleteModal = true">
 
 {% set locked = po and po.status in ('concluido', 'faturado', 'pago', 'cancelado', 'excluido') %}
 
@@ -137,11 +352,9 @@
   <input type="hidden" name="order_id" value="{{ linked_order.id }}">
   {% endif %}
 
-{# ── Grid 3 colunas ── #}
-<div class="grid lg:grid-cols-3 gap-4">
+<div class="space-y-4">
 
-{# ═══════════ LEFT 2/3 ═══════════ #}
-<div class="lg:col-span-2 space-y-4">
+{# ═══════════ MAIN CONTENT ═══════════ #}
 
 {# ────────────────────────────────
    Card 1 — Cabeçalho
@@ -277,9 +490,8 @@
       {% if not locked %}
       {% if po %}
       <button type="button" @click="showAddItemModal=true"
-              class="aq-btn bg-violet-600 hover:bg-violet-700"
-              style="height:26px;padding:0 10px;font-size:11px">
-        <i class="fa-solid fa-plus mr-1"></i> Item
+              class="h-7 px-2.5 text-[11px] font-semibold rounded-lg inline-flex items-center gap-1 transition-colors bg-violet-600 hover:bg-violet-700 text-white">
+        <i class="fa-solid fa-plus text-[10px]"></i> Item
       </button>
       {% endif %}
       {% endif %}
@@ -646,289 +858,7 @@
 {# /if po #}
 
 </div>
-{# /col-span-2 #}
-
-{# ═══════════ SIDEBAR 1/3 ═══════════ #}
-<div class="space-y-4">
-
-{# ── Histórico / Info ── #}
-<div x-data="{ histOpen: false }"
-     class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
-  {# Toggle header #}
-  <button type="button" @click="histOpen = !histOpen"
-          class="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-colors duration-150">
-    <div class="flex items-center gap-2">
-      <i class="fa-solid fa-clock-rotate-left text-slate-400 text-[11px]"></i>
-      <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-        {% if po %}Histórico{% else %}Nova PO{% endif %}
-      </span>
-      {% if po and audit_logs %}
-      <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400">{{ audit_logs|length }}</span>
-      {% endif %}
-    </div>
-    <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform duration-200"
-       :class="histOpen ? 'rotate-180' : ''"></i>
-  </button>
-  {# Content #}
-  <div x-show="histOpen"
-       x-transition:enter="transition ease-out duration-200"
-       x-transition:enter-start="opacity-0 -translate-y-1"
-       x-transition:enter-end="opacity-100 translate-y-0"
-       x-transition:leave="transition ease-in duration-150"
-       x-transition:leave-start="opacity-100 translate-y-0"
-       x-transition:leave-end="opacity-0 -translate-y-1"
-       class="px-4 pb-4">
-
-  {% if po %}
-  {% if audit_logs %}
-  <ol class="relative border-l border-slate-200 dark:border-slate-600 ml-2 space-y-3">
-    {% for log in audit_logs %}
-    <li class="ml-4">
-      <span class="absolute -left-1.5 mt-1 w-3 h-3 rounded-full bg-slate-300 dark:bg-slate-500 border-2 border-white dark:border-slate-800"></span>
-      <p class="text-xs font-medium text-slate-700 dark:text-slate-200">{{ log.action }}</p>
-      <p class="text-[11px] text-slate-400">{{ log.created_at|fdatetime }}{% if log.user %} · {{ log.user.name }}{% endif %}</p>
-    </li>
-    {% endfor %}
-  </ol>
-  {% else %}
-  <dl class="space-y-1.5 text-xs">
-    <div class="flex justify-between gap-2">
-      <dt class="text-slate-500">Criado</dt>
-      <dd class="text-slate-600 dark:text-slate-300">{{ po.created_at|fdatetime if po.created_at else '–' }}{% if po.creator %} <span class="text-slate-400">· {{ po.creator.name }}</span>{% endif %}</dd>
-    </div>
-    {% if po.sent_at %}
-    <div class="flex justify-between gap-2">
-      <dt class="text-slate-500">Aberto</dt>
-      <dd class="text-blue-500">{{ po.sent_at|fdatetime }}</dd>
-    </div>
-    {% endif %}
-    {% if po.approved_at %}
-    <div class="flex justify-between gap-2">
-      <dt class="text-slate-500">Aprovado</dt>
-      <dd class="text-green-500">{{ po.approved_at|fdatetime }}</dd>
-    </div>
-    {% endif %}
-    {% if po.concluded_at %}
-    <div class="flex justify-between gap-2">
-      <dt class="text-slate-500">Executado</dt>
-      <dd class="text-teal-500">{{ po.concluded_at|fdatetime }}</dd>
-    </div>
-    {% endif %}
-    {% if po.paid_at %}
-    <div class="flex justify-between gap-2">
-      <dt class="text-slate-500">Concluído</dt>
-      <dd class="text-emerald-500">{{ po.paid_at|fdatetime }}</dd>
-    </div>
-    {% endif %}
-    {% if po.cancelled_at %}
-    <div class="flex justify-between gap-2">
-      <dt class="text-slate-500">Cancelado</dt>
-      <dd class="text-red-500">{{ po.cancelled_at|fdatetime }}</dd>
-    </div>
-    {% endif %}
-  </dl>
-  {% endif %}
-
-  {# Vínculo SO #}
-  {% if po.order %}
-  <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700">
-    <p class="lbl">SO Vinculado</p>
-    <a href="{{ url_for('orders.detail', oid=po.order.id) }}"
-       class="text-xs font-mono text-teal-600 hover:underline">{{ po.order.number }}</a>
-  </div>
-  {% endif %}
-
-  {% else %}
-  {# Nova PO — sem histórico ainda #}
-  <p class="text-xs text-slate-400 leading-relaxed">O número da PO será gerado automaticamente após salvar.</p>
-  {% if linked_order %}
-  <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700">
-    <p class="lbl">SO Vinculado</p>
-    <a href="{{ url_for('orders.detail', oid=linked_order.id) }}"
-       class="text-xs font-mono text-teal-600 hover:underline">{{ linked_order.number }}</a>
-  </div>
-  {% endif %}
-  {% endif %}
-  </div>{# /x-show #}
-</div>{# /x-data #}
-
-{# ── Botões de Ação ── #}
-<div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-2">
-  <div class="flex flex-row gap-1.5 flex-wrap">
-
-    {# Salvar (visível quando não bloqueado) #}
-    {% if not locked and has_perm('po.edit' if po else 'po.create') %}
-    <button type="submit" form="main-form"
-            data-tip="{{ 'Salvar PO' if po else 'Criar PO' }}"
-            class="act-btn bg-blue-600 hover:bg-blue-700">
-      <i class="fa-solid fa-floppy-disk"></i>
-    </button>
-    {% endif %}
-
-    {% if po %}
-      {# Abrir PO #}
-      {% if po.status == 'rascunho' and has_perm('po.edit') %}
-      <button type="button"
-          data-tip="Abrir PO"
-              onclick="
-                const sel = document.getElementById('supplier-select');
-                if (sel && sel.value) document.getElementById('open-supplier-id').value = sel.value;
-                document.getElementById('po-open-form').submit();
-              "
-              class="act-btn bg-blue-600 hover:bg-blue-700">
-        <i class="fa-solid fa-folder-open"></i>
-      </button>
-      {% endif %}
-
-      {# Iniciar execução #}
-      {% if po.status == 'aprovado' and has_perm('po.edit') %}
-      <button type="button"
-              data-tip="Iniciar Execução"
-              onclick="document.getElementById('po-start-form').submit()"
-              class="act-btn bg-amber-500 hover:bg-amber-600">
-        <i class="fa-solid fa-play"></i>
-      </button>
-      {% endif %}
-
-      {# Concluir #}
-      {% if po.status in ('aprovado', 'em_execucao') and has_perm('po.close') %}
-      <button type="button"
-              data-tip="Concluir PO"
-              onclick="if(confirm('Concluir esta PO?'))document.getElementById('po-conclude-form').submit()"
-              class="act-btn bg-green-600 hover:bg-green-700">
-        <i class="fa-solid fa-flag-checkered"></i>
-      </button>
-      {% endif %}
-
-      {# Faturar #}
-      {% if po.status not in ('faturado', 'pago', 'cancelado') and has_perm('financial.manage') %}
-      <button type="button"
-              data-tip="Faturar PO"
-              @click="
-                const sid = document.querySelector('[name=supplier_id]');
-                if (!sid || !sid.value) {
-                  alert('Selecione o Fornecedor antes de faturar.');
-                  return;
-                }
-                const pmtWrap = document.getElementById('pmt-table-wrap');
-                if (!pmtWrap || pmtWrap.style.display === 'none') {
-                  alert('Gere as contas a pagar antes de faturar.');
-                  return;
-                }
-                document.getElementById('faturar-supplier-id').value = sid.value;
-                document.getElementById('po-faturar-form').submit();
-              "
-              class="act-btn bg-green-600 hover:bg-green-700">
-        <i class="fa-solid fa-file-invoice"></i>
-      </button>
-      {% endif %}
-
-      {% set _em = (po.supplier.email if po and po.supplier and po.supplier.email else '') %}
-      {% set _ph = (po.supplier.phone if po and po.supplier and po.supplier.phone else '') %}
-
-      {# PDF unified dropdown: PT + EN — Baixar, Email, WhatsApp #}
-      <div class="relative flex-1 min-w-0" x-data="{open:false}" @click.outside="open=false">
-        <button type="button" @click="open=!open" data-tip="PDF / Enviar"
-                class="act-btn bg-slate-600 hover:bg-slate-700 w-full">
-          <i class="fa-solid fa-file-pdf"></i><span style="font-size:10px;margin-left:3px">PDF</span>
-        </button>
-        <div x-show="open" x-cloak
-             class="absolute left-0 top-full mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 py-1 overflow-hidden"
-             style="min-width:200px">
-          <div style="display:grid;grid-template-columns:1fr 1fr">
-            <a href="{{ url_for('purchase_orders.pdf', po_id=po.id, lang='pt') }}" target="_blank"
-               @click="open=false"
-               class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
-              <i class="fa-solid fa-download text-rose-500"></i> PDF PT
-            </a>
-            <a href="{{ url_for('purchase_orders.pdf', po_id=po.id, lang='en') }}" target="_blank"
-               @click="open=false"
-               class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
-              <i class="fa-solid fa-download text-rose-700"></i> PDF EN
-            </a>
-          </div>
-          {% if _em %}
-          <hr class="my-1 border-slate-100 dark:border-slate-700">
-          <div style="display:grid;grid-template-columns:1fr 1fr">
-            <button type="button" onclick="poSendEmail('pt')" @click="open=false"
-                    class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
-              <i class="fa-solid fa-envelope text-blue-500"></i> Email PT
-            </button>
-            <button type="button" onclick="poSendEmail('en')" @click="open=false"
-                    class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
-              <i class="fa-solid fa-envelope text-blue-700"></i> Email EN
-            </button>
-          </div>
-          {% endif %}
-          {% if _ph %}
-          <hr class="my-1 border-slate-100 dark:border-slate-700">
-          <div style="display:grid;grid-template-columns:1fr 1fr">
-            <button type="button" onclick="poWhatsApp('pt')" @click="open=false"
-                    class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
-              <i class="fa-brands fa-whatsapp text-green-500"></i> WA PT
-            </button>
-            <button type="button" onclick="poWhatsApp('en')" @click="open=false"
-                    class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
-              <i class="fa-brands fa-whatsapp text-green-600"></i> WA EN
-            </button>
-          </div>
-          {% endif %}
-        </div>
-      </div>
-
-      {# Reabrir #}
-      {% if po.status == 'faturado' and has_role('ADMIN') %}
-      <button type="button" onclick="document.getElementById('po-reabrir-form').submit()"
-              data-tip="Reabrir"
-              class="act-btn bg-sky-500 hover:bg-sky-600">
-        <i class="fa-solid fa-rotate-left"></i>
-      </button>
-      {% endif %}
-
-      {# Cancelar #}
-      {% if po.status not in ('concluido', 'faturado', 'pago', 'cancelado') and has_perm('po.cancel') %}
-      <button type="button"
-              data-tip="Cancelar PO"
-              @click="showCancelModal=true"
-              class="act-btn bg-red-600 hover:bg-red-700">
-        <i class="fa-solid fa-ban"></i>
-      </button>
-      {% endif %}
-
-      {# Excluir #}
-      {% if has_perm('po.delete') %}
-      <button type="button"
-              data-tip="Excluir PO"
-              @click="showDeleteModal=true"
-              class="act-btn bg-red-800 hover:bg-red-900">
-        <i class="fa-solid fa-trash"></i>
-      </button>
-      {% endif %}
-
-    {# Form independente — Reabrir PO (faturado → aberto) #}
-    <form id="po-reabrir-form" method="post"
-          action="{{ url_for('purchase_orders.reopen', po_id=po.id) }}" class="hidden">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    </form>
-
-    {% else %}
-    {# Nova PO — botão voltar #}
-    <a href="{{ url_for('orders.detail', oid=linked_order.id) if linked_order else url_for('purchase_orders.index') }}"
-       data-tip="Cancelar"
-       class="act-btn bg-slate-500 hover:bg-slate-600">
-      <i class="fa-solid fa-xmark"></i>
-    </a>
-    {% endif %}
-
-  </div>
-</div>
-{# /Botões #}
-
-</div>
-{# /Sidebar #}
-
-</div>
-{# /grid #}
+{# /main content #}
 
 </form>
 {# /main-form #}
@@ -997,13 +927,13 @@
     </div>
     <div class="flex gap-2 justify-end mt-4">
       <button type="button" @click="showNewSupplierModal=false"
-              class="aq-btn bg-slate-400 hover:bg-slate-500">
-        <i class="fa-solid fa-xmark mr-1"></i> Cancelar
+              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-400 hover:bg-slate-500 text-white">
+        <i class="fa-solid fa-xmark text-[11px]"></i> Cancelar
       </button>
       <button type="button" onclick="createSupplierInline()"
               id="ns-save-btn"
-              class="aq-btn bg-violet-600 hover:bg-violet-700">
-        <i class="fa-solid fa-floppy-disk mr-1"></i> Cadastrar
+              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-violet-600 hover:bg-violet-700 text-white">
+        <i class="fa-solid fa-floppy-disk text-[11px]"></i> Cadastrar
       </button>
     </div>
   </div>
@@ -1033,12 +963,12 @@
       {% endif %}
       <div class="flex gap-2 justify-end">
         <button type="button" @click="showObsModal=false"
-                class="aq-btn bg-slate-400 hover:bg-slate-500">
-          <i class="fa-solid fa-xmark mr-1"></i> Fechar
+                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-400 hover:bg-slate-500 text-white">
+          <i class="fa-solid fa-xmark text-[11px]"></i> Fechar
         </button>
         <button type="submit"
-                class="aq-btn bg-amber-500 hover:bg-amber-600">
-          <i class="fa-solid fa-floppy-disk mr-1"></i> Salvar
+                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-amber-500 hover:bg-amber-600 text-white">
+          <i class="fa-solid fa-floppy-disk text-[11px]"></i> Salvar
         </button>
       </div>
     </form>
@@ -1131,12 +1061,12 @@
       </div>
       <div class="flex gap-2 justify-end mt-4">
         <button type="button" @click="showAddItemModal=false"
-                class="aq-btn bg-slate-400 hover:bg-slate-500">
-          <i class="fa-solid fa-xmark mr-1"></i> Fechar
+                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-400 hover:bg-slate-500 text-white">
+          <i class="fa-solid fa-xmark text-[11px]"></i> Fechar
         </button>
         <button type="submit"
-                class="aq-btn bg-violet-600 hover:bg-violet-700">
-          <i class="fa-solid fa-plus mr-1"></i> Adicionar
+                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-violet-600 hover:bg-violet-700 text-white">
+          <i class="fa-solid fa-plus text-[11px]"></i> Adicionar
         </button>
       </div>
     </form>
@@ -1182,12 +1112,12 @@
       </div>
       <div class="flex gap-2 justify-end mt-4">
         <button type="button" @click="showEditItemModal=false"
-                class="aq-btn bg-slate-400 hover:bg-slate-500">
-          <i class="fa-solid fa-xmark mr-1"></i> Fechar
+                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-400 hover:bg-slate-500 text-white">
+          <i class="fa-solid fa-xmark text-[11px]"></i> Fechar
         </button>
         <button type="submit"
-                class="aq-btn bg-blue-600 hover:bg-blue-700">
-          <i class="fa-solid fa-floppy-disk mr-1"></i> Salvar
+                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-blue-600 hover:bg-blue-700 text-white">
+          <i class="fa-solid fa-floppy-disk text-[11px]"></i> Salvar
         </button>
       </div>
     </form>
@@ -1312,12 +1242,12 @@
       </div>
       <div class="flex gap-2 justify-end">
         <button type="button" @click="showCancelModal=false"
-                class="aq-btn bg-slate-400 hover:bg-slate-500">
-          <i class="fa-solid fa-xmark mr-1"></i> Fechar
+                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-400 hover:bg-slate-500 text-white">
+          <i class="fa-solid fa-xmark text-[11px]"></i> Fechar
         </button>
         <button type="submit"
-                class="aq-btn bg-red-600 hover:bg-red-700">
-          <i class="fa-solid fa-ban mr-1"></i> Cancelar PO
+                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-red-600 hover:bg-red-700 text-white">
+          <i class="fa-solid fa-ban text-[11px]"></i> Cancelar PO
         </button>
       </div>
     </form>
@@ -1344,12 +1274,12 @@
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="flex gap-2 justify-end">
         <button type="button" @click="showDeleteModal=false"
-                class="aq-btn bg-slate-400 hover:bg-slate-500">
-          <i class="fa-solid fa-xmark mr-1"></i> Cancelar
+                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-400 hover:bg-slate-500 text-white">
+          <i class="fa-solid fa-xmark text-[11px]"></i> Cancelar
         </button>
         <button type="submit"
-                class="aq-btn bg-red-900 hover:bg-red-950">
-          <i class="fa-solid fa-trash mr-1"></i> Excluir PO
+                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-red-900 hover:bg-red-950 text-white">
+          <i class="fa-solid fa-trash text-[11px]"></i> Excluir PO
         </button>
       </div>
     </form>
@@ -1597,7 +1527,7 @@ function submitGenPayments() {
     });
 
     const apagarEl = document.getElementById('po-apagar-val');
-    if (apagarEl) apagarEl.textContent = 'R\u00a0' + data.a_pagar.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+    if (apagarEl) apagarEl.textContent = 'R ' + data.a_pagar.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
     if (total > 0) { wrap.style.display = ''; empty.style.display = 'none'; }
     // Pré-preenche saldo restante no campo Valor Parcela
     const customAmtInput = document.getElementById('gp-custom-amount');
@@ -1635,7 +1565,7 @@ function deletePmt(pid) {
     const row = document.getElementById('pmt-row-' + pid);
     if (row) row.remove();
     const apagarEl = document.getElementById('po-apagar-val');
-    if (apagarEl) apagarEl.textContent = 'R\u00a0' + data.a_pagar.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+    if (apagarEl) apagarEl.textContent = 'R ' + data.a_pagar.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
     if (data.total_count === 0) {
       document.getElementById('pmt-table-wrap').style.display = 'none';
       document.getElementById('pmt-empty').style.display      = '';

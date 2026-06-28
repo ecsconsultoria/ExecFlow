@@ -5,41 +5,6 @@
 <style>
   [x-cloak]{ display:none!important }
 
-  /* Botão padrão inline */
-  .aq-btn{
-    position:relative; display:inline-flex; align-items:center; justify-content:center;
-    gap:5px; padding:0 14px; height:36px; border-radius:8px; color:#fff;
-    font-size:13px; font-weight:600; cursor:pointer;
-    transition:filter .15s, transform .1s; border:none; text-decoration:none; white-space:nowrap;
-  }
-  .aq-btn:hover{ filter:brightness(1.1); transform:translateY(-1px) }
-
-  /* Botão padronizado para sidebar — full width, altura fixa */
-  .sb-btn{
-    display:flex; align-items:center; justify-content:center;
-    gap:6px; width:100%; height:38px; border-radius:8px; color:#fff;
-    font-size:13px; font-weight:600; cursor:pointer;
-    transition:filter .15s; border:none; text-decoration:none; white-space:nowrap;
-  }
-  .sb-btn:hover{ filter:brightness(1.12) }
-
-  /* Botão ícone compacto — barra de ações */
-  .act-btn{
-    position:relative; display:inline-flex; align-items:center; justify-content:center;
-    flex:1 1 0; min-width:0; height:36px; border-radius:8px; color:#fff; font-size:14px;
-    cursor:pointer; transition:filter .15s, transform .1s; border:none;
-    text-decoration:none;
-  }
-  .act-btn:hover{ filter:brightness(1.18); transform:translateY(-2px); }
-  .act-btn::after{
-    content:attr(data-tip); position:absolute; bottom:calc(100% + 6px);
-    left:50%; transform:translateX(-50%);
-    background:#1e293b; color:#fff; font-size:11px; font-weight:600;
-    padding:3px 8px; border-radius:5px; white-space:nowrap;
-    pointer-events:none; opacity:0; transition:opacity .15s; z-index:60;
-  }
-  .act-btn:hover::after{ opacity:1; }
-
   /* Field input */
   .fi{
     border:1px solid #e2e8f0; border-radius:6px; padding:5px 9px;
@@ -60,12 +25,221 @@
 {% endblock %}
 
 {% block page_title %}
-  <a href="{{ url_for('orders.index') }}"
-     class="text-slate-400 hover:text-teal-500 mr-2 text-sm font-normal">
-    <i class="fa-solid fa-arrow-left"></i>
-  </a>
-  Sales Order <span class="font-mono font-bold">{{ order.number }}</span>
-  <span class="ml-2" style="{{ order.status|status_badge_style }}"><span style="width:7px;height:7px;border-radius:50%;background:{{ order.status|status_dot_color }};flex-shrink:0;display:inline-block"></span> {{ order.status_label }}</span>
+<div class="w-full">
+  <div class="flex flex-wrap items-center gap-2">
+    <a href="{{ url_for('orders.index') }}"
+       class="text-slate-400 hover:text-teal-500 text-sm font-normal">
+      <i class="fa-solid fa-arrow-left"></i>
+    </a>
+    <span class="whitespace-nowrap">Sales Order <span class="font-mono font-bold">{{ order.number }}</span></span>
+    <span class="whitespace-nowrap" style="{{ order.status|status_badge_style }}"><span style="width:7px;height:7px;border-radius:50%;background:{{ order.status|status_dot_color }};flex-shrink:0;display:inline-block"></span> {{ order.status_label }}</span>
+
+    {% if order.status not in ('cancelado', 'concluido', 'faturado') and has_perm('so.edit') %}
+    <button type="submit" form="main-form" name="action" value="save"
+            class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-blue-600 hover:bg-blue-700 text-white">
+      <i class="fa-solid fa-floppy-disk text-[11px]"></i> Salvar
+    </button>
+    {% endif %}
+
+    {% if order.status == 'aberto' and has_perm('so.invoice') %}
+    <button type="button"
+            onclick="
+              if (!document.querySelector('[name=emission_date]')?.value) {
+                alert('Preencha a Data de Emissão antes de faturar.');
+                return;
+              }
+              var f = document.getElementById('main-form');
+              var h = document.createElement('input');
+              h.type='hidden'; h.name='action'; h.value='faturar';
+              f.appendChild(h); f.submit();
+            "
+            class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-emerald-600 hover:bg-emerald-700 text-white">
+      <i class="fa-solid fa-file-invoice text-[11px]"></i> Faturar
+    </button>
+    {% endif %}
+
+    {% if order.status == 'novo' and has_perm('so.edit') %}
+    <button type="button"
+            onclick="var s=document.getElementById('billing-type-select');if(s)document.getElementById('open-billing-type').value=s.value;var cs=document.getElementById('client-select');if(cs)document.getElementById('open-client-id').value=cs.value;document.getElementById('open-order-form').submit();"
+            class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-blue-600 hover:bg-blue-700 text-white">
+      <i class="fa-solid fa-folder-open text-[11px]"></i> Abrir SO
+    </button>
+    {% endif %}
+
+    {% if order.status in ('aberto','faturado','concluido') and has_perm('po.create') %}
+    <a href="{{ url_for('purchase_orders.new', order_id=order.id) }}"
+       class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-blue-600 hover:bg-blue-700 text-white">
+      <i class="fa-solid fa-cart-flatbed text-[11px]"></i> Criar PO
+    </a>
+    {% endif %}
+
+    {% set _em = (order.client.email if order.client and order.client.email else order.email) %}
+    {% set _ph = (order.client.whatsapp if order.client and order.client.whatsapp else (order.celular or order.phone)) %}
+
+    {# PDF unified dropdown #}
+    <div class="relative" x-data="{open:false}" @click.outside="open=false">
+      <button type="button" @click="open=!open" class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-600 hover:bg-slate-700 text-white">
+        <i class="fa-solid fa-file-pdf text-[11px]"></i> PDF
+      </button>
+      <div x-show="open" x-cloak
+           class="absolute left-0 top-full mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 py-1 overflow-hidden"
+           style="min-width:200px">
+        <div style="display:grid;grid-template-columns:1fr 1fr">
+          <a href="{{ url_for('orders.pdf', oid=order.id, lang='pt') }}" target="_blank"
+             @click="open=false"
+             class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
+            <i class="fa-solid fa-download text-rose-500"></i> PDF PT
+          </a>
+          <a href="{{ url_for('orders.pdf', oid=order.id, lang='en') }}" target="_blank"
+             @click="open=false"
+             class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
+            <i class="fa-solid fa-download text-rose-700"></i> PDF EN
+          </a>
+        </div>
+        {% if _em %}
+        <hr class="my-1 border-slate-100 dark:border-slate-700">
+        <div style="display:grid;grid-template-columns:1fr 1fr">
+          <button type="button" onclick="orderSendEmail('pt')" @click="open=false"
+                  class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
+            <i class="fa-solid fa-envelope text-blue-500"></i> Email PT
+          </button>
+          <button type="button" onclick="orderSendEmail('en')" @click="open=false"
+                  class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
+            <i class="fa-solid fa-envelope text-blue-700"></i> Email EN
+          </button>
+        </div>
+        {% endif %}
+        {% if _ph %}
+        <hr class="my-1 border-slate-100 dark:border-slate-700">
+        <div style="display:grid;grid-template-columns:1fr 1fr">
+          <button type="button" onclick="orderWhatsApp('pt')" @click="open=false"
+                  class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
+            <i class="fa-brands fa-whatsapp text-green-500"></i> WA PT
+          </button>
+          <button type="button" onclick="orderWhatsApp('en')" @click="open=false"
+                  class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
+            <i class="fa-brands fa-whatsapp text-green-600"></i> WA EN
+          </button>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if order.status not in ('concluido','cancelado') and has_perm('so.cancel') %}
+    <button type="button" onclick="window.dispatchEvent(new CustomEvent('open-cancel-modal'))"
+            class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-red-500 hover:bg-red-600 text-white">
+      <i class="fa-solid fa-ban text-[11px]"></i> Cancelar
+    </button>
+    {% endif %}
+
+    {% if has_perm('so.delete') %}
+    <button type="button" onclick="window.dispatchEvent(new CustomEvent('open-delete-modal'))"
+            class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-red-700 hover:bg-red-800 text-white">
+      <i class="fa-solid fa-trash text-[11px]"></i> Excluir
+    </button>
+    {% endif %}
+
+    {% if order.status == 'faturado' and has_role('ADMIN') %}
+    <button type="button" onclick="document.getElementById('reabrir-form').submit()"
+            class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-amber-600 hover:bg-amber-700 text-white">
+      <i class="fa-solid fa-rotate-left text-[11px]"></i> Reabrir
+    </button>
+    {% endif %}
+
+    {# ── Histórico dropdown ── #}
+    <div class="relative ml-auto" x-data="{ histOpen: false }">
+      <button type="button" @click="histOpen = !histOpen"
+              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600">
+        <i class="fa-solid fa-clock-rotate-left text-[11px]"></i>
+        <span>Histórico</span>
+        {% if audit_logs %}
+        <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-300 dark:bg-slate-500 text-slate-600 dark:text-slate-200">{{ audit_logs|length }}</span>
+        {% endif %}
+        <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200" :class="histOpen ? 'rotate-180' : ''"></i>
+      </button>
+      <div x-show="histOpen"
+           @click.outside="histOpen = false"
+           x-transition:enter="transition ease-out duration-200"
+           x-transition:enter-start="opacity-0 -translate-y-1"
+           x-transition:enter-end="opacity-100 translate-y-0"
+           x-transition:leave="transition ease-in duration-150"
+           x-transition:leave-start="opacity-100 translate-y-0"
+           x-transition:leave-end="opacity-0 -translate-y-1"
+           class="absolute right-0 top-full mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 py-3 px-4 min-w-[320px] max-h-[70vh] overflow-y-auto">
+        {% if audit_logs %}
+        <ol class="relative border-l border-slate-200 dark:border-slate-600 ml-2 space-y-3">
+          {% for log in audit_logs %}
+          <li class="ml-4">
+            <span class="absolute -left-1.5 mt-1 w-3 h-3 rounded-full bg-slate-300 dark:bg-slate-500 border-2 border-white dark:border-slate-800"></span>
+            <p class="text-xs font-medium text-slate-700 dark:text-slate-200">{{ log.action }}</p>
+            <p class="text-[11px] text-slate-400">{{ log.created_at|fdatetime }}{% if log.user %} · {{ log.user.name }}{% endif %}</p>
+          </li>
+          {% endfor %}
+        </ol>
+        {% else %}
+        <dl class="space-y-1.5 text-xs text-slate-500">
+          <div class="flex justify-between gap-2">
+            <dt>Criado</dt>
+            <dd class="text-right">{{ order.created_at|fdatetime if order.created_at else '–' }}{% if seller_name and seller_name != '–' %} <span class="text-slate-400">· {{ seller_name }}</span>{% endif %}</dd>
+          </div>
+          {% if order.opened_at %}
+          <div class="flex justify-between gap-2">
+            <dt>Aberto</dt><dd class="text-right">{{ order.opened_at|fdatetime }}{% if order.opener %} <span class="text-slate-400">· {{ order.opener.name }}</span>{% endif %}</dd>
+          </div>
+          {% endif %}
+          {% if order.invoiced_at %}
+          <div class="flex justify-between gap-2">
+            <dt>Faturado</dt><dd class="text-right">{{ order.invoiced_at|fdatetime }}{% if order.invoicer %} <span class="text-slate-400">· {{ order.invoicer.name }}</span>{% endif %}</dd>
+          </div>
+          {% endif %}
+          {% if order.reopened_at %}
+          <div class="flex justify-between gap-2">
+            <dt>Reaberto</dt><dd class="text-right text-sky-500">{{ order.reopened_at|fdatetime }}{% if order.reopener %} <span class="text-slate-400">· {{ order.reopener.name }}</span>{% endif %}</dd>
+          </div>
+          {% endif %}
+          {% if order.closed_at %}
+          <div class="flex justify-between gap-2">
+            <dt>Concluído</dt><dd class="text-right text-emerald-500">{{ order.closed_at|fdatetime }}{% if order.closer %} <span class="text-slate-400">· {{ order.closer.name }}</span>{% endif %}</dd>
+          </div>
+          {% endif %}
+          {% if order.cancelled_at %}
+          <div class="flex justify-between gap-2">
+            <dt>Cancelado</dt><dd class="text-right text-red-500">{{ order.cancelled_at|fdatetime }}{% if order.canceller %} <span class="text-slate-400">· {{ order.canceller.name }}</span>{% endif %}</dd>
+          </div>
+          {% endif %}
+        </dl>
+        {% endif %}
+        {% if order.quote %}
+        <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700">
+          <p class="lbl">RFQ Vinculada</p>
+          <a href="{{ url_for('quotes.detail', qid=order.quote_id) }}"
+             class="text-xs font-mono text-teal-600 hover:underline">{{ order.quote.number }}</a>
+        </div>
+        {% endif %}
+        {% if order.purchase_orders %}
+        <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700">
+          <p class="lbl">PO(s) Gerada(s)</p>
+          {% for po in order.purchase_orders %}
+          <a href="{{ url_for('purchase_orders.detail', po_id=po.id) }}"
+             class="block text-xs font-mono text-violet-600 hover:underline">{{ po.number }}</a>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% if order.cancel_reason %}
+        <div class="mt-2 p-2 bg-red-50 dark:bg-red-900/20 rounded text-xs text-red-600">
+          <strong>Motivo:</strong> {{ order.cancel_reason }}
+        </div>
+        {% endif %}
+        {% if order.obs %}
+        <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700">
+          <p class="text-xs font-semibold text-slate-400 mb-1">Observações</p>
+          <p class="text-xs text-slate-600 dark:text-slate-300 italic leading-relaxed">{{ order.obs }}</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block content %}
@@ -130,7 +304,9 @@
     this.opNotes = d.opNotes || '';
     this.showOpItemModal = true;
   }
-}" x-cloak>
+}" x-cloak
+  @open-cancel-modal.window="showCancelModal = true"
+  @open-delete-modal.window="showDeleteModal = true">
 
 {% set locked = order.status in ('concluido', 'faturado', 'cancelado', 'excluido') %}
 
@@ -141,11 +317,9 @@
 <form id="main-form" method="post" action="{{ url_for('orders.save_all', oid=order.id) }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-{# ── Grid 3 colunas ── #}
-<div class="grid lg:grid-cols-3 gap-4">
+<div class="space-y-4">
 
-{# ═══════════ LEFT 2/3 ═══════════ #}
-<div class="lg:col-span-2 space-y-4">
+{# ═══════════ MAIN CONTENT ═══════════ #}
 
 {# ────────────────────────────────
    Card 1 — Cabeçalho (2 linhas)
@@ -652,244 +826,7 @@
 {# /Card 3 #}
 
 </div>
-{# /col-span-2 #}
-
-
-{# ═══════════ SIDEBAR 1/3 ═══════════ #}
-<div class="space-y-4">
-
-  {# Card: Histórico #}
-  <div x-data="{ histOpen: false }"
-       class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
-    {# Toggle header #}
-    <button type="button" @click="histOpen = !histOpen"
-            class="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-colors duration-150">
-      <div class="flex items-center gap-2">
-        <i class="fa-solid fa-clock-rotate-left text-slate-400 text-[11px]"></i>
-        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Histórico</span>
-        {% if audit_logs %}
-        <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400">{{ audit_logs|length }}</span>
-        {% endif %}
-      </div>
-      <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform duration-200"
-         :class="histOpen ? 'rotate-180' : ''"></i>
-    </button>
-    {# Content #}
-    <div x-show="histOpen"
-         x-transition:enter="transition ease-out duration-200"
-         x-transition:enter-start="opacity-0 -translate-y-1"
-         x-transition:enter-end="opacity-100 translate-y-0"
-         x-transition:leave="transition ease-in duration-150"
-         x-transition:leave-start="opacity-100 translate-y-0"
-         x-transition:leave-end="opacity-0 -translate-y-1"
-         class="px-4 pb-4">
-    {% if audit_logs %}
-    <ol class="relative border-l border-slate-200 dark:border-slate-600 ml-2 space-y-3">
-      {% for log in audit_logs %}
-      <li class="ml-4">
-        <span class="absolute -left-1.5 mt-1 w-3 h-3 rounded-full bg-slate-300 dark:bg-slate-500 border-2 border-white dark:border-slate-800"></span>
-        <p class="text-xs font-medium text-slate-700 dark:text-slate-200">{{ log.action }}</p>
-        <p class="text-[11px] text-slate-400">{{ log.created_at|fdatetime }}{% if log.user %} · {{ log.user.name }}{% endif %}</p>
-      </li>
-      {% endfor %}
-    </ol>
-    {% else %}
-    <dl class="space-y-1.5 text-xs text-slate-500">
-      <div class="flex justify-between gap-2">
-        <dt>Criado</dt>
-        <dd class="text-right">{{ order.created_at|fdatetime if order.created_at else '–' }}{% if seller_name and seller_name != '–' %} <span class="text-slate-400">· {{ seller_name }}</span>{% endif %}</dd>
-      </div>
-      {% if order.opened_at %}
-      <div class="flex justify-between gap-2">
-        <dt>Aberto</dt><dd class="text-right">{{ order.opened_at|fdatetime }}{% if order.opener %} <span class="text-slate-400">· {{ order.opener.name }}</span>{% endif %}</dd>
-      </div>
-      {% endif %}
-      {% if order.invoiced_at %}
-      <div class="flex justify-between gap-2">
-        <dt>Faturado</dt><dd class="text-right">{{ order.invoiced_at|fdatetime }}{% if order.invoicer %} <span class="text-slate-400">· {{ order.invoicer.name }}</span>{% endif %}</dd>
-      </div>
-      {% endif %}
-      {% if order.reopened_at %}
-      <div class="flex justify-between gap-2">
-        <dt>Reaberto</dt><dd class="text-right text-sky-500">{{ order.reopened_at|fdatetime }}{% if order.reopener %} <span class="text-slate-400">· {{ order.reopener.name }}</span>{% endif %}</dd>
-      </div>
-      {% endif %}
-      {% if order.closed_at %}
-      <div class="flex justify-between gap-2">
-        <dt>Concluído</dt><dd class="text-right text-emerald-500">{{ order.closed_at|fdatetime }}{% if order.closer %} <span class="text-slate-400">· {{ order.closer.name }}</span>{% endif %}</dd>
-      </div>
-      {% endif %}
-      {% if order.cancelled_at %}
-      <div class="flex justify-between gap-2">
-        <dt>Cancelado</dt><dd class="text-right text-red-500">{{ order.cancelled_at|fdatetime }}{% if order.canceller %} <span class="text-slate-400">· {{ order.canceller.name }}</span>{% endif %}</dd>
-      </div>
-      {% endif %}
-    </dl>
-    {% endif %}
-    {% if order.quote %}
-    <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700">
-      <p class="lbl">RFQ Vinculada</p>
-      <a href="{{ url_for('quotes.detail', qid=order.quote_id) }}"
-         class="text-xs font-mono text-teal-600 hover:underline">{{ order.quote.number }}</a>
-    </div>
-    {% endif %}
-    {% if order.purchase_orders %}
-    <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700">
-      <p class="lbl">PO(s) Gerada(s)</p>
-      {% for po in order.purchase_orders %}
-      <a href="{{ url_for('purchase_orders.detail', po_id=po.id) }}"
-         class="block text-xs font-mono text-violet-600 hover:underline">{{ po.number }}</a>
-      {% endfor %}
-    </div>
-    {% endif %}
-    {% if order.cancel_reason %}
-    <div class="mt-2 p-2 bg-red-50 dark:bg-red-900/20 rounded text-xs text-red-600">
-      <strong>Motivo:</strong> {{ order.cancel_reason }}
-    </div>
-    {% endif %}
-    {% if order.obs %}
-    <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700">
-      <p class="text-xs font-semibold text-slate-400 mb-1">Observações</p>
-      <p class="text-xs text-slate-600 dark:text-slate-300 italic leading-relaxed">{{ order.obs }}</p>
-    </div>
-    {% endif %}
-    </div>{# /x-show #}
-  </div>{# /x-data #}
-
-  {# ── Botões de Ação ── mesma largura do card histórico #}
-  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-2">
-    <div class="flex flex-row gap-1.5">
-
-      {% if order.status not in ('cancelado', 'concluido', 'faturado') and has_perm('so.edit') %}
-      <button type="submit" form="main-form" name="action" value="save"
-              data-tip="Salvar"
-              class="act-btn bg-blue-600 hover:bg-blue-700">
-        <i class="fa-solid fa-floppy-disk"></i>
-      </button>
-      {% endif %}
-
-      {% if order.status == 'aberto' and has_perm('so.invoice') %}
-      <button type="button"
-              @click="
-                if (!document.querySelector('[name=emission_date]')?.value) {
-                  alert('Preencha a Data de Emiss\u00e3o antes de faturar.');
-                  return;
-                }
-                const f = $el.closest('form');
-                const h = document.createElement('input');
-                h.type='hidden'; h.name='action'; h.value='faturar';
-                f.appendChild(h); f.submit();
-              "
-              data-tip="Faturar"
-              class="act-btn bg-green-600 hover:bg-green-700">
-        <i class="fa-solid fa-file-invoice"></i>
-      </button>
-      {% endif %}
-
-      {% if order.status == 'novo' and has_perm('so.edit') %}
-      <button type="button" data-tip="Abrir SO"
-              onclick="var s=document.getElementById('billing-type-select');if(s)document.getElementById('open-billing-type').value=s.value;var cs=document.getElementById('client-select');if(cs)document.getElementById('open-client-id').value=cs.value;document.getElementById('open-order-form').submit();"
-              class="act-btn bg-blue-600 hover:bg-blue-700">
-        <i class="fa-solid fa-folder-open"></i>
-      </button>
-      {% endif %}
-
-      {% if order.status in ('aberto','faturado','concluido') and has_perm('po.create') %}
-      <a href="{{ url_for('purchase_orders.new', order_id=order.id) }}"
-         data-tip="Criar PC/PO"
-         class="act-btn bg-blue-600 hover:bg-blue-700">
-        <i class="fa-solid fa-cart-flatbed"></i>
-      </a>
-      {% endif %}
-
-      {% set _em = (order.client.email if order.client and order.client.email else order.email) %}
-      {% set _ph = (order.client.whatsapp if order.client and order.client.whatsapp else (order.celular or order.phone)) %}
-
-      {# PDF unified dropdown: PT + EN — Baixar, Email, WhatsApp #}
-      <div class="relative flex-1 min-w-0" x-data="{open:false}" @click.outside="open=false">
-        <button type="button" @click="open=!open" data-tip="PDF / Enviar"
-                class="act-btn bg-slate-600 hover:bg-slate-700 w-full">
-          <i class="fa-solid fa-file-pdf"></i><span style="font-size:10px;margin-left:3px">PDF</span>
-        </button>
-        <div x-show="open" x-cloak
-             class="absolute left-0 top-full mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 py-1 overflow-hidden"
-             style="min-width:200px">
-          <div style="display:grid;grid-template-columns:1fr 1fr">
-            <a href="{{ url_for('orders.pdf', oid=order.id, lang='pt') }}" target="_blank"
-               @click="open=false"
-               class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
-              <i class="fa-solid fa-download text-rose-500"></i> PDF PT
-            </a>
-            <a href="{{ url_for('orders.pdf', oid=order.id, lang='en') }}" target="_blank"
-               @click="open=false"
-               class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
-              <i class="fa-solid fa-download text-rose-700"></i> PDF EN
-            </a>
-          </div>
-          {% if _em %}
-          <hr class="my-1 border-slate-100 dark:border-slate-700">
-          <div style="display:grid;grid-template-columns:1fr 1fr">
-            <button type="button" onclick="orderSendEmail('pt')" @click="open=false"
-                    class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
-              <i class="fa-solid fa-envelope text-blue-500"></i> Email PT
-            </button>
-            <button type="button" onclick="orderSendEmail('en')" @click="open=false"
-                    class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
-              <i class="fa-solid fa-envelope text-blue-700"></i> Email EN
-            </button>
-          </div>
-          {% endif %}
-          {% if _ph %}
-          <hr class="my-1 border-slate-100 dark:border-slate-700">
-          <div style="display:grid;grid-template-columns:1fr 1fr">
-            <button type="button" onclick="orderWhatsApp('pt')" @click="open=false"
-                    class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
-              <i class="fa-brands fa-whatsapp text-green-500"></i> WA PT
-            </button>
-            <button type="button" onclick="orderWhatsApp('en')" @click="open=false"
-                    class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
-              <i class="fa-brands fa-whatsapp text-green-600"></i> WA EN
-            </button>
-          </div>
-          {% endif %}
-        </div>
-      </div>
-
-      {% if order.status not in ('concluido','cancelado') and has_perm('so.cancel') %}
-      <button type="button" @click="showCancelModal=true"
-              data-tip="Cancelar SO"
-              class="act-btn bg-red-600 hover:bg-red-700">
-        <i class="fa-solid fa-ban"></i>
-      </button>
-      {% endif %}
-
-      {% if has_perm('so.delete') %}
-      <button type="button" @click="showDeleteModal=true"
-              data-tip="Excluir SO"
-              class="act-btn bg-red-800 hover:bg-red-900">
-        <i class="fa-solid fa-trash"></i>
-      </button>
-      {% endif %}
-
-      {% if order.status == 'faturado' and has_role('ADMIN') %}
-      <button type="button" onclick="document.getElementById('reabrir-form').submit()"
-              data-tip="Reabrir"
-              class="act-btn bg-amber-500 hover:bg-amber-600">
-        <i class="fa-solid fa-rotate-left"></i>
-      </button>
-      {% endif %}
-
-    </div>
-  </div>
-  {# /Botões #}
-
-</div>
-{# /sidebar #}
-
-</div>
-{# /grid #}
-
-
+{# /main content #}
 
 </form>
 {# /main-form #}
@@ -998,7 +935,7 @@
   });
 
   function fmtBRL(v) {
-    return 'R\u00a0' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+    return 'R ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
   }
   function updateAParar(val) {
     const el = document.getElementById('pmt-apagar-val');
@@ -1021,7 +958,7 @@
   function buildPmtRow(p, total) {
     const amtDisp = fmtBRL(p.amount);
     const amtVal  = Number(p.amount).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
-    const dueDisp = p.due_date ? p.due_date.substring(0,10).split('-').reverse().join('/') : '\u2013';
+    const dueDisp = p.due_date ? p.due_date.substring(0,10).split('-').reverse().join('/') : '–';
     const bxUrl   = _pmtUrl(_pmt_bx_tpl, p.id);
     const tr = document.createElement('tr');
     tr.id = 'pmt-row-' + p.id;
@@ -1329,7 +1266,7 @@
         <div>
           <label class="lbl">Total</label>
           <p class="text-sm font-bold font-mono text-teal-600 py-1"
-             x-text="'R\u00a0' + (editQty * (parseFloat((editUnit||'0').replace(/\./g,'').replace(',','.')) || 0)).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})"></p>
+             x-text="'R ' + (editQty * (parseFloat((editUnit||'0').replace(/\./g,'').replace(',','.')) || 0)).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})"></p>
         </div>
       </div>
       <div class="px-5 py-3 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-2">
