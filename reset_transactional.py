@@ -5,7 +5,7 @@ Mantém: usuários, empresa, clientes, serviços, veículos, motoristas, fornece
 Uso:
     python reset_transactional.py
 """
-from app_v2 import app
+from ExecFlow_V3 import app
 from app.extensions import db
 
 TABLES = [
