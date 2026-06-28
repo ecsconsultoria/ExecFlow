@@ -54,7 +54,7 @@
       </div>
       {% endif %}
       <span x-show="sidebarOpen" x-transition class="text-white font-bold text-sm truncate">
-        {{ current_company.name if current_company else 'Executive Car SP' }}
+        {{ current_company.name if current_company else 'ExecFlow ERP v3' }}
       </span>
     </a>
     <button @click="sidebarOpen = !sidebarOpen; localStorage.setItem('sidebarOpen', sidebarOpen)"
