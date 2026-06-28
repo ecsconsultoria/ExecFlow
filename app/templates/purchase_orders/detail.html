@@ -541,7 +541,7 @@
         </thead>
         <tbody id="pmt-tbody" class="divide-y divide-slate-100 dark:divide-slate-700">
           {% set total_pmts = po.payments.count() %}
-          {% for pmt in po.payments.order_by(none) %}
+          {% for pmt in po.payments|sort(attribute='due_date') %}
           <tr id="pmt-row-{{ pmt.id }}" class="{% if pmt.is_paid %}bg-emerald-50/60 dark:bg-emerald-900/10{% else %}hover:bg-slate-50/50{% endif %}">
             <td class="px-2 py-1.5 text-center text-slate-500" data-pmt-no>{{ pmt.installment_no }}/{{ total_pmts }}</td>
 
