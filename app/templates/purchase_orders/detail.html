@@ -595,7 +595,15 @@
             <td class="px-2 py-1.5 text-center text-slate-500 text-xs">
               {% if pmt.paid_at %}{{ pmt.paid_at|fdatetime }}{% else %}–{% endif %}
             </td>
-            <td></td>
+            <td class="px-2 py-1.5 text-center">
+              {% if po.status not in ('concluido', 'cancelado', 'rascunho') %}
+              <button type="button" onclick="estornarPmt({{ pmt.id }})"
+                      class="p-1 rounded text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/30"
+                      title="Estornar pagamento">
+                <i class="fa-solid fa-rotate-left"></i>
+              </button>
+              {% endif %}
+            </td>
             {% endif %}
           </tr>
           {% endfor %}
@@ -1544,7 +1552,8 @@ function submitGenPayments() {
     const empty = document.getElementById('pmt-empty');
     const total = data.total_count;
     const updUrl = '{{ url_for("purchase_orders.update_payment", pid=0) }}';
-    const baixaUrl = '{{ url_for("purchase_orders.baixa", pid=0) }}';
+    const baixaUrl   = '{{ url_for("purchase_orders.baixa", pid=0) }}';
+    const estornoUrl = '{{ url_for("purchase_orders.estornar", pid=0) }}';
 
     data.installments.forEach(p => {
       const tr = document.createElement('tr');
@@ -1656,6 +1665,15 @@ function closeBaixa() {
 document.getElementById('baixa-modal').addEventListener('click', function(e) {
   if (e.target === this) closeBaixa();
 });
+
+async function estornarPmt(pid) {
+  if (!confirm('Estornar este pagamento? O valor voltara a ficar pendente.')) return;
+  const url  = estornoUrl.replace('/0/', '/' + pid + '/');
+  const resp = await fetch(url, {method: 'POST', headers: {'X-Requested-With': 'XMLHttpRequest'}});
+  const d    = await resp.json();
+  if (!d.ok) { alert(d.error || 'Erro ao estornar.'); return; }
+  location.reload();
+}
 {% endif %}
 </script>
 

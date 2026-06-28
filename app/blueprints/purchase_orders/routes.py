@@ -569,6 +569,50 @@ def baixa(pid):
     return redirect(url_for("purchase_orders.detail", po_id=po.id))
 
 
+@purchase_orders_bp.route("/payments/<int:pid>/estornar", methods=["POST"])
+@login_required
+@require_permission("po.edit")
+def estornar(pid):
+    """Estorna um pagamento já registrado, voltando a parcela para pendente."""
+    pmt = POPayment.query.get_or_404(pid)
+    po = pmt.purchase_order
+    if po.company_id != current_user.company_id:
+        flash("Não autorizado.", "warning")
+        return redirect(url_for("purchase_orders.index"))
+    if not pmt.is_paid:
+        flash("Esta parcela não possui pagamento para estornar.", "warning")
+        return redirect(url_for("purchase_orders.detail", po_id=po.id))
+    try:
+        pmt.paid_amount = 0
+        pmt.paid_at = None
+        pmt.paid_by = None
+        # Reverte status pago → faturado se necessário
+        if po.status == "pago":
+            po.status = "faturado"
+            po.paid_at = None
+        # Reverte FinancialRecord vinculado
+        from ...models.financial import FinancialRecord
+        ref = f"po_payment:{pmt.id}"
+        fr = FinancialRecord.query.filter_by(company_id=po.company_id, reference=ref).filter(
+            FinancialRecord.deleted_at.is_(None)
+        ).first()
+        if fr and fr.status == "pago":
+            fr.status = "pendente"
+            fr.paid_date = None
+        log_activity("po", po.id, po.company_id,
+                     f"Pagamento parcela {pmt.installment_no} estornado", current_user.id)
+        db.session.commit()
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"ok": True})
+        flash("Pagamento estornado com sucesso.", "success")
+    except Exception as e:
+        db.session.rollback()
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"ok": False, "error": str(e)}), 500
+        flash(f"Erro ao estornar: {e}", "danger")
+    return redirect(url_for("purchase_orders.detail", po_id=po.id))
+
+
 # ─── Items da PO ─────────────────────────────────────────────────────────────
 
 @purchase_orders_bp.route("/<int:po_id>/items/add", methods=["POST"])
