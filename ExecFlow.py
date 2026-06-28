@@ -24,5 +24,5 @@ if os.environ.get("FLASK_ENV", "").lower() == "production":
     gc.freeze()
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5004, debug=True,
+    app.run(host="0.0.0.0", port=5003, debug=True,
             extra_files=[], reloader_type="stat")

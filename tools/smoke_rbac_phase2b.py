@@ -12,7 +12,7 @@ Uso:
 """
 from __future__ import annotations
 import sys
-from ExecFlow_V3 import app
+from ExecFlow import app
 from app.extensions import db
 from app.models.user import User
 from app.models.rbac import Role

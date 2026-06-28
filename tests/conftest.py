@@ -13,7 +13,7 @@ HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
 
-from ExecFlow_V3 import app as _app  # noqa: E402
+from ExecFlow import app as _app  # noqa: E402
 from app.extensions import db  # noqa: E402
 from app.models.user import User  # noqa: E402
 from app.models.rbac import Role  # noqa: E402
