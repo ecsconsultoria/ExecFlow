@@ -441,6 +441,51 @@ def baixa(pid):
     return redirect(url_for("orders.detail", oid=order.id))
 
 
+@orders_bp.route("/payments/<int:pid>/estornar", methods=["POST"])
+@login_required
+@require_permission("so.edit")
+def estornar(pid):
+    """Estorna um pagamento já registrado, voltando a parcela para pendente."""
+    pmt = OrderPayment.query.get_or_404(pid)
+    order = pmt.order
+    if order.company_id != current_user.company_id:
+        flash("Não autorizado.", "warning")
+        return redirect(url_for("orders.index"))
+    if not pmt.is_paid:
+        flash("Esta parcela não possui pagamento para estornar.", "warning")
+        return redirect(url_for("orders.detail", oid=order.id))
+    try:
+        pmt.paid_amount = 0
+        pmt.paid_at = None
+        pmt.paid_by = None
+        # Reverte status concluido → faturado se necessário
+        if order.status == "concluido":
+            order.status = "faturado"
+            order.closed_at = None
+            order.closed_by = None
+        # Reverte FinancialRecord vinculado
+        from ...models.financial import FinancialRecord
+        ref = f"order_payment:{pmt.id}"
+        fr = FinancialRecord.query.filter_by(company_id=order.company_id, reference=ref).filter(
+            FinancialRecord.deleted_at.is_(None)
+        ).first()
+        if fr and fr.status == "pago":
+            fr.status = "pendente"
+            fr.paid_date = None
+        log_activity("order", order.id, order.company_id,
+                     f"Pagamento parcela {pmt.installment_no} estornado", current_user.id)
+        db.session.commit()
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"ok": True})
+        flash("Pagamento estornado com sucesso.", "success")
+    except Exception as e:
+        db.session.rollback()
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"ok": False, "error": str(e)}), 500
+        flash(f"Erro ao estornar: {e}", "danger")
+    return redirect(url_for("orders.detail", oid=order.id))
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Atualização de campos (cabeçalho / ajustes / parcela inline)
 # ─────────────────────────────────────────────────────────────────────────────
