@@ -64,9 +64,9 @@
   </div>
 
   <!-- Nav -->
-  <nav class="flex-1 py-4 px-2 overflow-y-auto space-y-0.5">
-    {% set sl = "flex items-center gap-3 px-3 py-2 rounded-lg text-slate-100 hover:bg-slate-700 hover:text-white transition-colors text-sm w-full" %}
-    {% set sl_active = "flex items-center gap-3 px-3 py-2 rounded-lg bg-blue-600 text-white text-sm w-full" %}
+  <nav class="flex-1 py-3 px-3 overflow-y-auto space-y-0.5">
+    {% set sl = "flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors text-[13px] w-full font-medium" %}
+    {% set sl_active = "flex items-center gap-3 px-3 py-2 rounded-lg bg-white/10 text-white text-[13px] w-full font-semibold" %}
 
     <a href="{{ url_for('dashboard.index') }}"
        class="{{ sl_active if request.endpoint == 'dashboard.index' else sl }}">
