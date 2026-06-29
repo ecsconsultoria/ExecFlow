@@ -39,7 +39,7 @@
 <body x-data="erp()" class="bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-slate-100 min-h-screen font-sans antialiased">
 
 <!-- ═══ Primary Sidebar — ícones apenas ─═══════════════════════════════════════ -->
-<aside class="fixed inset-y-0 left-0 z-50 w-[72px] bg-slate-900 flex flex-col shadow-xl shadow-black/20">
+<aside class="fixed inset-y-0 left-0 z-50 w-[80px] bg-slate-900 flex flex-col shadow-xl shadow-black/20">
 
   <!-- Logo -->
   <a href="/" class="h-14 flex items-center justify-center border-b border-white/5 shrink-0">
@@ -61,14 +61,14 @@
        class="{{ pi }}"
        @click="activeModule=null; localStorage.setItem('activeModule','')">
       <i class="fa-solid fa-gauge-high text-lg"></i>
-      <span class="text-[9px] text-slate-500 font-light mt-1 leading-none">Dashboard</span>
+      <span class="text-[9px] text-slate-500 font-medium mt-1 leading-none uppercase">Dashboard</span>
     </button>
 
     {% if has_any_perm('quote.view','so.view','po.view') %}
     <button @click="selectModule('comercial')"
             class="{{ pi_active if activeModule=='comercial' else pi }}">
       <i class="fa-solid fa-briefcase text-lg"></i>
-      <span class="text-[9px] text-slate-500 font-light mt-1 leading-none">Comercial</span>
+      <span class="text-[9px] text-slate-500 font-medium mt-1 leading-none uppercase">Comercial</span>
     </button>
     {% endif %}
 
@@ -76,7 +76,7 @@
     <button @click="selectModule('catalogo')"
             class="{{ pi_active if activeModule=='catalogo' else pi }}">
       <i class="fa-solid fa-book text-lg"></i>
-      <span class="text-[9px] text-slate-500 font-light mt-1 leading-none">Catálogo</span>
+      <span class="text-[9px] text-slate-500 font-medium mt-1 leading-none uppercase">Catálogo</span>
     </button>
     {% endif %}
 
@@ -84,7 +84,7 @@
     <button @click="selectModule('operacional')"
             class="{{ pi_active if activeModule=='operacional' else pi }}">
       <i class="fa-solid fa-tower-broadcast text-lg"></i>
-      <span class="text-[9px] text-slate-500 font-light mt-1 leading-none">Operac.</span>
+      <span class="text-[9px] text-slate-500 font-medium mt-1 leading-none uppercase">Operac.</span>
     </button>
     {% endif %}
 
@@ -92,7 +92,7 @@
     <button @click="selectModule('financeiro')"
             class="{{ pi_active if activeModule=='financeiro' else pi }}">
       <i class="fa-solid fa-coins text-lg"></i>
-      <span class="text-[9px] text-slate-500 font-light mt-1 leading-none">Financeiro</span>
+      <span class="text-[9px] text-slate-500 font-medium mt-1 leading-none uppercase">Financeiro</span>
     </button>
     {% endif %}
 
@@ -100,7 +100,7 @@
     <button @click="selectModule('config')"
             class="{{ pi_active if activeModule=='config' else pi }}">
       <i class="fa-solid fa-gear text-lg"></i>
-      <span class="text-[9px] text-slate-500 font-light mt-1 leading-none">Config.</span>
+      <span class="text-[9px] text-slate-500 font-medium mt-1 leading-none uppercase">Config.</span>
     </button>
     {% endif %}
 
@@ -116,7 +116,7 @@
 
 <!-- ═══ Secondary Sidebar — subitens do módulo ativo ─═════════════════════════ -->
 <aside x-show="activeModule" x-cloak x-transition:enter="transition ease-out duration-200" x-transition:enter-start="-translate-x-4 opacity-0" x-transition:enter-end="translate-x-0 opacity-100"
-       class="fixed inset-y-0 left-[72px] z-40 w-60 bg-slate-800 border-r border-white/5 flex flex-col shadow-xl shadow-black/10">
+       class="fixed inset-y-0 left-[80px] z-40 w-60 bg-slate-800 border-r border-white/5 flex flex-col shadow-xl shadow-black/10">
 
   <div class="h-14 flex items-center px-4 border-b border-white/5 shrink-0">
     <span class="text-white text-sm font-semibold tracking-tight" x-text="activeModule ? {comercial:'Comercial',catalogo:'Catálogo',operacional:'Operacional',financeiro:'Financeiro',config:'Configurações'}[activeModule] : ''"></span>
@@ -207,7 +207,7 @@
 </aside>
 
 <!-- ═══ Main ─══════════════════════════════════════════════════════════════════ -->
-<div class="ml-[72px] min-h-screen flex flex-col transition-all duration-200"
+<div class="ml-[80px] min-h-screen flex flex-col transition-all duration-200"
      :class="activeModule ? 'lg:ml-[312px]' : ''">
 
   <!-- Header -->
