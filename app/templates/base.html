@@ -61,7 +61,7 @@
        class="{{ pi }}"
        @click="activeModule=null; localStorage.setItem('activeModule','')">
       <i class="fa-solid fa-gauge-high text-lg"></i>
-      <span class="text-[9px] text-slate-500 font-light mt-1 leading-none">Dashboard</span>
+      <span class="text-[9px] text-slate-500 font-light mt-1 leading-none uppercase">Dashboard</span>
       <span class="absolute left-full ml-3 px-2.5 py-1 bg-slate-800 text-white text-xs rounded-lg font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-lg">Dashboard</span>
     </button>
 
@@ -69,7 +69,7 @@
     <button @click="selectModule('comercial')" title="Comercial"
             class="{{ pi_active if activeModule=='comercial' else pi }}">
       <i class="fa-solid fa-briefcase text-lg"></i>
-      <span class="text-[9px] text-slate-500 font-light mt-1 leading-none">Comercial</span>
+      <span class="text-[9px] text-slate-500 font-light mt-1 leading-none uppercase">Comercial</span>
       <span class="absolute left-full ml-3 px-2.5 py-1 bg-slate-800 text-white text-xs rounded-lg font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-lg">Comercial</span>
     </button>
     {% endif %}
@@ -78,7 +78,7 @@
     <button @click="selectModule('catalogo')" title="Catálogo"
             class="{{ pi_active if activeModule=='catalogo' else pi }}">
       <i class="fa-solid fa-book text-lg"></i>
-      <span class="text-[9px] text-slate-500 font-light mt-1 leading-none">Catálogo</span>
+      <span class="text-[9px] text-slate-500 font-light mt-1 leading-none uppercase">Catálogo</span>
       <span class="absolute left-full ml-3 px-2.5 py-1 bg-slate-800 text-white text-xs rounded-lg font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-lg">Catálogo</span>
     </button>
     {% endif %}
@@ -87,7 +87,7 @@
     <button @click="selectModule('operacional')" title="Operacional"
             class="{{ pi_active if activeModule=='operacional' else pi }}">
       <i class="fa-solid fa-tower-broadcast text-lg"></i>
-      <span class="text-[9px] text-slate-500 font-light mt-1 leading-none">Operac.</span>
+      <span class="text-[9px] text-slate-500 font-light mt-1 leading-none uppercase">Operac.</span>
       <span class="absolute left-full ml-3 px-2.5 py-1 bg-slate-800 text-white text-xs rounded-lg font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-lg">Operacional</span>
     </button>
     {% endif %}
@@ -96,7 +96,7 @@
     <button @click="selectModule('financeiro')" title="Financeiro"
             class="{{ pi_active if activeModule=='financeiro' else pi }}">
       <i class="fa-solid fa-coins text-lg"></i>
-      <span class="text-[9px] text-slate-500 font-light mt-1 leading-none">Financeiro</span>
+      <span class="text-[9px] text-slate-500 font-light mt-1 leading-none uppercase">Financeiro</span>
       <span class="absolute left-full ml-3 px-2.5 py-1 bg-slate-800 text-white text-xs rounded-lg font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-lg">Financeiro</span>
     </button>
     {% endif %}
@@ -105,7 +105,7 @@
     <button @click="selectModule('config')" title="Configurações"
             class="{{ pi_active if activeModule=='config' else pi }}">
       <i class="fa-solid fa-gear text-lg"></i>
-      <span class="text-[9px] text-slate-500 font-light mt-1 leading-none">Config.</span>
+      <span class="text-[9px] text-slate-500 font-light mt-1 leading-none uppercase">Config.</span>
       <span class="absolute left-full ml-3 px-2.5 py-1 bg-slate-800 text-white text-xs rounded-lg font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-lg">Configurações</span>
     </button>
     {% endif %}
@@ -218,7 +218,7 @@
 
   <!-- Header -->
   <header class="py-3 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between gap-4 px-6 sticky top-0 z-40">
-    <div class="text-base font-semibold text-slate-700 dark:text-slate-200 min-w-0 flex-1">
+    <div class="text-base font-semibold text-slate-700 dark:text-slate-200 min-w-0 flex-1 pl-4">
       {% block page_title %}{% endblock %}
     </div>
     <div class="flex items-center gap-4 shrink-0">

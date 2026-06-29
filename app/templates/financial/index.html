@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Financeiro{% endblock %}
-{% block page_title %}<i class="fa-solid fa-coins mr-2 text-amber-500"></i>Financeiro{% endblock %}
+{% block page_title %}<i class="fa-solid fa-coins mr-2 text-amber-500"></i>{% if ftype == 'revenue' %}Contas a Receber{% elif ftype == 'cost' %}Contas a Pagar{% else %}Financeiro{% endif %}{% endblock %}
 
 {% block content %}
 
