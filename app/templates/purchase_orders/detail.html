@@ -681,7 +681,7 @@
     <div class="sm:w-52 shrink-0 bg-slate-700 dark:bg-slate-900 text-white p-3 space-y-3">
       <div>
         <p class="text-xs text-slate-400 uppercase mb-0.5">A Pagar</p>
-        <p class="text-xl font-extrabold text-red-300 font-mono">{{ po.computed_total|currency }}</p>
+        <p id="po-apagar-display" class="text-xl font-extrabold text-red-300 font-mono">{{ apagar|currency }}</p>
         <span id="po-apagar-val" class="hidden">{{ apagar|currency }}</span>
         {% if po.total_paid() > 0 %}
         <p class="text-xs text-emerald-400">Pago: {{ po.total_paid()|currency }}</p>
@@ -1527,7 +1527,10 @@ function submitGenPayments() {
     });
 
     const apagarEl = document.getElementById('po-apagar-val');
-    if (apagarEl) apagarEl.textContent = 'R ' + data.a_pagar.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+    const apagarDisplay = document.getElementById('po-apagar-display');
+    var txt = 'R ' + data.a_pagar.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+    if (apagarEl) apagarEl.textContent = txt;
+    if (apagarDisplay) apagarDisplay.textContent = txt;
     if (total > 0) { wrap.style.display = ''; empty.style.display = 'none'; }
     // Pré-preenche saldo restante no campo Valor Parcela
     const customAmtInput = document.getElementById('gp-custom-amount');
@@ -1565,7 +1568,10 @@ function deletePmt(pid) {
     const row = document.getElementById('pmt-row-' + pid);
     if (row) row.remove();
     const apagarEl = document.getElementById('po-apagar-val');
-    if (apagarEl) apagarEl.textContent = 'R ' + data.a_pagar.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+    const apagarDisplay = document.getElementById('po-apagar-display');
+    var txt = 'R ' + data.a_pagar.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+    if (apagarEl) apagarEl.textContent = txt;
+    if (apagarDisplay) apagarDisplay.textContent = txt;
     if (data.total_count === 0) {
       document.getElementById('pmt-table-wrap').style.display = 'none';
       document.getElementById('pmt-empty').style.display      = '';
