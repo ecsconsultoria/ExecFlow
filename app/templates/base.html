@@ -55,13 +55,14 @@
 
   <!-- Primary Nav -->
   <nav class="flex-1 py-3 flex flex-col items-center gap-1 overflow-y-auto">
-    {% set pi = "relative w-12 h-12 flex items-center justify-center rounded-xl text-slate-500 hover:text-white hover:bg-white/5 transition-all duration-200 group" %}
-    {% set pi_active = "relative w-12 h-12 flex items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-500/20" %}
+    {% set pi = "relative w-12 py-2 flex flex-col items-center justify-center rounded-xl text-slate-500 hover:text-white hover:bg-white/5 transition-all duration-200 group gap-0.5" %}
+    {% set pi_active = "relative w-12 py-2 flex flex-col items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-500/20 gap-0.5" %}
 
     <a href="{{ url_for('dashboard.index') }}" title="Dashboard"
        class="{{ pi_active if request.endpoint == 'dashboard.index' else pi }}"
        @click="activeModule=null; localStorage.setItem('activeModule','')">
       <i class="fa-solid fa-gauge-high text-lg"></i>
+      <span class="text-[9px] text-slate-500 font-light mt-1 leading-none">Dashboard</span>
       <span class="absolute left-full ml-3 px-2.5 py-1 bg-slate-800 text-white text-xs rounded-lg font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-lg">Dashboard</span>
     </a>
 
@@ -72,6 +73,7 @@
     <button @click="selectModule('comercial')" title="Comercial"
             class="{{ pi_active if activeModule=='comercial' else pi }}">
       <i class="fa-solid fa-briefcase text-lg"></i>
+      <span class="text-[9px] text-slate-500 font-light mt-1 leading-none">Comercial</span>
       <span class="absolute left-full ml-3 px-2.5 py-1 bg-slate-800 text-white text-xs rounded-lg font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-lg">Comercial</span>
     </button>
     {% endif %}
@@ -80,6 +82,7 @@
     <button @click="selectModule('catalogo')" title="Catálogo"
             class="{{ pi_active if activeModule=='catalogo' else pi }}">
       <i class="fa-solid fa-book text-lg"></i>
+      <span class="text-[9px] text-slate-500 font-light mt-1 leading-none">Catálogo</span>
       <span class="absolute left-full ml-3 px-2.5 py-1 bg-slate-800 text-white text-xs rounded-lg font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-lg">Catálogo</span>
     </button>
     {% endif %}
@@ -88,6 +91,7 @@
     <button @click="selectModule('operacional')" title="Operacional"
             class="{{ pi_active if activeModule=='operacional' else pi }}">
       <i class="fa-solid fa-tower-broadcast text-lg"></i>
+      <span class="text-[9px] text-slate-500 font-light mt-1 leading-none">Operac.</span>
       <span class="absolute left-full ml-3 px-2.5 py-1 bg-slate-800 text-white text-xs rounded-lg font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-lg">Operacional</span>
     </button>
     {% endif %}
@@ -96,6 +100,7 @@
     <button @click="selectModule('financeiro')" title="Financeiro"
             class="{{ pi_active if activeModule=='financeiro' else pi }}">
       <i class="fa-solid fa-coins text-lg"></i>
+      <span class="text-[9px] text-slate-500 font-light mt-1 leading-none">Financeiro</span>
       <span class="absolute left-full ml-3 px-2.5 py-1 bg-slate-800 text-white text-xs rounded-lg font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-lg">Financeiro</span>
     </button>
     {% endif %}
@@ -104,6 +109,7 @@
     <button @click="selectModule('config')" title="Configurações"
             class="{{ pi_active if activeModule=='config' else pi }}">
       <i class="fa-solid fa-gear text-lg"></i>
+      <span class="text-[9px] text-slate-500 font-light mt-1 leading-none">Config.</span>
       <span class="absolute left-full ml-3 px-2.5 py-1 bg-slate-800 text-white text-xs rounded-lg font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-lg">Configurações</span>
     </button>
     {% endif %}
@@ -112,6 +118,7 @@
     <button @click="selectModule('admin')" title="Administração"
             class="{{ pi_active if activeModule=='admin' else pi }}">
       <i class="fa-solid fa-shield-halved text-lg"></i>
+      <span class="text-[9px] text-slate-500 font-light mt-1 leading-none">Admin</span>
       <span class="absolute left-full ml-3 px-2.5 py-1 bg-slate-800 text-white text-xs rounded-lg font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-lg">Administração</span>
     </button>
     {% endif %}
