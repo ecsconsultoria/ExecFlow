@@ -64,9 +64,9 @@
   </div>
 
   <!-- Nav -->
-  <nav class="flex-1 py-3 px-3 overflow-y-auto space-y-0.5">
-    {% set sl = "flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors text-[13px] w-full font-medium" %}
-    {% set sl_active = "flex items-center gap-3 px-3 py-2 rounded-lg bg-white/10 text-white text-[13px] w-full font-semibold" %}
+  <nav class="flex-1 py-4 px-2 overflow-y-auto space-y-0.5">
+    {% set sl = "flex items-center gap-3 px-3 py-2 rounded-lg text-slate-100 hover:bg-slate-700 hover:text-white transition-colors text-sm w-full" %}
+    {% set sl_active = "flex items-center gap-3 px-3 py-2 rounded-lg bg-blue-600 text-white text-sm w-full" %}
 
     <a href="{{ url_for('dashboard.index') }}"
        class="{{ sl_active if request.endpoint == 'dashboard.index' else sl }}">
@@ -74,15 +74,14 @@
       <span x-show="sidebarOpen" x-transition class="truncate">Dashboard</span>
     </a>
 
-    <!-- COMERCIAL -->
+    <!-- COMERCIAL (1º) -->
     {% if has_any_perm('quote.view','so.view','po.view') %}
     <button @click="toggleMenu('comercial')"
-            class="{{ sl }}" :class="isExpanded('comercial') ? '{{ sl_active }}' : ''">
-      <i class="fa-solid fa-briefcase w-5 text-center shrink-0 opacity-70"></i>
-      <span x-show="sidebarOpen" x-transition class="truncate">Comercial</span>
-      <i :class="isExpanded('comercial') ? 'fa-chevron-down' : 'fa-chevron-right'" class="fa-solid text-[9px] ml-auto opacity-50" x-show="sidebarOpen"></i>
+            class="flex items-center gap-2 w-full text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mt-5 mb-1 hover:text-slate-200 transition-colors">
+      <i :class="isExpanded('comercial') ? 'fa-chevron-down' : 'fa-chevron-right'" class="fa-solid text-[10px] w-3"></i>
+      <span x-show="sidebarOpen" x-transition>Comercial</span>
     </button>
-    <div x-show="!sidebarOpen || isExpanded('comercial')" x-transition class="space-y-0.5 pl-3 border-l border-white/10 ml-3.5">
+    <div x-show="sidebarOpen && isExpanded('comercial')" x-transition class="space-y-0.5">
     {% if has_perm('quote.view') %}
     <a href="{{ url_for('quotes.index') }}"
        class="{{ sl_active if request.blueprint == 'quotes' else sl }}">
@@ -109,15 +108,12 @@
 
     <!-- CATÁLOGO -->
     {% if has_any_perm('catalog.view','vehicles.view','clients.view','suppliers.view','drivers.view') %}
-    <div x-show="!sidebarOpen" class="flex justify-center py-1.5 mt-4">
-      <div class="w-5 h-px bg-slate-600"></div>
-    </div>
-    <button @click="toggleMenu('catalogo')" x-show="sidebarOpen"
+    <button @click="toggleMenu('catalogo')"
             class="flex items-center gap-2 w-full text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mt-5 mb-1 hover:text-slate-200 transition-colors">
       <i :class="isExpanded('catalogo') ? 'fa-chevron-down' : 'fa-chevron-right'" class="fa-solid text-[10px] w-3"></i>
       <span x-show="sidebarOpen" x-transition>Catálogo</span>
     </button>
-    <div x-show="!sidebarOpen || isExpanded('catalogo')" x-transition class="space-y-0.5 pl-3 border-l border-white/10 ml-3.5">
+    <div x-show="sidebarOpen && isExpanded('catalogo')" x-transition class="space-y-0.5">
     {% if has_perm('catalog.view') %}
     <a href="{{ url_for('services.index') }}"
        class="{{ sl_active if request.blueprint == 'services' else sl }}">
@@ -163,15 +159,12 @@
 
     <!-- OPERACIONAL -->
     {% if has_perm('dispatch.view') %}
-    <div x-show="!sidebarOpen" class="flex justify-center py-1.5 mt-4">
-      <div class="w-5 h-px bg-slate-600"></div>
-    </div>
-    <button @click="toggleMenu('operacional')" x-show="sidebarOpen"
+    <button @click="toggleMenu('operacional')"
             class="flex items-center gap-2 w-full text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mt-5 mb-1 hover:text-slate-200 transition-colors">
       <i :class="isExpanded('operacional') ? 'fa-chevron-down' : 'fa-chevron-right'" class="fa-solid text-[10px] w-3"></i>
       <span x-show="sidebarOpen" x-transition>Operacional</span>
     </button>
-    <div x-show="!sidebarOpen || isExpanded('operacional')" x-transition class="space-y-0.5 pl-3 border-l border-white/10 ml-3.5">
+    <div x-show="sidebarOpen && isExpanded('operacional')" x-transition class="space-y-0.5">
     <a href="{{ url_for('dispatch.index') }}"
        class="{{ sl_active if request.blueprint == 'dispatch' else sl }}">
       <i class="fa-solid fa-tower-broadcast w-5 text-center shrink-0"></i>
@@ -182,15 +175,12 @@
 
     <!-- FINANCEIRO -->
     {% if has_any_perm('financial.view','reports.view') %}
-    <div x-show="!sidebarOpen" class="flex justify-center py-1.5 mt-4">
-      <div class="w-5 h-px bg-slate-600"></div>
-    </div>
-    <button @click="toggleMenu('financeiro')" x-show="sidebarOpen"
+    <button @click="toggleMenu('financeiro')"
             class="flex items-center gap-2 w-full text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mt-5 mb-1 hover:text-slate-200 transition-colors">
       <i :class="isExpanded('financeiro') ? 'fa-chevron-down' : 'fa-chevron-right'" class="fa-solid text-[10px] w-3"></i>
       <span x-show="sidebarOpen" x-transition>Financeiro</span>
     </button>
-    <div x-show="!sidebarOpen || isExpanded('financeiro')" x-transition class="space-y-0.5 pl-3 border-l border-white/10 ml-3.5">
+    <div x-show="sidebarOpen && isExpanded('financeiro')" x-transition class="space-y-0.5">
     {% if has_perm('financial.view') %}
     <a href="{{ url_for('financial.payables') }}"
        class="{{ sl_active if request.endpoint == 'financial.payables' else sl }}">
@@ -230,15 +220,12 @@
 
     <!-- CONFIGURAÇÕES -->
     {% if has_perm('settings.manage') %}
-    <div x-show="!sidebarOpen" class="flex justify-center py-1.5 mt-4">
-      <div class="w-5 h-px bg-slate-600"></div>
-    </div>
-    <button @click="toggleMenu('config')" x-show="sidebarOpen"
+    <button @click="toggleMenu('config')"
             class="flex items-center gap-2 w-full text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mt-5 mb-1 hover:text-slate-200 transition-colors">
       <i :class="isExpanded('config') ? 'fa-chevron-down' : 'fa-chevron-right'" class="fa-solid text-[10px] w-3"></i>
       <span x-show="sidebarOpen" x-transition>Configurações</span>
     </button>
-    <div x-show="!sidebarOpen || isExpanded('config')" x-transition class="space-y-0.5 pl-3 border-l border-white/10 ml-3.5">
+    <div x-show="sidebarOpen && isExpanded('config')" x-transition class="space-y-0.5">
     <a href="{{ url_for('dashboard.settings') }}"
        class="{{ sl_active if request.endpoint == 'dashboard.settings' else sl }}">
       <i class="fa-solid fa-gear w-5 text-center shrink-0"></i>
@@ -249,15 +236,12 @@
 
     <!-- ADMINISTRAÇÃO -->
     {% if has_any_perm('users.manage', 'roles.manage', 'audit.view') %}
-    <div x-show="!sidebarOpen" class="flex justify-center py-1.5 mt-4">
-      <div class="w-5 h-px bg-slate-600"></div>
-    </div>
-    <button @click="toggleMenu('admin')" x-show="sidebarOpen"
+    <button @click="toggleMenu('admin')"
             class="flex items-center gap-2 w-full text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mt-5 mb-1 hover:text-slate-200 transition-colors">
       <i :class="isExpanded('admin') ? 'fa-chevron-down' : 'fa-chevron-right'" class="fa-solid text-[10px] w-3"></i>
       <span x-show="sidebarOpen" x-transition>Administração</span>
     </button>
-    <div x-show="!sidebarOpen || isExpanded('admin')" x-transition class="space-y-0.5 pl-3 border-l border-white/10 ml-3.5">
+    <div x-show="sidebarOpen && isExpanded('admin')" x-transition class="space-y-0.5">
     {% if has_perm('users.manage') %}
     <a href="{{ url_for('users.index') }}"
        class="{{ sl_active if request.blueprint == 'users' else sl }}">
