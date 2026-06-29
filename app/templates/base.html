@@ -62,7 +62,6 @@
        @click="activeModule=null; localStorage.setItem('activeModule','')">
       <i class="fa-solid fa-gauge-high text-lg"></i>
       <span class="text-[9px] text-slate-500 font-light mt-1 leading-none">Dashboard</span>
-      <span class="absolute left-full ml-3 px-2.5 py-1 bg-slate-800 text-white text-xs rounded-lg font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-lg">Dashboard</span>
     </button>
 
     {% if has_any_perm('quote.view','so.view','po.view') %}
@@ -70,7 +69,6 @@
             class="{{ pi_active if activeModule=='comercial' else pi }}">
       <i class="fa-solid fa-briefcase text-lg"></i>
       <span class="text-[9px] text-slate-500 font-light mt-1 leading-none">Comercial</span>
-      <span class="absolute left-full ml-3 px-2.5 py-1 bg-slate-800 text-white text-xs rounded-lg font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-lg">Comercial</span>
     </button>
     {% endif %}
 
@@ -79,7 +77,6 @@
             class="{{ pi_active if activeModule=='catalogo' else pi }}">
       <i class="fa-solid fa-book text-lg"></i>
       <span class="text-[9px] text-slate-500 font-light mt-1 leading-none">Catálogo</span>
-      <span class="absolute left-full ml-3 px-2.5 py-1 bg-slate-800 text-white text-xs rounded-lg font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-lg">Catálogo</span>
     </button>
     {% endif %}
 
@@ -88,7 +85,6 @@
             class="{{ pi_active if activeModule=='operacional' else pi }}">
       <i class="fa-solid fa-tower-broadcast text-lg"></i>
       <span class="text-[9px] text-slate-500 font-light mt-1 leading-none">Operac.</span>
-      <span class="absolute left-full ml-3 px-2.5 py-1 bg-slate-800 text-white text-xs rounded-lg font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-lg">Operacional</span>
     </button>
     {% endif %}
 
@@ -97,7 +93,6 @@
             class="{{ pi_active if activeModule=='financeiro' else pi }}">
       <i class="fa-solid fa-coins text-lg"></i>
       <span class="text-[9px] text-slate-500 font-light mt-1 leading-none">Financeiro</span>
-      <span class="absolute left-full ml-3 px-2.5 py-1 bg-slate-800 text-white text-xs rounded-lg font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-lg">Financeiro</span>
     </button>
     {% endif %}
 
@@ -106,7 +101,6 @@
             class="{{ pi_active if activeModule=='config' else pi }}">
       <i class="fa-solid fa-gear text-lg"></i>
       <span class="text-[9px] text-slate-500 font-light mt-1 leading-none">Config.</span>
-      <span class="absolute left-full ml-3 px-2.5 py-1 bg-slate-800 text-white text-xs rounded-lg font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-lg">Configurações</span>
     </button>
     {% endif %}
 
