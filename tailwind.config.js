@@ -9,6 +9,7 @@ module.exports = {
     {
       pattern: /(bg|text|border|hover:bg|hover:border|dark:bg|dark:text|dark:border)-(slate|blue|green|amber|red|emerald|sky|violet|cyan|teal|orange|yellow|rose|fuchsia|purple|indigo|lime|pink)-(50|100|200|300|400|500|600|700|800|900)(\/(10|20|30|50))?/,
     },
+    'ml-[72px]', 'lg:ml-[312px]', 'w-[72px]', 'w-60', 'left-[72px]',
   ],
   theme: {
     extend: {
