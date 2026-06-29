@@ -64,205 +64,168 @@
   </div>
 
   <!-- Nav -->
-  <nav class="flex-1 py-4 px-2 overflow-y-auto space-y-0.5">
-    {% set sl = "flex items-center gap-3 px-3 py-2 rounded-lg text-slate-100 hover:bg-slate-700 hover:text-white transition-colors text-sm w-full" %}
-    {% set sl_active = "flex items-center gap-3 px-3 py-2 rounded-lg bg-blue-600 text-white text-sm w-full" %}
+  <nav class="flex-1 py-4 px-2.5 overflow-y-auto space-y-0.5">
+    {% set sl = "flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-200 hover:bg-white/8 hover:text-white transition-all duration-200 text-[13px] w-full font-medium group" %}
+    {% set sl_active = "flex items-center gap-3 px-3 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md shadow-blue-500/20 text-[13px] w-full font-semibold" %}
 
-    <a href="{{ url_for('dashboard.index') }}"
+    <a href="{{ url_for('dashboard.index') }}" title="Dashboard"
        class="{{ sl_active if request.endpoint == 'dashboard.index' else sl }}">
-      <i class="fa-solid fa-gauge-high w-5 text-center shrink-0"></i>
+      <i class="fa-solid fa-gauge-high w-5 text-center shrink-0 opacity-70 group-hover:opacity-100 transition-opacity"></i>
       <span x-show="sidebarOpen" x-transition class="truncate">Dashboard</span>
     </a>
 
     <!-- COMERCIAL (1º) -->
     {% if has_any_perm('quote.view','so.view','po.view') %}
-    <button @click="toggleMenu('comercial')"
-            class="flex items-center gap-2 w-full text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mt-5 mb-1 hover:text-slate-200 transition-colors">
-      <i :class="isExpanded('comercial') ? 'fa-chevron-down' : 'fa-chevron-right'" class="fa-solid text-[10px] w-3"></i>
-      <span x-show="sidebarOpen" x-transition>Comercial</span>
-    </button>
-    <div x-show="sidebarOpen && isExpanded('comercial')" x-transition class="space-y-0.5">
+    <div class="mt-4 pt-3 border-t border-white/5">
+      <button @click="toggleMenu('comercial')"
+              class="flex items-center gap-2 w-full text-[11px] font-semibold text-slate-400 uppercase tracking-widest px-3 mb-1.5 hover:text-amber-400 transition-colors">
+        <i :class="isExpanded('comercial') ? 'fa-chevron-down' : 'fa-chevron-right'" class="fa-solid text-[9px] w-2.5 text-amber-500/60 shrink-0"></i>
+        <span x-show="sidebarOpen" x-transition>Comercial</span>
+        <span x-show="!sidebarOpen" class="block w-full h-px bg-white/5 ml-1"></span>
+      </button>
+      <div x-show="sidebarOpen && isExpanded('comercial')" x-transition class="space-y-0.5 pl-1">
     {% if has_perm('quote.view') %}
-    <a href="{{ url_for('quotes.index') }}"
+    <a href="{{ url_for('quotes.index') }}" title="Quote (RFQ)"
        class="{{ sl_active if request.blueprint == 'quotes' else sl }}">
-      <i class="fa-solid fa-file-invoice-dollar w-5 text-center shrink-0"></i>
-      <span class="truncate">Quote (RFQ)</span>
-    </a>
-    {% endif %}
+      <i class="fa-solid fa-file-invoice-dollar w-4 text-center shrink-0 opacity-70"></i><span class="truncate">Quote (RFQ)</span>
+    </a>{% endif %}
     {% if has_perm('so.view') %}
-    <a href="{{ url_for('orders.index') }}"
+    <a href="{{ url_for('orders.index') }}" title="Sales Orders"
        class="{{ sl_active if request.blueprint == 'orders' else sl }}">
-      <i class="fa-solid fa-bag-shopping w-5 text-center shrink-0"></i>
-      <span class="truncate">Sales Orders (SO)</span>
-    </a>
-    {% endif %}
+      <i class="fa-solid fa-bag-shopping w-4 text-center shrink-0 opacity-70"></i><span class="truncate">Sales Orders (SO)</span>
+    </a>{% endif %}
     {% if has_perm('po.view') %}
-    <a href="{{ url_for('purchase_orders.index') }}"
+    <a href="{{ url_for('purchase_orders.index') }}" title="Purchase Orders"
        class="{{ sl_active if request.blueprint == 'purchase_orders' else sl }}">
-      <i class="fa-solid fa-cart-flatbed w-5 text-center shrink-0"></i>
-      <span class="truncate">Purchase Orders (PO)</span>
-    </a>
-    {% endif %}
-    </div>
-    {% endif %}
+      <i class="fa-solid fa-cart-flatbed w-4 text-center shrink-0 opacity-70"></i><span class="truncate">Purchase Orders (PO)</span>
+    </a>{% endif %}
+      </div>
+    </div>{% endif %}
 
     <!-- CATÁLOGO -->
     {% if has_any_perm('catalog.view','vehicles.view','clients.view','suppliers.view','drivers.view') %}
-    <button @click="toggleMenu('catalogo')"
-            class="flex items-center gap-2 w-full text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mt-5 mb-1 hover:text-slate-200 transition-colors">
-      <i :class="isExpanded('catalogo') ? 'fa-chevron-down' : 'fa-chevron-right'" class="fa-solid text-[10px] w-3"></i>
-      <span x-show="sidebarOpen" x-transition>Catálogo</span>
-    </button>
-    <div x-show="sidebarOpen && isExpanded('catalogo')" x-transition class="space-y-0.5">
+    <div class="mt-4 pt-3 border-t border-white/5">
+      <button @click="toggleMenu('catalogo')"
+              class="flex items-center gap-2 w-full text-[11px] font-semibold text-slate-400 uppercase tracking-widest px-3 mb-1.5 hover:text-amber-400 transition-colors">
+        <i :class="isExpanded('catalogo') ? 'fa-chevron-down' : 'fa-chevron-right'" class="fa-solid text-[9px] w-2.5 text-amber-500/60 shrink-0"></i>
+        <span x-show="sidebarOpen" x-transition>Catálogo</span>
+        <span x-show="!sidebarOpen" class="block w-full h-px bg-white/5 ml-1"></span>
+      </button>
+      <div x-show="sidebarOpen && isExpanded('catalogo')" x-transition class="space-y-0.5 pl-1">
     {% if has_perm('catalog.view') %}
-    <a href="{{ url_for('services.index') }}"
+    <a href="{{ url_for('services.index') }}" title="Serviços"
        class="{{ sl_active if request.blueprint == 'services' else sl }}">
-      <i class="fa-solid fa-list-check w-5 text-center shrink-0"></i>
-      <span class="truncate">Serviços</span>
-    </a>
-    <a href="{{ url_for('categories.index') }}"
+      <i class="fa-solid fa-list-check w-4 text-center shrink-0 opacity-70"></i><span class="truncate">Serviços</span></a>
+    <a href="{{ url_for('categories.index') }}" title="Categorias"
        class="{{ sl_active if request.blueprint == 'categories' else sl }}">
-      <i class="fa-solid fa-tags w-5 text-center shrink-0"></i>
-      <span class="truncate">Categorias</span>
-    </a>
-    {% endif %}
+      <i class="fa-solid fa-tags w-4 text-center shrink-0 opacity-70"></i><span class="truncate">Categorias</span></a>{% endif %}
     {% if has_perm('vehicles.view') %}
-    <a href="{{ url_for('vehicles.index') }}"
+    <a href="{{ url_for('vehicles.index') }}" title="Veículos"
        class="{{ sl_active if request.blueprint == 'vehicles' else sl }}">
-      <i class="fa-solid fa-car-side w-5 text-center shrink-0"></i>
-      <span class="truncate">Veículos</span>
-    </a>
-    {% endif %}
+      <i class="fa-solid fa-car-side w-4 text-center shrink-0 opacity-70"></i><span class="truncate">Veículos</span></a>{% endif %}
     {% if has_perm('clients.view') %}
-    <a href="{{ url_for('clients.index') }}"
+    <a href="{{ url_for('clients.index') }}" title="Clientes"
        class="{{ sl_active if request.blueprint == 'clients' else sl }}">
-      <i class="fa-solid fa-users w-5 text-center shrink-0"></i>
-      <span class="truncate">Clientes</span>
-    </a>
-    {% endif %}
+      <i class="fa-solid fa-users w-4 text-center shrink-0 opacity-70"></i><span class="truncate">Clientes</span></a>{% endif %}
     {% if has_perm('suppliers.view') %}
-    <a href="{{ url_for('suppliers.index') }}"
+    <a href="{{ url_for('suppliers.index') }}" title="Fornecedores"
        class="{{ sl_active if request.blueprint == 'suppliers' else sl }}">
-      <i class="fa-solid fa-handshake w-5 text-center shrink-0"></i>
-      <span class="truncate">Fornecedores</span>
-    </a>
-    {% endif %}
+      <i class="fa-solid fa-handshake w-4 text-center shrink-0 opacity-70"></i><span class="truncate">Fornecedores</span></a>{% endif %}
     {% if has_perm('drivers.view') %}
-    <a href="{{ url_for('drivers.index') }}"
+    <a href="{{ url_for('drivers.index') }}" title="Motoristas"
        class="{{ sl_active if request.blueprint == 'drivers' else sl }}">
-      <i class="fa-solid fa-id-card w-5 text-center shrink-0"></i>
-      <span class="truncate">Motoristas</span>
-    </a>
-    {% endif %}
-    </div>
-    {% endif %}
+      <i class="fa-solid fa-id-card w-4 text-center shrink-0 opacity-70"></i><span class="truncate">Motoristas</span></a>{% endif %}
+      </div>
+    </div>{% endif %}
 
     <!-- OPERACIONAL -->
     {% if has_perm('dispatch.view') %}
-    <button @click="toggleMenu('operacional')"
-            class="flex items-center gap-2 w-full text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mt-5 mb-1 hover:text-slate-200 transition-colors">
-      <i :class="isExpanded('operacional') ? 'fa-chevron-down' : 'fa-chevron-right'" class="fa-solid text-[10px] w-3"></i>
-      <span x-show="sidebarOpen" x-transition>Operacional</span>
-    </button>
-    <div x-show="sidebarOpen && isExpanded('operacional')" x-transition class="space-y-0.5">
-    <a href="{{ url_for('dispatch.index') }}"
+    <div class="mt-4 pt-3 border-t border-white/5">
+      <button @click="toggleMenu('operacional')"
+              class="flex items-center gap-2 w-full text-[11px] font-semibold text-slate-400 uppercase tracking-widest px-3 mb-1.5 hover:text-amber-400 transition-colors">
+        <i :class="isExpanded('operacional') ? 'fa-chevron-down' : 'fa-chevron-right'" class="fa-solid text-[9px] w-2.5 text-amber-500/60 shrink-0"></i>
+        <span x-show="sidebarOpen" x-transition>Operacional</span>
+        <span x-show="!sidebarOpen" class="block w-full h-px bg-white/5 ml-1"></span>
+      </button>
+      <div x-show="sidebarOpen && isExpanded('operacional')" x-transition class="space-y-0.5 pl-1">
+    <a href="{{ url_for('dispatch.index') }}" title="Centro de Despacho"
        class="{{ sl_active if request.blueprint == 'dispatch' else sl }}">
-      <i class="fa-solid fa-tower-broadcast w-5 text-center shrink-0"></i>
-      <span class="truncate">Centro de Despacho</span>
-    </a>
-    </div>
-    {% endif %}
+      <i class="fa-solid fa-tower-broadcast w-4 text-center shrink-0 opacity-70"></i><span class="truncate">Centro de Despacho</span></a>
+      </div>
+    </div>{% endif %}
 
     <!-- FINANCEIRO -->
     {% if has_any_perm('financial.view','reports.view') %}
-    <button @click="toggleMenu('financeiro')"
-            class="flex items-center gap-2 w-full text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mt-5 mb-1 hover:text-slate-200 transition-colors">
-      <i :class="isExpanded('financeiro') ? 'fa-chevron-down' : 'fa-chevron-right'" class="fa-solid text-[10px] w-3"></i>
-      <span x-show="sidebarOpen" x-transition>Financeiro</span>
-    </button>
-    <div x-show="sidebarOpen && isExpanded('financeiro')" x-transition class="space-y-0.5">
+    <div class="mt-4 pt-3 border-t border-white/5">
+      <button @click="toggleMenu('financeiro')"
+              class="flex items-center gap-2 w-full text-[11px] font-semibold text-slate-400 uppercase tracking-widest px-3 mb-1.5 hover:text-amber-400 transition-colors">
+        <i :class="isExpanded('financeiro') ? 'fa-chevron-down' : 'fa-chevron-right'" class="fa-solid text-[9px] w-2.5 text-amber-500/60 shrink-0"></i>
+        <span x-show="sidebarOpen" x-transition>Financeiro</span>
+        <span x-show="!sidebarOpen" class="block w-full h-px bg-white/5 ml-1"></span>
+      </button>
+      <div x-show="sidebarOpen && isExpanded('financeiro')" x-transition class="space-y-0.5 pl-1">
     {% if has_perm('financial.view') %}
-    <a href="{{ url_for('financial.payables') }}"
+    <a href="{{ url_for('financial.payables') }}" title="Contas a Pagar"
        class="{{ sl_active if request.endpoint == 'financial.payables' else sl }}">
-      <i class="fa-solid fa-file-invoice w-5 text-center shrink-0"></i>
-      <span class="truncate">Contas a Pagar</span>
-    </a>
-    <a href="{{ url_for('financial.index', type='revenue') }}"
+      <i class="fa-solid fa-file-invoice w-4 text-center shrink-0 opacity-70"></i><span class="truncate">Contas a Pagar</span></a>
+    <a href="{{ url_for('financial.index', type='revenue') }}" title="Contas a Receber"
        class="{{ sl_active if request.blueprint == 'financial' and request.args.get('type') == 'revenue' else sl }}">
-      <i class="fa-solid fa-hand-holding-dollar w-5 text-center shrink-0"></i>
-      <span class="truncate">Contas a Receber</span>
-    </a>
-    <a href="{{ url_for('financial.index', type='revenue') }}"
+      <i class="fa-solid fa-hand-holding-dollar w-4 text-center shrink-0 opacity-70"></i><span class="truncate">Contas a Receber</span></a>
+    <a href="{{ url_for('financial.index', type='revenue') }}" title="Receitas"
        class="{{ sl_active if request.blueprint == 'financial' and request.args.get('type') == 'revenue' else sl }}">
-      <i class="fa-solid fa-arrow-trend-up w-5 text-center shrink-0"></i>
-      <span class="truncate">Receitas</span>
-    </a>
-    <a href="{{ url_for('financial.index', type='cost') }}"
+      <i class="fa-solid fa-arrow-trend-up w-4 text-center shrink-0 opacity-70"></i><span class="truncate">Receitas</span></a>
+    <a href="{{ url_for('financial.index', type='cost') }}" title="Despesas"
        class="{{ sl_active if request.blueprint == 'financial' and request.args.get('type') == 'cost' else sl }}">
-      <i class="fa-solid fa-arrow-trend-down w-5 text-center shrink-0"></i>
-      <span class="truncate">Despesas</span>
-    </a>
-    <a href="{{ url_for('financial.index') }}"
+      <i class="fa-solid fa-arrow-trend-down w-4 text-center shrink-0 opacity-70"></i><span class="truncate">Despesas</span></a>
+    <a href="{{ url_for('financial.index') }}" title="Lançamentos"
        class="{{ sl_active if request.blueprint == 'financial' and not request.args.get('type') else sl }}">
-      <i class="fa-solid fa-coins w-5 text-center shrink-0"></i>
-      <span class="truncate">Todos os Lançamentos</span>
-    </a>
-    {% endif %}
+      <i class="fa-solid fa-coins w-4 text-center shrink-0 opacity-70"></i><span class="truncate">Todos os Lançamentos</span></a>{% endif %}
     {% if has_perm('reports.view') %}
-    <a href="{{ url_for('reports.index') }}"
+    <a href="{{ url_for('reports.index') }}" title="Relatórios"
        class="{{ sl_active if request.blueprint == 'reports' else sl }}">
-      <i class="fa-solid fa-chart-pie w-5 text-center shrink-0"></i>
-      <span class="truncate">Relatórios</span>
-    </a>
-    {% endif %}
-    </div>
-    {% endif %}
+      <i class="fa-solid fa-chart-pie w-4 text-center shrink-0 opacity-70"></i><span class="truncate">Relatórios</span></a>{% endif %}
+      </div>
+    </div>{% endif %}
 
     <!-- CONFIGURAÇÕES -->
     {% if has_perm('settings.manage') %}
-    <button @click="toggleMenu('config')"
-            class="flex items-center gap-2 w-full text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mt-5 mb-1 hover:text-slate-200 transition-colors">
-      <i :class="isExpanded('config') ? 'fa-chevron-down' : 'fa-chevron-right'" class="fa-solid text-[10px] w-3"></i>
-      <span x-show="sidebarOpen" x-transition>Configurações</span>
-    </button>
-    <div x-show="sidebarOpen && isExpanded('config')" x-transition class="space-y-0.5">
-    <a href="{{ url_for('dashboard.settings') }}"
+    <div class="mt-4 pt-3 border-t border-white/5">
+      <button @click="toggleMenu('config')"
+              class="flex items-center gap-2 w-full text-[11px] font-semibold text-slate-400 uppercase tracking-widest px-3 mb-1.5 hover:text-amber-400 transition-colors">
+        <i :class="isExpanded('config') ? 'fa-chevron-down' : 'fa-chevron-right'" class="fa-solid text-[9px] w-2.5 text-amber-500/60 shrink-0"></i>
+        <span x-show="sidebarOpen" x-transition>Configurações</span>
+        <span x-show="!sidebarOpen" class="block w-full h-px bg-white/5 ml-1"></span>
+      </button>
+      <div x-show="sidebarOpen && isExpanded('config')" x-transition class="space-y-0.5 pl-1">
+    <a href="{{ url_for('dashboard.settings') }}" title="Empresa"
        class="{{ sl_active if request.endpoint == 'dashboard.settings' else sl }}">
-      <i class="fa-solid fa-gear w-5 text-center shrink-0"></i>
-      <span class="truncate">Empresa</span>
-    </a>
-    </div>
-    {% endif %}
+      <i class="fa-solid fa-gear w-4 text-center shrink-0 opacity-70"></i><span class="truncate">Empresa</span></a>
+      </div>
+    </div>{% endif %}
 
     <!-- ADMINISTRAÇÃO -->
-    {% if has_any_perm('users.manage', 'roles.manage', 'audit.view') %}
-    <button @click="toggleMenu('admin')"
-            class="flex items-center gap-2 w-full text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mt-5 mb-1 hover:text-slate-200 transition-colors">
-      <i :class="isExpanded('admin') ? 'fa-chevron-down' : 'fa-chevron-right'" class="fa-solid text-[10px] w-3"></i>
-      <span x-show="sidebarOpen" x-transition>Administração</span>
-    </button>
-    <div x-show="sidebarOpen && isExpanded('admin')" x-transition class="space-y-0.5">
+    {% if has_any_perm('users.manage','roles.manage','audit.view') %}
+    <div class="mt-4 pt-3 border-t border-white/5">
+      <button @click="toggleMenu('admin')"
+              class="flex items-center gap-2 w-full text-[11px] font-semibold text-slate-400 uppercase tracking-widest px-3 mb-1.5 hover:text-amber-400 transition-colors">
+        <i :class="isExpanded('admin') ? 'fa-chevron-down' : 'fa-chevron-right'" class="fa-solid text-[9px] w-2.5 text-amber-500/60 shrink-0"></i>
+        <span x-show="sidebarOpen" x-transition>Administração</span>
+        <span x-show="!sidebarOpen" class="block w-full h-px bg-white/5 ml-1"></span>
+      </button>
+      <div x-show="sidebarOpen && isExpanded('admin')" x-transition class="space-y-0.5 pl-1">
     {% if has_perm('users.manage') %}
-    <a href="{{ url_for('users.index') }}"
+    <a href="{{ url_for('users.index') }}" title="Usuários"
        class="{{ sl_active if request.blueprint == 'users' else sl }}">
-      <i class="fa-solid fa-users-gear w-5 text-center shrink-0"></i>
-      <span class="truncate">Usuários</span>
-    </a>
-    <a href="{{ url_for('roles.index') }}"
+      <i class="fa-solid fa-users-gear w-4 text-center shrink-0 opacity-70"></i><span class="truncate">Usuários</span></a>
+    <a href="{{ url_for('roles.index') }}" title="Roles & Permissões"
        class="{{ sl_active if request.blueprint == 'roles' else sl }}">
-      <i class="fa-solid fa-shield-halved w-5 text-center shrink-0"></i>
-      <span class="truncate">Roles & Permissões</span>
-    </a>
-    {% endif %}
+      <i class="fa-solid fa-shield-halved w-4 text-center shrink-0 opacity-70"></i><span class="truncate">Roles & Permissões</span></a>{% endif %}
     {% if has_perm('audit.view') %}
-    <a href="{{ url_for('audit.index') }}"
+    <a href="{{ url_for('audit.index') }}" title="Auditoria"
        class="{{ sl_active if request.blueprint == 'audit' else sl }}">
-      <i class="fa-solid fa-clipboard-list w-5 text-center shrink-0"></i>
-      <span class="truncate">Auditoria</span>
-    </a>
-    {% endif %}
-    </div>
-    {% endif %}
+      <i class="fa-solid fa-clipboard-list w-4 text-center shrink-0 opacity-70"></i><span class="truncate">Auditoria</span></a>{% endif %}
+      </div>
+    </div>{% endif %}
   </nav>
 
   <!-- User strip -->
