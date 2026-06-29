@@ -39,7 +39,7 @@
 <body x-data="erp()" class="bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-slate-100 min-h-screen font-sans antialiased">
 
 <!-- ═══ Primary Sidebar — ícones apenas ─═══════════════════════════════════════ -->
-<aside class="fixed inset-y-0 left-0 z-50 w-[72px] bg-slate-900 flex flex-col shadow-xl shadow-black/20">
+<aside class="hidden lg:flex fixed inset-y-0 left-0 z-50 w-[72px] bg-slate-900 flex flex-col shadow-xl shadow-black/20">
 
   <!-- Logo -->
   <a href="/" class="h-14 flex items-center justify-center border-b border-white/5 shrink-0">
@@ -213,12 +213,15 @@
 </aside>
 
 <!-- ═══ Main ─══════════════════════════════════════════════════════════════════ -->
-<div class="ml-[72px] min-h-screen flex flex-col transition-all duration-200"
+<div class="ml-0 lg:ml-[72px] min-h-screen flex flex-col transition-all duration-200"
      :class="activeModule ? 'lg:ml-[312px]' : ''">
 
   <!-- Header -->
   <header class="py-3 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between gap-4 px-6 sticky top-0 z-40">
-    <div class="text-base font-semibold text-slate-700 dark:text-slate-200 min-w-0 flex-1 pl-4">
+    <button @click="mobileMenuOpen=true" class="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 shrink-0">
+      <i class="fa-solid fa-bars text-lg"></i>
+    </button>
+    <div class="text-base font-semibold text-slate-700 dark:text-slate-200 min-w-0 flex-1 pl-0 lg:pl-4">
       {% block page_title %}{% endblock %}
     </div>
     <div class="flex items-center gap-4 shrink-0">
@@ -265,21 +268,131 @@
 
 {% block modals %}{% endblock %}
 
+{# ═══ Mobile Drawer ─═══════════════════════════════════════════════════════════ #}
+<div x-show="mobileMenuOpen" x-cloak class="fixed inset-0 z-50 lg:hidden">
+  <div @click="closeMobileMenu()" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+  <div class="absolute inset-y-0 left-0 w-[85%] max-w-sm bg-slate-900 flex flex-col shadow-2xl"
+       x-transition:enter="transition ease-out duration-200" x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0">
+
+    <div class="h-14 flex items-center justify-between px-4 border-b border-white/5 shrink-0">
+      <span class="text-white text-sm font-semibold" x-text="mobileSubmenu ? {comercial:'Comercial',catalogo:'Catálogo',operacional:'Operacional',financeiro:'Financeiro',config:'Configurações'}[mobileSubmenu] : 'Menu'"></span>
+      <button @click="closeMobileMenu()" class="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-white/5">
+        <i class="fa-solid fa-xmark text-sm"></i>
+      </button>
+    </div>
+
+    <nav class="flex-1 py-4 px-4 overflow-y-auto space-y-2">
+      {% set dm = "flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors text-sm w-full font-medium" %}
+      {% set dm_active = "flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/10 text-white text-sm w-full font-semibold" %}
+
+      {# Main modules (mobileSubmenu === null) #}
+      <div x-show="!mobileSubmenu">
+        <a href="{{ url_for('dashboard.index') }}" @click="closeMobileMenu()" class="{{ dm_active if request.endpoint == 'dashboard.index' else dm }}">
+          <i class="fa-solid fa-gauge-high w-5 text-center"></i>Dashboard
+        </a>
+        {% if has_any_perm('quote.view','so.view','po.view') %}
+        <button @click="openMobileSub('comercial')" class="{{ dm }} w-full">
+          <i class="fa-solid fa-briefcase w-5 text-center"></i>Comercial
+          <i class="fa-solid fa-chevron-right ml-auto text-[10px] opacity-50"></i>
+        </button>{% endif %}
+        {% if has_any_perm('catalog.view','vehicles.view','clients.view','suppliers.view','drivers.view') %}
+        <button @click="openMobileSub('catalogo')" class="{{ dm }} w-full">
+          <i class="fa-solid fa-book w-5 text-center"></i>Catálogo
+          <i class="fa-solid fa-chevron-right ml-auto text-[10px] opacity-50"></i>
+        </button>{% endif %}
+        {% if has_perm('dispatch.view') %}
+        <button @click="openMobileSub('operacional')" class="{{ dm }} w-full">
+          <i class="fa-solid fa-tower-broadcast w-5 text-center"></i>Operacional
+          <i class="fa-solid fa-chevron-right ml-auto text-[10px] opacity-50"></i>
+        </button>{% endif %}
+        {% if has_any_perm('financial.view','reports.view') %}
+        <button @click="openMobileSub('financeiro')" class="{{ dm }} w-full">
+          <i class="fa-solid fa-coins w-5 text-center"></i>Financeiro
+          <i class="fa-solid fa-chevron-right ml-auto text-[10px] opacity-50"></i>
+        </button>{% endif %}
+        {% if has_perm('settings.manage') %}
+        <button @click="openMobileSub('config')" class="{{ dm }} w-full">
+          <i class="fa-solid fa-gear w-5 text-center"></i>Configurações
+          <i class="fa-solid fa-chevron-right ml-auto text-[10px] opacity-50"></i>
+        </button>{% endif %}
+      </div>
+
+      {# Sub-items (mobileSubmenu set) #}
+      <div x-show="mobileSubmenu === 'comercial'">
+        <button @click="closeMobileSub()" class="flex items-center gap-2 text-xs text-slate-400 mb-4 hover:text-white transition-colors">
+          <i class="fa-solid fa-arrow-left text-[10px]"></i> Voltar
+        </button>
+        {% if has_perm('quote.view') %}<a href="{{ url_for('quotes.index') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'quotes' else dm }}">📋 Quote (RFQ)</a>{% endif %}
+        {% if has_perm('so.view') %}<a href="{{ url_for('orders.index') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'orders' else dm }}">🛒 Sales Orders (SO)</a>{% endif %}
+        {% if has_perm('po.view') %}<a href="{{ url_for('purchase_orders.index') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'purchase_orders' else dm }}">📦 Purchase Orders (PO)</a>{% endif %}
+      </div>
+
+      <div x-show="mobileSubmenu === 'catalogo'">
+        <button @click="closeMobileSub()" class="flex items-center gap-2 text-xs text-slate-400 mb-4 hover:text-white transition-colors">
+          <i class="fa-solid fa-arrow-left text-[10px]"></i> Voltar
+        </button>
+        {% if has_perm('catalog.view') %}<a href="{{ url_for('services.index') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'services' else dm }}">Serviços</a>
+        <a href="{{ url_for('categories.index') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'categories' else dm }}">Categorias</a>{% endif %}
+        {% if has_perm('vehicles.view') %}<a href="{{ url_for('vehicles.index') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'vehicles' else dm }}">Veículos</a>{% endif %}
+        {% if has_perm('clients.view') %}<a href="{{ url_for('clients.index') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'clients' else dm }}">Clientes</a>{% endif %}
+        {% if has_perm('suppliers.view') %}<a href="{{ url_for('suppliers.index') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'suppliers' else dm }}">Fornecedores</a>{% endif %}
+        {% if has_perm('drivers.view') %}<a href="{{ url_for('drivers.index') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'drivers' else dm }}">Motoristas</a>{% endif %}
+      </div>
+
+      <div x-show="mobileSubmenu === 'operacional'">
+        <button @click="closeMobileSub()" class="flex items-center gap-2 text-xs text-slate-400 mb-4 hover:text-white transition-colors">
+          <i class="fa-solid fa-arrow-left text-[10px]"></i> Voltar
+        </button>
+        <a href="{{ url_for('dispatch.index') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'dispatch' else dm }}">Centro de Despacho</a>
+      </div>
+
+      <div x-show="mobileSubmenu === 'financeiro'">
+        <button @click="closeMobileSub()" class="flex items-center gap-2 text-xs text-slate-400 mb-4 hover:text-white transition-colors">
+          <i class="fa-solid fa-arrow-left text-[10px]"></i> Voltar
+        </button>
+        {% if has_perm('financial.view') %}
+        <a href="{{ url_for('financial.payables') }}" @click="closeMobileMenu()" class="{{ dm_active if request.endpoint == 'financial.payables' else dm }}">Contas a Pagar</a>
+        <a href="{{ url_for('financial.index', type='revenue') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'financial' and request.args.get('type') == 'revenue' else dm }}">Contas a Receber</a>
+        <a href="{{ url_for('financial.index', type='revenue') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'financial' and request.args.get('type') == 'revenue' else dm }}">Receitas</a>
+        <a href="{{ url_for('financial.index', type='cost') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'financial' and request.args.get('type') == 'cost' else dm }}">Despesas</a>
+        <a href="{{ url_for('financial.index') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'financial' and not request.args.get('type') else dm }}">Lançamentos</a>{% endif %}
+        {% if has_perm('reports.view') %}<a href="{{ url_for('reports.index') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'reports' else dm }}">Relatórios</a>{% endif %}
+      </div>
+
+      <div x-show="mobileSubmenu === 'config'">
+        <button @click="closeMobileSub()" class="flex items-center gap-2 text-xs text-slate-400 mb-4 hover:text-white transition-colors">
+          <i class="fa-solid fa-arrow-left text-[10px]"></i> Voltar
+        </button>
+        {% if has_perm('settings.manage') %}<a href="{{ url_for('dashboard.settings') }}" @click="closeMobileMenu()" class="{{ dm_active if request.endpoint == 'dashboard.settings' else dm }}">Empresa</a>{% endif %}
+        {% if has_perm('users.manage') %}<a href="{{ url_for('users.index') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'users' else dm }}">Usuários</a>
+        <a href="{{ url_for('roles.index') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'roles' else dm }}">Roles & Permissões</a>{% endif %}
+        {% if has_perm('audit.view') %}<a href="{{ url_for('audit.index') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'audit' else dm }}">Auditoria</a>{% endif %}
+      </div>
+    </nav>
+  </div>
+</div>
+
 <script>
 /* ── Sidebar state + expandable menus (Alpine) ── */
 function erp() {
   return {
     activeModule: (function() {
       var saved = localStorage.getItem('activeModule');
-      // Dashboard nunca deve mostrar secondary sidebar
       if (window.location.pathname === '/' || window.location.pathname === '/dashboard/') return null;
       return saved || null;
     })(),
+    mobileMenuOpen: false,
+    mobileSubmenu: null,
 
     selectModule(key) {
       this.activeModule = (this.activeModule === key) ? null : key;
       localStorage.setItem('activeModule', this.activeModule || '');
-    }
+      this.mobileSubmenu = key;
+    },
+
+    openMobileSub(key) { this.mobileSubmenu = key; },
+    closeMobileSub() { this.mobileSubmenu = null; },
+    closeMobileMenu() { this.mobileMenuOpen = false; this.mobileSubmenu = null; }
   }
 }
 
