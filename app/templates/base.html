@@ -65,7 +65,7 @@
     </button>
 
     {% if has_any_perm('quote.view','so.view','po.view') %}
-    <button @click="selectModule('comercial')" title="Comercial"
+    <button @click="selectModule('comercial')"
             class="{{ pi_active if activeModule=='comercial' else pi }}">
       <i class="fa-solid fa-briefcase text-lg"></i>
       <span class="text-[9px] text-slate-500 font-light mt-1 leading-none">Comercial</span>
@@ -73,7 +73,7 @@
     {% endif %}
 
     {% if has_any_perm('catalog.view','vehicles.view','clients.view','suppliers.view','drivers.view') %}
-    <button @click="selectModule('catalogo')" title="Catálogo"
+    <button @click="selectModule('catalogo')"
             class="{{ pi_active if activeModule=='catalogo' else pi }}">
       <i class="fa-solid fa-book text-lg"></i>
       <span class="text-[9px] text-slate-500 font-light mt-1 leading-none">Catálogo</span>
@@ -81,7 +81,7 @@
     {% endif %}
 
     {% if has_perm('dispatch.view') %}
-    <button @click="selectModule('operacional')" title="Operacional"
+    <button @click="selectModule('operacional')"
             class="{{ pi_active if activeModule=='operacional' else pi }}">
       <i class="fa-solid fa-tower-broadcast text-lg"></i>
       <span class="text-[9px] text-slate-500 font-light mt-1 leading-none">Operac.</span>
@@ -89,7 +89,7 @@
     {% endif %}
 
     {% if has_any_perm('financial.view','reports.view') %}
-    <button @click="selectModule('financeiro')" title="Financeiro"
+    <button @click="selectModule('financeiro')"
             class="{{ pi_active if activeModule=='financeiro' else pi }}">
       <i class="fa-solid fa-coins text-lg"></i>
       <span class="text-[9px] text-slate-500 font-light mt-1 leading-none">Financeiro</span>
@@ -97,7 +97,7 @@
     {% endif %}
 
     {% if has_perm('settings.manage') %}
-    <button @click="selectModule('config')" title="Configurações"
+    <button @click="selectModule('config')"
             class="{{ pi_active if activeModule=='config' else pi }}">
       <i class="fa-solid fa-gear text-lg"></i>
       <span class="text-[9px] text-slate-500 font-light mt-1 leading-none">Config.</span>
@@ -108,7 +108,7 @@
 
   <!-- User -->
   <div class="p-3 border-t border-white/5 flex justify-center">
-    <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold" title="{{ current_user.name }}">
+    <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
       {{ current_user.name[0]|upper if current_user.is_authenticated else '?' }}
     </div>
   </div>
@@ -216,10 +216,10 @@
       {% block page_title %}{% endblock %}
     </div>
     <div class="flex items-center gap-4 shrink-0">
-      <button id="darkToggle" title="Alternar Dark / Light" class="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white transition-colors">
+      <button id="darkToggle" class="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white transition-colors">
         <i id="darkIcon" class="fa-solid fa-moon text-lg"></i>
       </button>
-      <a href="{{ url_for('auth.change_password') }}" class="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white text-sm flex items-center gap-1" title="Trocar senha">
+      <a href="{{ url_for('auth.change_password') }}" class="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white text-sm flex items-center gap-1">
         <i class="fa-solid fa-key"></i>
         <span class="hidden sm:inline">Senha</span>
       </a>
