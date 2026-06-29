@@ -54,8 +54,8 @@
 
   <!-- Primary Nav -->
   <nav class="flex-1 py-3 flex flex-col items-center gap-1.5">
-    {% set pi = "relative w-12 py-2 flex flex-col items-center justify-center rounded-xl text-slate-500 hover:text-white hover:bg-white/5 transition-all duration-200 group gap-0.5" %}
-    {% set pi_active = "relative w-12 py-2 flex flex-col items-center justify-center rounded-xl bg-white/10 text-white ring-1 ring-white/20 gap-0.5" %}
+    {% set pi = "relative w-12 py-2 flex flex-col items-center justify-center rounded-xl text-slate-500 hover:text-white hover:bg-white/5 transition-all duration-200 group gap-0.5 border-0 outline-none" %}
+    {% set pi_active = "relative w-12 py-2 flex flex-col items-center justify-center rounded-xl bg-white/10 text-white ring-1 ring-white/20 gap-0.5 border-0 outline-none" %}
 
     <a href="{{ url_for('dashboard.index') }}"
        @click="activeModule=null; localStorage.setItem('activeModule','')"
@@ -121,7 +121,7 @@
 </aside>
 
 <!-- ═══ Secondary Sidebar — subitens do módulo ativo ─═════════════════════════ -->
-<aside x-show="activeModule" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="-translate-x-4 opacity-0" x-transition:enter-end="translate-x-0 opacity-100"
+<aside x-show="activeModule" x-cloak x-transition:enter="transition ease-out duration-200" x-transition:enter-start="-translate-x-4 opacity-0" x-transition:enter-end="translate-x-0 opacity-100"
        class="fixed inset-y-0 left-[72px] z-40 w-60 bg-slate-800 border-r border-white/5 flex flex-col shadow-xl shadow-black/10">
 
   <div class="h-14 flex items-center px-4 border-b border-white/5 shrink-0">
