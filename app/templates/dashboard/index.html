@@ -2,37 +2,45 @@
 {% block title %}Dashboard Executivo{% endblock %}
 
 {% block page_title %}
-  <i class="fa-solid fa-gauge-high mr-2 text-blue-500"></i>Painel Executivo
-  <span class="ml-3 text-xs text-slate-400 font-normal hidden sm:inline">
+<div class="flex flex-wrap items-center gap-2 w-full">
+  <span class="font-bold text-slate-800 dark:text-white text-lg tracking-tight">
+    <i class="fa-solid fa-gauge-high mr-2 text-blue-500"></i>Painel Executivo
+  </span>
+  <span class="text-xs text-slate-400 font-normal hidden sm:inline">
     <i class="fa-regular fa-clock mr-1"></i>
     <span x-data="{t:''}" x-init="setInterval(()=>{t=new Date().toLocaleTimeString('pt-BR')},1000)" x-text="t"></span>
   </span>
-{% endblock %}
 
-{% block content %}
-{# ── Period selector + Title row ──────────────────────────────────────────── #}
-<div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-  <p class="text-xs text-slate-500 dark:text-slate-400">
-    Período:
-    <strong class="text-slate-700 dark:text-slate-200">
-      {% if period == 'last_month' %}Mês Anterior
-      {% elif period == 'last_30' %}Últimos 30 dias
-      {% elif period == 'quarter' %}Trimestre
-      {% elif period == 'ytd' %}Este Ano
-      {% else %}Este Mês{% endif %}
-    </strong>
-    <span class="text-slate-400">({{ p_start.strftime('%d/%m/%Y') }} – {{ p_end.strftime('%d/%m/%Y') }})</span>
-  </p>
-  <div class="flex items-center gap-2">
+  {# Period pills #}
+  <div class="flex items-center gap-1 ml-4">
     {% for val, label in [('this_month','Este Mês'),('last_month','Mês Anterior'),('last_30','Últimos 30d'),('quarter','Trimestre'),('ytd','Este Ano')] %}
     <a href="?period={{ val }}"
-       class="text-xs px-3 py-1.5 rounded-lg border transition-colors
+       class="text-xs px-2.5 py-1 rounded-lg border transition-colors
               {% if period == val %}bg-blue-600 text-white border-blue-600{% else %}bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-blue-400{% endif %}">
       {{ label }}
     </a>
     {% endfor %}
   </div>
+
+  {# Quick actions #}
+  <div class="flex items-center gap-1.5 ml-auto">
+    <a href="{{ url_for('quotes.new') }}" class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white transition-colors">
+      <i class="fa-solid fa-plus text-[10px]"></i>Orçamento
+    </a>
+    <a href="{{ url_for('purchase_orders.new') }}" class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 bg-rose-600 hover:bg-rose-700 text-white transition-colors">
+      <i class="fa-solid fa-plus text-[10px]"></i>Nova PO
+    </a>
+    <a href="{{ url_for('dispatch.index') }}" class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 bg-cyan-600 hover:bg-cyan-700 text-white transition-colors">
+      <i class="fa-solid fa-tower-broadcast text-[10px]"></i>Dispatch
+    </a>
+    <a href="{{ url_for('financial.index') }}" class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white transition-colors">
+      <i class="fa-solid fa-coins text-[10px]"></i>Financeiro
+    </a>
+  </div>
 </div>
+{% endblock %}
+
+{% block content %}
 
 {# ── ROW A — Executive KPI Band ───────────────────────────────────────────── #}
 <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-5">
@@ -445,29 +453,6 @@
 {% else %}
 <div class="mb-20"></div>
 {% endif %}
-
-{# ── Quick Actions Bar (sticky bottom) ───────────────────────────────────── #}
-<div class="fixed bottom-0 left-0 right-0 z-30 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 shadow-lg">
-  <div class="max-w-screen-xl mx-auto px-4 py-2 flex items-center justify-end gap-3">
-    <span class="text-xs text-slate-400 mr-auto hidden sm:block">Ações rápidas</span>
-    <a href="{{ url_for('quotes.new') }}"
-       class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition-colors">
-      <i class="fa-solid fa-plus text-xs"></i><span class="hidden sm:inline">Orçamento</span>
-    </a>
-    <a href="{{ url_for('purchase_orders.new') }}"
-       class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-colors">
-      <i class="fa-solid fa-plus text-xs"></i><span class="hidden sm:inline">Nova PO</span>
-    </a>
-    <a href="{{ url_for('dispatch.index') }}"
-       class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors">
-      <i class="fa-solid fa-tower-broadcast text-xs"></i><span class="hidden sm:inline">Dispatch</span>
-    </a>
-    <a href="{{ url_for('financial.index') }}"
-       class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors">
-      <i class="fa-solid fa-coins text-xs"></i><span class="hidden sm:inline">Financeiro</span>
-    </a>
-  </div>
-</div>
 
 {# ── Chart.js ─────────────────────────────────────────────────────────────── #}
 <script src="{{ url_for('static', filename='vendor/chartjs.min.js') }}"></script>
