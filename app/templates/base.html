@@ -39,27 +39,28 @@
 <body x-data="erp()" class="bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-slate-100 min-h-screen font-sans antialiased">
 
 <!-- ─── Sidebar ───────────────────────────────────────────────────────────── -->
-<aside :class="sidebarOpen ? 'w-64' : 'w-16'"
-       class="fixed inset-y-0 left-0 z-50 bg-slate-800 flex flex-col transition-all duration-300 overflow-hidden">
+<aside :class="sidebarOpen ? 'w-60' : 'w-[68px]'"
+       class="fixed inset-y-0 left-0 z-50 bg-slate-900 flex flex-col transition-all duration-300 overflow-hidden shadow-2xl shadow-black/20">
 
   <!-- Logo -->
-  <div class="h-16 flex items-center justify-between px-4 border-b border-slate-700 shrink-0">
-    <a href="/" class="flex items-center gap-2 min-w-0">
+  <div class="h-16 flex items-center justify-between px-4 border-b border-white/8 shrink-0">
+    <a href="/" class="flex items-center gap-3 min-w-0">
       {% if current_company and current_company.logo_url %}
       <img src="{{ current_company.logo_url }}" alt="Logo"
-           class="w-8 h-8 object-contain rounded shrink-0">
+           class="w-9 h-9 object-contain rounded-xl shrink-0">
       {% else %}
-      <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shrink-0">
-        <i class="fa-solid fa-car text-white text-sm"></i>
+      <div class="w-9 h-9 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/20">
+        <i class="fa-solid fa-car text-white text-xs"></i>
       </div>
       {% endif %}
-      <span x-show="sidebarOpen" x-transition class="text-white font-bold text-sm truncate">
+      <span x-show="sidebarOpen" x-transition class="text-white font-semibold text-sm truncate tracking-tight">
         {{ current_company.name if current_company else 'ExecFlow ERP v3' }}
       </span>
     </a>
     <button @click="sidebarOpen = !sidebarOpen; localStorage.setItem('sidebarOpen', sidebarOpen)"
-            class="text-slate-400 hover:text-white p-1 shrink-0">
-      <i :class="sidebarOpen ? 'fa-angles-left' : 'fa-angles-right'" class="fa-solid text-sm"></i>
+            class="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all shrink-0"
+            title="Recolher menu">
+      <i :class="sidebarOpen ? 'fa-angles-left' : 'fa-angles-right'" class="fa-solid text-[11px]"></i>
     </button>
   </div>
 
@@ -229,14 +230,14 @@
   </nav>
 
   <!-- User strip -->
-  <div class="border-t border-slate-700 p-3 shrink-0">
+  <div class="border-t border-white/8 p-3 shrink-0">
     <div class="flex items-center gap-3">
-      <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0">
+      <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 shadow">
         {{ current_user.name[0]|upper if current_user.is_authenticated else '?' }}
       </div>
       <div x-show="sidebarOpen" x-transition class="min-w-0">
-        <p class="text-white text-xs font-medium truncate">{{ current_user.name if current_user.is_authenticated else '' }}</p>
-        <p class="text-slate-400 text-xs truncate">{{ current_user.role if current_user.is_authenticated else '' }}</p>
+        <p class="text-white text-[13px] font-semibold truncate">{{ current_user.name if current_user.is_authenticated else '' }}</p>
+        <p class="text-slate-400 text-[11px] truncate">{{ current_user.role if current_user.is_authenticated else '' }}</p>
       </div>
     </div>
   </div>
