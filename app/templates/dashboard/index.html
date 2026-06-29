@@ -2,33 +2,16 @@
 {% block title %}Dashboard Executivo{% endblock %}
 
 {% block page_title %}
-<div class="flex flex-col gap-2 w-full">
-  {# Row 1: Title + Quick actions #}
-  <div class="flex flex-wrap items-center gap-2">
-    <span class="font-bold text-slate-800 dark:text-white text-lg tracking-tight">
-      <i class="fa-solid fa-gauge-high mr-2 text-blue-500"></i>Painel Executivo
-    </span>
-    <span class="text-xs text-slate-400 font-normal hidden sm:inline">
-      <i class="fa-regular fa-clock mr-1"></i>
-      <span x-data="{t:''}" x-init="setInterval(()=>{t=new Date().toLocaleTimeString('pt-BR')},1000)" x-text="t"></span>
-    </span>
+<div class="flex flex-wrap items-center gap-2 w-full">
+  <span class="font-bold text-slate-800 dark:text-white text-lg tracking-tight">
+    <i class="fa-solid fa-gauge-high mr-2 text-blue-500"></i>Painel Executivo
+  </span>
+  <span class="text-xs text-slate-400 font-normal hidden sm:inline">
+    <i class="fa-regular fa-clock mr-1"></i>
+    <span x-data="{t:''}" x-init="setInterval(()=>{t=new Date().toLocaleTimeString('pt-BR')},1000)" x-text="t"></span>
+  </span>
 
-    <a href="{{ url_for('quotes.new') }}" class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white transition-colors">
-      <i class="fa-solid fa-plus text-[10px]"></i>Orçamento
-    </a>
-    <a href="{{ url_for('purchase_orders.new') }}" class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 bg-rose-600 hover:bg-rose-700 text-white transition-colors">
-      <i class="fa-solid fa-plus text-[10px]"></i>Nova PO
-    </a>
-    <a href="{{ url_for('dispatch.index') }}" class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 bg-cyan-600 hover:bg-cyan-700 text-white transition-colors">
-      <i class="fa-solid fa-tower-broadcast text-[10px]"></i>Dispatch
-    </a>
-    <a href="{{ url_for('financial.index') }}" class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white transition-colors">
-      <i class="fa-solid fa-coins text-[10px]"></i>Financeiro
-    </a>
-  </div>
-
-  {# Row 2: Period pills #}
-  <div class="flex items-center gap-1">
+  <div class="flex items-center gap-1 ml-4">
     {% for val, label in [('this_month','Este Mês'),('last_month','Mês Anterior'),('last_30','Últimos 30d'),('quarter','Trimestre'),('ytd','Este Ano')] %}
     <a href="?period={{ val }}"
        class="text-xs px-2.5 py-1 rounded-lg border transition-colors
