@@ -67,8 +67,8 @@
   <nav class="flex-1 py-3 px-3 overflow-y-auto space-y-1">
     {% set sl = "flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors text-[13px] w-full font-medium" %}
     {% set sl_active = "flex items-center gap-3 px-3 py-2 rounded-lg bg-white/10 text-white text-[13px] w-full font-semibold" %}
-    {% set sl_sub = "flex items-center gap-2 px-3 py-1.5 rounded-lg text-slate-500 hover:text-slate-300 transition-colors text-[12px] w-full font-normal" %}
-    {% set sl_sub_active = "flex items-center gap-2 px-3 py-1.5 rounded-lg text-white text-[12px] w-full font-medium" %}
+    {% set sl_sub = "flex items-center gap-3 px-3 py-2 rounded-lg text-slate-500 hover:text-slate-300 transition-colors text-[12px] w-full font-normal" %}
+    {% set sl_sub_active = "flex items-center gap-3 px-3 py-2 rounded-lg text-white text-[12px] w-full font-medium" %}
 
     <a href="{{ url_for('dashboard.index') }}" title="Dashboard"
        class="{{ sl_active if request.endpoint == 'dashboard.index' else sl }}">
@@ -88,19 +88,19 @@
     {% if has_perm('quote.view') %}
     <a href="{{ url_for('quotes.index') }}" title="Quote (RFQ)"
        class="{{ sl_sub_active if request.blueprint == 'quotes' else sl_sub }}">
-      <i class="fa-solid fa-file-invoice-dollar w-3.5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Quote (RFQ)</span>
+      <i class="fa-solid fa-file-invoice-dollar w-5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Quote (RFQ)</span>
     </a>
     {% endif %}
     {% if has_perm('so.view') %}
     <a href="{{ url_for('orders.index') }}" title="Sales Orders"
        class="{{ sl_sub_active if request.blueprint == 'orders' else sl_sub }}">
-      <i class="fa-solid fa-bag-shopping w-3.5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Sales Orders (SO)</span>
+      <i class="fa-solid fa-bag-shopping w-5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Sales Orders (SO)</span>
     </a>
     {% endif %}
     {% if has_perm('po.view') %}
     <a href="{{ url_for('purchase_orders.index') }}" title="Purchase Orders"
        class="{{ sl_sub_active if request.blueprint == 'purchase_orders' else sl_sub }}">
-      <i class="fa-solid fa-cart-flatbed w-3.5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Purchase Orders (PO)</span>
+      <i class="fa-solid fa-cart-flatbed w-5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Purchase Orders (PO)</span>
     </a>
     {% endif %}
     </div>
@@ -118,26 +118,26 @@
     {% if has_perm('catalog.view') %}
     <a href="{{ url_for('services.index') }}" title="Serviços"
        class="{{ sl_sub_active if request.blueprint == 'services' else sl_sub }}">
-      <i class="fa-solid fa-list-check w-3.5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Serviços</span></a>
+      <i class="fa-solid fa-list-check w-5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Serviços</span></a>
     <a href="{{ url_for('categories.index') }}" title="Categorias"
        class="{{ sl_sub_active if request.blueprint == 'categories' else sl_sub }}">
-      <i class="fa-solid fa-tags w-3.5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Categorias</span></a>{% endif %}
+      <i class="fa-solid fa-tags w-5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Categorias</span></a>{% endif %}
     {% if has_perm('vehicles.view') %}
     <a href="{{ url_for('vehicles.index') }}" title="Veículos"
        class="{{ sl_sub_active if request.blueprint == 'vehicles' else sl_sub }}">
-      <i class="fa-solid fa-car-side w-3.5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Veículos</span></a>{% endif %}
+      <i class="fa-solid fa-car-side w-5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Veículos</span></a>{% endif %}
     {% if has_perm('clients.view') %}
     <a href="{{ url_for('clients.index') }}" title="Clientes"
        class="{{ sl_sub_active if request.blueprint == 'clients' else sl_sub }}">
-      <i class="fa-solid fa-users w-3.5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Clientes</span></a>{% endif %}
+      <i class="fa-solid fa-users w-5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Clientes</span></a>{% endif %}
     {% if has_perm('suppliers.view') %}
     <a href="{{ url_for('suppliers.index') }}" title="Fornecedores"
        class="{{ sl_sub_active if request.blueprint == 'suppliers' else sl_sub }}">
-      <i class="fa-solid fa-handshake w-3.5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Fornecedores</span></a>{% endif %}
+      <i class="fa-solid fa-handshake w-5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Fornecedores</span></a>{% endif %}
     {% if has_perm('drivers.view') %}
     <a href="{{ url_for('drivers.index') }}" title="Motoristas"
        class="{{ sl_sub_active if request.blueprint == 'drivers' else sl_sub }}">
-      <i class="fa-solid fa-id-card w-3.5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Motoristas</span></a>{% endif %}
+      <i class="fa-solid fa-id-card w-5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Motoristas</span></a>{% endif %}
     </div>
     {% endif %}
 
@@ -152,7 +152,7 @@
     <div x-show="activeGroup === 'operacional'" x-transition class="space-y-1 pl-3 border-l border-white/10 ml-3.5">
     <a href="{{ url_for('dispatch.index') }}" title="Despacho"
        class="{{ sl_sub_active if request.blueprint == 'dispatch' else sl_sub }}">
-      <i class="fa-solid fa-tower-broadcast w-3.5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Centro de Despacho</span></a>
+      <i class="fa-solid fa-tower-broadcast w-5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Centro de Despacho</span></a>
     </div>
     {% endif %}
 
@@ -168,23 +168,23 @@
     {% if has_perm('financial.view') %}
     <a href="{{ url_for('financial.payables') }}" title="Contas a Pagar"
        class="{{ sl_sub_active if request.endpoint == 'financial.payables' else sl_sub }}">
-      <i class="fa-solid fa-file-invoice w-3.5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Contas a Pagar</span></a>
+      <i class="fa-solid fa-file-invoice w-5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Contas a Pagar</span></a>
     <a href="{{ url_for('financial.index', type='revenue') }}" title="Contas a Receber"
        class="{{ sl_sub_active if request.blueprint == 'financial' and request.args.get('type') == 'revenue' else sl_sub }}">
-      <i class="fa-solid fa-hand-holding-dollar w-3.5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Contas a Receber</span></a>
+      <i class="fa-solid fa-hand-holding-dollar w-5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Contas a Receber</span></a>
     <a href="{{ url_for('financial.index', type='revenue') }}" title="Receitas"
        class="{{ sl_sub_active if request.blueprint == 'financial' and request.args.get('type') == 'revenue' else sl_sub }}">
-      <i class="fa-solid fa-arrow-trend-up w-3.5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Receitas</span></a>
+      <i class="fa-solid fa-arrow-trend-up w-5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Receitas</span></a>
     <a href="{{ url_for('financial.index', type='cost') }}" title="Despesas"
        class="{{ sl_sub_active if request.blueprint == 'financial' and request.args.get('type') == 'cost' else sl_sub }}">
-      <i class="fa-solid fa-arrow-trend-down w-3.5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Despesas</span></a>
+      <i class="fa-solid fa-arrow-trend-down w-5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Despesas</span></a>
     <a href="{{ url_for('financial.index') }}" title="Lançamentos"
        class="{{ sl_sub_active if request.blueprint == 'financial' and not request.args.get('type') else sl_sub }}">
-      <i class="fa-solid fa-list-ul w-3.5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Lançamentos</span></a>{% endif %}
+      <i class="fa-solid fa-list-ul w-5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Lançamentos</span></a>{% endif %}
     {% if has_perm('reports.view') %}
     <a href="{{ url_for('reports.index') }}" title="Relatórios"
        class="{{ sl_sub_active if request.blueprint == 'reports' else sl_sub }}">
-      <i class="fa-solid fa-chart-pie w-3.5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Relatórios</span></a>{% endif %}
+      <i class="fa-solid fa-chart-pie w-5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Relatórios</span></a>{% endif %}
     </div>
     {% endif %}
 
@@ -199,7 +199,7 @@
     <div x-show="activeGroup === 'config'" x-transition class="space-y-1 pl-3 border-l border-white/10 ml-3.5">
     <a href="{{ url_for('dashboard.settings') }}" title="Empresa"
        class="{{ sl_sub_active if request.endpoint == 'dashboard.settings' else sl_sub }}">
-      <i class="fa-solid fa-building w-3.5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Empresa</span></a>
+      <i class="fa-solid fa-building w-5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Empresa</span></a>
     </div>
     {% endif %}
 
@@ -215,14 +215,14 @@
     {% if has_perm('users.manage') %}
     <a href="{{ url_for('users.index') }}" title="Usuários"
        class="{{ sl_sub_active if request.blueprint == 'users' else sl_sub }}">
-      <i class="fa-solid fa-user w-3.5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Usuários</span></a>
+      <i class="fa-solid fa-user w-5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Usuários</span></a>
     <a href="{{ url_for('roles.index') }}" title="Roles"
        class="{{ sl_sub_active if request.blueprint == 'roles' else sl_sub }}">
-      <i class="fa-solid fa-lock w-3.5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Roles & Permissões</span></a>{% endif %}
+      <i class="fa-solid fa-lock w-5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Roles & Permissões</span></a>{% endif %}
     {% if has_perm('audit.view') %}
     <a href="{{ url_for('audit.index') }}" title="Auditoria"
        class="{{ sl_sub_active if request.blueprint == 'audit' else sl_sub }}">
-      <i class="fa-solid fa-clipboard-list w-3.5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Auditoria</span></a>{% endif %}
+      <i class="fa-solid fa-clipboard-list w-5 text-center shrink-0 opacity-50"></i><span class="truncate text-[12px] text-slate-400">Auditoria</span></a>{% endif %}
     </div>
     {% endif %}
   </nav>
