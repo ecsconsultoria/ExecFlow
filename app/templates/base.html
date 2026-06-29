@@ -111,7 +111,10 @@
 
     <!-- CATÁLOGO -->
     {% if has_any_perm('catalog.view','vehicles.view','clients.view','suppliers.view','drivers.view') %}
-    <button @click="toggleMenu('catalogo')"
+    <div x-show="!sidebarOpen" class="flex justify-center py-1.5 mt-4">
+      <div class="w-5 h-px bg-slate-600"></div>
+    </div>
+    <button @click="toggleMenu('catalogo')" x-show="sidebarOpen"
             class="flex items-center gap-2 w-full text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mt-5 mb-1 hover:text-slate-200 transition-colors">
       <i :class="isExpanded('catalogo') ? 'fa-chevron-down' : 'fa-chevron-right'" class="fa-solid text-[10px] w-3"></i>
       <span x-show="sidebarOpen" x-transition>Catálogo</span>
@@ -162,7 +165,10 @@
 
     <!-- OPERACIONAL -->
     {% if has_perm('dispatch.view') %}
-    <button @click="toggleMenu('operacional')"
+    <div x-show="!sidebarOpen" class="flex justify-center py-1.5 mt-4">
+      <div class="w-5 h-px bg-slate-600"></div>
+    </div>
+    <button @click="toggleMenu('operacional')" x-show="sidebarOpen"
             class="flex items-center gap-2 w-full text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mt-5 mb-1 hover:text-slate-200 transition-colors">
       <i :class="isExpanded('operacional') ? 'fa-chevron-down' : 'fa-chevron-right'" class="fa-solid text-[10px] w-3"></i>
       <span x-show="sidebarOpen" x-transition>Operacional</span>
@@ -178,7 +184,10 @@
 
     <!-- FINANCEIRO -->
     {% if has_any_perm('financial.view','reports.view') %}
-    <button @click="toggleMenu('financeiro')"
+    <div x-show="!sidebarOpen" class="flex justify-center py-1.5 mt-4">
+      <div class="w-5 h-px bg-slate-600"></div>
+    </div>
+    <button @click="toggleMenu('financeiro')" x-show="sidebarOpen"
             class="flex items-center gap-2 w-full text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mt-5 mb-1 hover:text-slate-200 transition-colors">
       <i :class="isExpanded('financeiro') ? 'fa-chevron-down' : 'fa-chevron-right'" class="fa-solid text-[10px] w-3"></i>
       <span x-show="sidebarOpen" x-transition>Financeiro</span>
@@ -223,7 +232,10 @@
 
     <!-- CONFIGURAÇÕES -->
     {% if has_perm('settings.manage') %}
-    <button @click="toggleMenu('config')"
+    <div x-show="!sidebarOpen" class="flex justify-center py-1.5 mt-4">
+      <div class="w-5 h-px bg-slate-600"></div>
+    </div>
+    <button @click="toggleMenu('config')" x-show="sidebarOpen"
             class="flex items-center gap-2 w-full text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mt-5 mb-1 hover:text-slate-200 transition-colors">
       <i :class="isExpanded('config') ? 'fa-chevron-down' : 'fa-chevron-right'" class="fa-solid text-[10px] w-3"></i>
       <span x-show="sidebarOpen" x-transition>Configurações</span>
@@ -239,7 +251,10 @@
 
     <!-- ADMINISTRAÇÃO -->
     {% if has_any_perm('users.manage', 'roles.manage', 'audit.view') %}
-    <button @click="toggleMenu('admin')"
+    <div x-show="!sidebarOpen" class="flex justify-center py-1.5 mt-4">
+      <div class="w-5 h-px bg-slate-600"></div>
+    </div>
+    <button @click="toggleMenu('admin')" x-show="sidebarOpen"
             class="flex items-center gap-2 w-full text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mt-5 mb-1 hover:text-slate-200 transition-colors">
       <i :class="isExpanded('admin') ? 'fa-chevron-down' : 'fa-chevron-right'" class="fa-solid text-[10px] w-3"></i>
       <span x-show="sidebarOpen" x-transition>Administração</span>
