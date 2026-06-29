@@ -77,7 +77,7 @@
     <!-- COMERCIAL -->
     {% if has_any_perm('quote.view','so.view','po.view') %}
     <button @click="toggleMenu('comercial')"
-            class="{{ sl_active if isExpanded('comercial') else sl }}">
+            class="{{ sl }}" :class="isExpanded('comercial') ? '{{ sl_active }}' : ''">
       <i class="fa-solid fa-briefcase w-5 text-center shrink-0 opacity-70"></i>
       <span x-show="sidebarOpen" x-transition class="truncate">Comercial</span>
       <i :class="isExpanded('comercial') ? 'fa-chevron-down' : 'fa-chevron-right'" class="fa-solid text-[9px] ml-auto opacity-50" x-show="sidebarOpen"></i>
