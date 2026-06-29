@@ -679,12 +679,17 @@
 
     {# Painel esquerdo — configuração #}
     <div class="sm:w-52 shrink-0 bg-slate-700 dark:bg-slate-900 text-white p-3 space-y-3">
-      <div>
-        <p class="text-xs text-slate-400 uppercase mb-0.5">A Pagar</p>
-        <p id="po-apagar-display" class="text-xl font-extrabold text-red-300 font-mono">{{ apagar|currency }}</p>
-        <span id="po-apagar-val" class="hidden">{{ apagar|currency }}</span>
+      <div class="space-y-2">
+        <div>
+          <p class="text-xs text-slate-400 uppercase mb-0.5">A Pagar</p>
+          <p id="po-apagar-display" class="text-lg font-bold text-red-300 font-mono">{{ apagar|currency }}</p>
+          <span id="po-apagar-val" class="hidden">{{ apagar|currency }}</span>
+        </div>
         {% if po.total_paid() > 0 %}
-        <p class="text-xs text-emerald-400">Pago: {{ po.total_paid()|currency }}</p>
+        <div>
+          <p class="text-xs text-slate-400 uppercase mb-0.5">Pago</p>
+          <p id="po-pago-display" class="text-lg font-bold text-emerald-300 font-mono">{{ po.total_paid()|currency }}</p>
+        </div>
         {% endif %}
       </div>
       {% if po.status not in ('faturado', 'pago', 'cancelado') %}
