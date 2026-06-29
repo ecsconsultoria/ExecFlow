@@ -84,7 +84,7 @@
       <i :class="isExpanded('comercial') ? 'fa-chevron-down' : 'fa-chevron-right'" class="fa-solid text-[10px] w-3"></i>
       <span x-show="sidebarOpen" x-transition>Comercial</span>
     </button>
-    <div x-show="sidebarOpen && isExpanded('comercial')" x-transition class="space-y-0.5">
+    <div x-show="!sidebarOpen || isExpanded('comercial')" x-transition class="space-y-0.5">
     {% if has_perm('quote.view') %}
     <a href="{{ url_for('quotes.index') }}"
        class="{{ sl_active if request.blueprint == 'quotes' else sl }}">
@@ -119,7 +119,7 @@
       <i :class="isExpanded('catalogo') ? 'fa-chevron-down' : 'fa-chevron-right'" class="fa-solid text-[10px] w-3"></i>
       <span x-show="sidebarOpen" x-transition>Catálogo</span>
     </button>
-    <div x-show="sidebarOpen && isExpanded('catalogo')" x-transition class="space-y-0.5">
+    <div x-show="!sidebarOpen || isExpanded('catalogo')" x-transition class="space-y-0.5">
     {% if has_perm('catalog.view') %}
     <a href="{{ url_for('services.index') }}"
        class="{{ sl_active if request.blueprint == 'services' else sl }}">
@@ -173,7 +173,7 @@
       <i :class="isExpanded('operacional') ? 'fa-chevron-down' : 'fa-chevron-right'" class="fa-solid text-[10px] w-3"></i>
       <span x-show="sidebarOpen" x-transition>Operacional</span>
     </button>
-    <div x-show="sidebarOpen && isExpanded('operacional')" x-transition class="space-y-0.5">
+    <div x-show="!sidebarOpen || isExpanded('operacional')" x-transition class="space-y-0.5">
     <a href="{{ url_for('dispatch.index') }}"
        class="{{ sl_active if request.blueprint == 'dispatch' else sl }}">
       <i class="fa-solid fa-tower-broadcast w-5 text-center shrink-0"></i>
@@ -192,7 +192,7 @@
       <i :class="isExpanded('financeiro') ? 'fa-chevron-down' : 'fa-chevron-right'" class="fa-solid text-[10px] w-3"></i>
       <span x-show="sidebarOpen" x-transition>Financeiro</span>
     </button>
-    <div x-show="sidebarOpen && isExpanded('financeiro')" x-transition class="space-y-0.5">
+    <div x-show="!sidebarOpen || isExpanded('financeiro')" x-transition class="space-y-0.5">
     {% if has_perm('financial.view') %}
     <a href="{{ url_for('financial.payables') }}"
        class="{{ sl_active if request.endpoint == 'financial.payables' else sl }}">
@@ -240,7 +240,7 @@
       <i :class="isExpanded('config') ? 'fa-chevron-down' : 'fa-chevron-right'" class="fa-solid text-[10px] w-3"></i>
       <span x-show="sidebarOpen" x-transition>Configurações</span>
     </button>
-    <div x-show="sidebarOpen && isExpanded('config')" x-transition class="space-y-0.5">
+    <div x-show="!sidebarOpen || isExpanded('config')" x-transition class="space-y-0.5">
     <a href="{{ url_for('dashboard.settings') }}"
        class="{{ sl_active if request.endpoint == 'dashboard.settings' else sl }}">
       <i class="fa-solid fa-gear w-5 text-center shrink-0"></i>
@@ -259,7 +259,7 @@
       <i :class="isExpanded('admin') ? 'fa-chevron-down' : 'fa-chevron-right'" class="fa-solid text-[10px] w-3"></i>
       <span x-show="sidebarOpen" x-transition>Administração</span>
     </button>
-    <div x-show="sidebarOpen && isExpanded('admin')" x-transition class="space-y-0.5">
+    <div x-show="!sidebarOpen || isExpanded('admin')" x-transition class="space-y-0.5">
     {% if has_perm('users.manage') %}
     <a href="{{ url_for('users.index') }}"
        class="{{ sl_active if request.blueprint == 'users' else sl }}">
