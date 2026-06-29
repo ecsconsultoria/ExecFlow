@@ -135,15 +135,15 @@
     <!-- COMERCIAL sub-items -->
     <div x-show="activeModule === 'comercial'">
       {% if has_perm('quote.view') %}
-      <a href="{{ url_for('quotes.index') }}" class="{{ s2_active if request.blueprint == 'quotes' else s2 }}">
+      <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('quotes.index') }}" class="{{ s2_active if request.blueprint == 'quotes' else s2 }}">
         <i class="fa-solid fa-file-invoice-dollar w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Quote (RFQ)</span>
       </a>{% endif %}
       {% if has_perm('so.view') %}
-      <a href="{{ url_for('orders.index') }}" class="{{ s2_active if request.blueprint == 'orders' else s2 }}">
+      <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('orders.index') }}" class="{{ s2_active if request.blueprint == 'orders' else s2 }}">
         <i class="fa-solid fa-bag-shopping w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Sales Orders (SO)</span>
       </a>{% endif %}
       {% if has_perm('po.view') %}
-      <a href="{{ url_for('purchase_orders.index') }}" class="{{ s2_active if request.blueprint == 'purchase_orders' else s2 }}">
+      <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('purchase_orders.index') }}" class="{{ s2_active if request.blueprint == 'purchase_orders' else s2 }}">
         <i class="fa-solid fa-cart-flatbed w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Purchase Orders (PO)</span>
       </a>{% endif %}
     </div>
@@ -151,62 +151,62 @@
     <!-- CATÁLOGO sub-items -->
     <div x-show="activeModule === 'catalogo'">
       {% if has_perm('catalog.view') %}
-      <a href="{{ url_for('services.index') }}" class="{{ s2_active if request.blueprint == 'services' else s2 }}">
+      <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('services.index') }}" class="{{ s2_active if request.blueprint == 'services' else s2 }}">
         <i class="fa-solid fa-list-check w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Serviços</span></a>
-      <a href="{{ url_for('categories.index') }}" class="{{ s2_active if request.blueprint == 'categories' else s2 }}">
+      <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('categories.index') }}" class="{{ s2_active if request.blueprint == 'categories' else s2 }}">
         <i class="fa-solid fa-tags w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Categorias</span></a>{% endif %}
       {% if has_perm('vehicles.view') %}
-      <a href="{{ url_for('vehicles.index') }}" class="{{ s2_active if request.blueprint == 'vehicles' else s2 }}">
+      <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('vehicles.index') }}" class="{{ s2_active if request.blueprint == 'vehicles' else s2 }}">
         <i class="fa-solid fa-car-side w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Veículos</span></a>{% endif %}
       {% if has_perm('clients.view') %}
-      <a href="{{ url_for('clients.index') }}" class="{{ s2_active if request.blueprint == 'clients' else s2 }}">
+      <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('clients.index') }}" class="{{ s2_active if request.blueprint == 'clients' else s2 }}">
         <i class="fa-solid fa-users w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Clientes</span></a>{% endif %}
       {% if has_perm('suppliers.view') %}
-      <a href="{{ url_for('suppliers.index') }}" class="{{ s2_active if request.blueprint == 'suppliers' else s2 }}">
+      <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('suppliers.index') }}" class="{{ s2_active if request.blueprint == 'suppliers' else s2 }}">
         <i class="fa-solid fa-handshake w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Fornecedores</span></a>{% endif %}
       {% if has_perm('drivers.view') %}
-      <a href="{{ url_for('drivers.index') }}" class="{{ s2_active if request.blueprint == 'drivers' else s2 }}">
+      <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('drivers.index') }}" class="{{ s2_active if request.blueprint == 'drivers' else s2 }}">
         <i class="fa-solid fa-id-card w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Motoristas</span></a>{% endif %}
     </div>
 
     <!-- OPERACIONAL sub-items -->
     <div x-show="activeModule === 'operacional'">
       {% if has_perm('dispatch.view') %}
-      <a href="{{ url_for('dispatch.index') }}" class="{{ s2_active if request.blueprint == 'dispatch' else s2 }}">
+      <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('dispatch.index') }}" class="{{ s2_active if request.blueprint == 'dispatch' else s2 }}">
         <i class="fa-solid fa-tower-broadcast w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Centro de Despacho</span></a>{% endif %}
     </div>
 
     <!-- FINANCEIRO sub-items -->
     <div x-show="activeModule === 'financeiro'">
       {% if has_perm('financial.view') %}
-      <a href="{{ url_for('financial.payables') }}" class="{{ s2_active if request.endpoint == 'financial.payables' else s2 }}">
+      <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('financial.payables') }}" class="{{ s2_active if request.endpoint == 'financial.payables' else s2 }}">
         <i class="fa-solid fa-file-invoice w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Contas a Pagar</span></a>
-      <a href="{{ url_for('financial.index', type='revenue') }}" class="{{ s2_active if request.blueprint == 'financial' and request.args.get('type') == 'revenue' else s2 }}">
+      <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('financial.index', type='revenue') }}" class="{{ s2_active if request.blueprint == 'financial' and request.args.get('type') == 'revenue' else s2 }}">
         <i class="fa-solid fa-hand-holding-dollar w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Contas a Receber</span></a>
-      <a href="{{ url_for('financial.index', type='revenue') }}" class="{{ s2_active if request.blueprint == 'financial' and request.args.get('type') == 'revenue' else s2 }}">
+      <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('financial.index', type='revenue') }}" class="{{ s2_active if request.blueprint == 'financial' and request.args.get('type') == 'revenue' else s2 }}">
         <i class="fa-solid fa-arrow-trend-up w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Receitas</span></a>
-      <a href="{{ url_for('financial.index', type='cost') }}" class="{{ s2_active if request.blueprint == 'financial' and request.args.get('type') == 'cost' else s2 }}">
+      <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('financial.index', type='cost') }}" class="{{ s2_active if request.blueprint == 'financial' and request.args.get('type') == 'cost' else s2 }}">
         <i class="fa-solid fa-arrow-trend-down w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Despesas</span></a>
-      <a href="{{ url_for('financial.index') }}" class="{{ s2_active if request.blueprint == 'financial' and not request.args.get('type') else s2 }}">
+      <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('financial.index') }}" class="{{ s2_active if request.blueprint == 'financial' and not request.args.get('type') else s2 }}">
         <i class="fa-solid fa-list-ul w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Lançamentos</span></a>{% endif %}
       {% if has_perm('reports.view') %}
-      <a href="{{ url_for('reports.index') }}" class="{{ s2_active if request.blueprint == 'reports' else s2 }}">
+      <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('reports.index') }}" class="{{ s2_active if request.blueprint == 'reports' else s2 }}">
         <i class="fa-solid fa-chart-pie w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Relatórios</span></a>{% endif %}
     </div>
 
     <!-- CONFIGURAÇÕES sub-items -->
     <div x-show="activeModule === 'config'">
       {% if has_perm('settings.manage') %}
-      <a href="{{ url_for('dashboard.settings') }}" class="{{ s2_active if request.endpoint == 'dashboard.settings' else s2 }}">
+      <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('dashboard.settings') }}" class="{{ s2_active if request.endpoint == 'dashboard.settings' else s2 }}">
         <i class="fa-solid fa-building w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Empresa</span></a>{% endif %}
       {% if has_perm('users.manage') %}
       <div class="mt-3 mb-1 px-3 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Administração</div>
-      <a href="{{ url_for('users.index') }}" class="{{ s2_active if request.blueprint == 'users' else s2 }}">
+      <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('users.index') }}" class="{{ s2_active if request.blueprint == 'users' else s2 }}">
         <i class="fa-solid fa-user w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Usuários</span></a>
-      <a href="{{ url_for('roles.index') }}" class="{{ s2_active if request.blueprint == 'roles' else s2 }}">
+      <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('roles.index') }}" class="{{ s2_active if request.blueprint == 'roles' else s2 }}">
         <i class="fa-solid fa-lock w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Roles & Permissões</span></a>{% endif %}
       {% if has_perm('audit.view') %}
-      <a href="{{ url_for('audit.index') }}" class="{{ s2_active if request.blueprint == 'audit' else s2 }}">
+      <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('audit.index') }}" class="{{ s2_active if request.blueprint == 'audit' else s2 }}">
         <i class="fa-solid fa-clipboard-list w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Auditoria</span></a>{% endif %}
     </div>
   </nav>
