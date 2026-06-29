@@ -126,9 +126,6 @@
 
   <div class="h-14 flex items-center px-4 border-b border-white/5 shrink-0">
     <span class="text-white text-sm font-semibold tracking-tight" x-text="activeModule ? {comercial:'Comercial',catalogo:'Catálogo',operacional:'Operacional',financeiro:'Financeiro',config:'Configurações'}[activeModule] : ''"></span>
-    <button @click="activeModule=null; localStorage.setItem('activeModule','')" class="ml-auto w-6 h-6 flex items-center justify-center rounded-md text-slate-500 hover:text-slate-300 hover:bg-white/5 transition-colors">
-      <i class="fa-solid fa-xmark text-[10px]"></i>
-    </button>
   </div>
 
   <nav class="flex-1 py-3 px-3 overflow-y-auto space-y-1">
@@ -280,8 +277,8 @@ function erp() {
     })(),
 
     selectModule(key) {
-      this.activeModule = key;
-      localStorage.setItem('activeModule', key);
+      this.activeModule = (this.activeModule === key) ? null : key;
+      localStorage.setItem('activeModule', this.activeModule || '');
     }
   }
 }
