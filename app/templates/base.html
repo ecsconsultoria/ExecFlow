@@ -272,7 +272,12 @@
 /* ── Sidebar state + expandable menus (Alpine) ── */
 function erp() {
   return {
-    activeModule: localStorage.getItem('activeModule') || null,
+    activeModule: (function() {
+      var saved = localStorage.getItem('activeModule');
+      // Dashboard nunca deve mostrar secondary sidebar
+      if (window.location.pathname === '/' || window.location.pathname === '/dashboard/') return null;
+      return saved || null;
+    })(),
 
     selectModule(key) {
       this.activeModule = key;
