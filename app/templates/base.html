@@ -58,6 +58,7 @@
     {% set pi_active = "relative w-12 py-2 flex flex-col items-center justify-center rounded-xl bg-white/10 text-white ring-1 ring-white/20 gap-0.5" %}
 
     <a href="{{ url_for('dashboard.index') }}"
+       @click="activeModule=null; localStorage.setItem('activeModule','')"
        class="{{ pi_active if request.endpoint == 'dashboard.index' else pi }}">
       <i class="fa-solid fa-gauge-high text-lg"></i>
       <span class="text-[9px] text-slate-500 font-light mt-1 leading-none">Dashboard</span>
