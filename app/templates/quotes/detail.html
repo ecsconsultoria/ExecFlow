@@ -199,15 +199,17 @@
     <!-- 3. Dados do Serviço (Items) -->
     <div class="card p-5 overflow-hidden">
       <h3 class="section-title"><i class="fa-solid fa-list-check mr-2 text-slate-400"></i>Serviços Cotados</h3>
-      <div class="table-card !shadow-none !border-0">
+
+      {# Desktop: tabela tradicional #}
+      <div class="table-card !shadow-none !border-0 hidden md:block">
         <table class="table">
           <thead>
             <tr>
               <th>Serviço</th>
               <th>Categoria</th>
-              <th class="hidden sm:table-cell">Motorista</th>
+              <th>Motorista</th>
               <th class="text-right">Qtd</th>
-              <th class="text-right hidden sm:table-cell">Unit.</th>
+              <th class="text-right">Unit.</th>
               <th class="text-right">Total</th>
             </tr>
           </thead>
@@ -219,9 +221,9 @@
                 {{ item.service.name if item.service else item.description }}
               </td>
               <td class="text-slate-500 text-xs">{{ item.category.name if item.category else '–' }}</td>
-              <td class="text-slate-500 text-xs hidden sm:table-cell">{% if item.driver_name %}Motorista {{ item.driver_name }}{% else %}–{% endif %}</td>
+              <td class="text-slate-500 text-xs">{% if item.driver_name %}Motorista {{ item.driver_name }}{% else %}–{% endif %}</td>
               <td class="text-right text-slate-500">{{ item.quantity }}</td>
-              <td class="text-right text-slate-500 whitespace-nowrap hidden sm:table-cell">{{ item.unit_price|currency }}</td>
+              <td class="text-right text-slate-500 whitespace-nowrap">{{ item.unit_price|currency }}</td>
               <td class="text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">{{ item.total_price|currency }}</td>
             </tr>
             {% endfor %}
@@ -231,6 +233,33 @@
             </tr>
           </tbody>
         </table>
+      </div>
+
+      {# Mobile: cards individuais #}
+      <div class="md:hidden space-y-3">
+        {% for item in quote.items %}
+        <div class="bg-slate-50 dark:bg-slate-700/30 rounded-xl p-4 border border-slate-100 dark:border-slate-700">
+          {% if item.ref_note %}
+          <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{{ item.ref_note }}</p>
+          {% endif %}
+          <p class="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-2">{{ item.service.name if item.service else item.description }}</p>
+          <div class="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+            <div><span class="text-slate-500">Categoria</span><p class="text-slate-700 dark:text-slate-300 font-medium">{{ item.category.name if item.category else '–' }}</p></div>
+            <div><span class="text-slate-500">Motorista</span><p class="text-slate-700 dark:text-slate-300 font-medium">{% if item.driver_name %}{{ item.driver_name }}{% else %}–{% endif %}</p></div>
+            <div><span class="text-slate-500">Quantidade</span><p class="text-slate-700 dark:text-slate-300 font-medium">{{ item.quantity }}</p></div>
+            <div><span class="text-slate-500">Valor Unit.</span><p class="text-slate-700 dark:text-slate-300 font-medium font-mono">{{ item.unit_price|currency }}</p></div>
+          </div>
+          <div class="mt-2 pt-2 border-t border-slate-200 dark:border-slate-600 flex justify-between items-center">
+            <span class="text-xs text-slate-500">Total</span>
+            <span class="text-sm font-bold text-slate-800 dark:text-slate-100 font-mono">{{ item.total_price|currency }}</span>
+          </div>
+        </div>
+        {% endfor %}
+        {# Total geral mobile #}
+        <div class="bg-slate-100 dark:bg-slate-700 rounded-xl p-4 flex justify-between items-center">
+          <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">Total do Orçamento</span>
+          <span class="text-lg font-bold text-slate-800 dark:text-slate-100 font-mono">{{ quote.total_amount|currency }}</span>
+        </div>
       </div>
     </div>
 
