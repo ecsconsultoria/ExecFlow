@@ -169,65 +169,75 @@
 {% block content %}
 <div x-data="{confirmDelete:false}" @open-delete-modal.window="confirmDelete = true">
   <div class="space-y-4">
-    <!-- Details -->
-    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-5">
-      <dl class="grid grid-cols-3 gap-4 text-sm">
-        {# row 1: client contact #}
-        <div><dt class="text-slate-500">Cliente</dt><dd class="font-medium">{{ quote.client.name if quote.client else '–' }}</dd></div>
+    <!-- 1. Dados do Cliente -->
+    <div class="card p-5">
+      <h3 class="section-title"><i class="fa-solid fa-user mr-2 text-slate-400"></i>Dados do Cliente</h3>
+      <dl class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+        <div><dt class="text-xs text-slate-500 mb-0.5">Cliente</dt><dd class="font-medium text-slate-800 dark:text-slate-200">{{ quote.client.name if quote.client else '–' }}</dd></div>
         <div>
-          <dt class="text-slate-500">Email</dt>
+          <dt class="text-xs text-slate-500 mb-0.5">Email</dt>
           {% set _em = (quote.client.email if quote.client and quote.client.email else quote.email) %}
           <dd class="text-xs break-all">{% if _em %}<a href="mailto:{{ _em }}" class="text-blue-500 hover:underline">{{ _em }}</a>{% else %}–{% endif %}</dd>
         </div>
         <div>
-          <dt class="text-slate-500">Celular</dt>
-          <dd class="text-xs">{{ (quote.client.whatsapp if quote.client and quote.client.whatsapp else quote.phone) or '–' }}</dd>
+          <dt class="text-xs text-slate-500 mb-0.5">Celular</dt>
+          <dd class="text-xs text-slate-700 dark:text-slate-300">{{ (quote.client.whatsapp if quote.client and quote.client.whatsapp else quote.phone) or '–' }}</dd>
         </div>
-        {# row 2: billing #}
-        <div><dt class="text-slate-500">Faturamento Fiscal</dt><dd class="font-medium">{{ (quote.billing_type|billing_label)|lower|title }}</dd></div>
-        <div><dt class="text-slate-500">Forma de Pagamento</dt><dd class="font-medium">{{ (quote.payment_method or '–')|lower|title }}</dd></div>
-        <div><dt class="text-slate-500">Prazo de Pagamento</dt><dd class="font-medium">{{ (quote.payment_terms or '–')|lower|title }}</dd></div>
       </dl>
     </div>
 
-    <!-- Items -->
-    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
-      <table class="w-full text-sm">
-        <thead class="bg-slate-50 dark:bg-slate-700">
-          <tr>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Serviço</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Categoria</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Motorista</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Qtd</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Unit.</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Total</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
-          {% for item in quote.items %}
-          <tr>
-            <td class="px-4 py-3 text-slate-700 dark:text-slate-200">
-              {% if item.ref_note %}<span class="text-xs font-semibold text-slate-400">{{ item.ref_note }}</span><br>{% endif %}
-              {{ item.service.name if item.service else item.description }}
-            </td>
-            <td class="px-4 py-3 text-slate-500 text-xs">{{ item.category.name if item.category else '–' }}</td>
-            <td class="px-4 py-3 text-slate-500 text-xs">{% if item.driver_name %}Motorista {{ item.driver_name }}{% else %}–{% endif %}</td>
-            <td class="px-4 py-3 text-right text-slate-500">{{ item.quantity }}</td>
-            <td class="px-4 py-3 text-right text-slate-500 whitespace-nowrap">{{ item.unit_price|currency }}</td>
-            <td class="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">{{ item.total_price|currency }}</td>
-          </tr>
-          {% endfor %}
-          <tr class="bg-slate-50 dark:bg-slate-700">
-            <td colspan="5" class="px-4 py-3 text-right font-semibold text-slate-700 dark:text-slate-200">Total</td>
-            <td class="px-4 py-3 text-right font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">{{ quote.total_amount|currency }}</td>
-          </tr>
-        </tbody>
-      </table>
+    <!-- 2. Informações Financeiras -->
+    <div class="card p-5">
+      <h3 class="section-title"><i class="fa-solid fa-credit-card mr-2 text-slate-400"></i>Informações Financeiras</h3>
+      <dl class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+        <div><dt class="text-xs text-slate-500 mb-0.5">Faturamento Fiscal</dt><dd class="font-medium text-slate-800 dark:text-slate-200">{{ (quote.billing_type|billing_label)|lower|title }}</dd></div>
+        <div><dt class="text-xs text-slate-500 mb-0.5">Forma de Pagamento</dt><dd class="font-medium text-slate-800 dark:text-slate-200">{{ (quote.payment_method or '–')|lower|title }}</dd></div>
+        <div><dt class="text-xs text-slate-500 mb-0.5">Prazo de Pagamento</dt><dd class="font-medium text-slate-800 dark:text-slate-200">{{ (quote.payment_terms or '–')|lower|title }}</dd></div>
+      </dl>
+    </div>
+
+    <!-- 3. Dados do Serviço (Items) -->
+    <div class="card p-5 overflow-hidden">
+      <h3 class="section-title"><i class="fa-solid fa-list-check mr-2 text-slate-400"></i>Serviços Cotados</h3>
+      <div class="table-card !shadow-none !border-0">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Serviço</th>
+              <th>Categoria</th>
+              <th class="hidden sm:table-cell">Motorista</th>
+              <th class="text-right">Qtd</th>
+              <th class="text-right hidden sm:table-cell">Unit.</th>
+              <th class="text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in quote.items %}
+            <tr>
+              <td class="text-slate-700 dark:text-slate-200">
+                {% if item.ref_note %}<span class="text-[11px] font-semibold text-slate-400">{{ item.ref_note }}</span><br>{% endif %}
+                {{ item.service.name if item.service else item.description }}
+              </td>
+              <td class="text-slate-500 text-xs">{{ item.category.name if item.category else '–' }}</td>
+              <td class="text-slate-500 text-xs hidden sm:table-cell">{% if item.driver_name %}Motorista {{ item.driver_name }}{% else %}–{% endif %}</td>
+              <td class="text-right text-slate-500">{{ item.quantity }}</td>
+              <td class="text-right text-slate-500 whitespace-nowrap hidden sm:table-cell">{{ item.unit_price|currency }}</td>
+              <td class="text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">{{ item.total_price|currency }}</td>
+            </tr>
+            {% endfor %}
+            <tr class="bg-slate-50 dark:bg-slate-700/50 font-semibold">
+              <td colspan="5" class="text-right text-slate-700 dark:text-slate-200">Total</td>
+              <td class="text-right font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap">{{ quote.total_amount|currency }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     {% if quote.obs %}
-    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-4">
-      <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Observações</p>
+    <!-- 4. Observações -->
+    <div class="card p-5">
+      <h3 class="section-title"><i class="fa-solid fa-pencil mr-2 text-slate-400"></i>Observações</h3>
       <p class="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap">{{ quote.obs }}</p>
     </div>
     {% endif %}
