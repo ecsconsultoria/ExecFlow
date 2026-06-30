@@ -1,0 +1,37 @@
+{# ═══════════════════════════════════════════════════════════════════════════
+   Componente: Input / Select / Textarea
+   Uso: {% from "components/input.html" import input, select, textarea with context %}
+        {{ input('email', 'E-mail', value='admin@test.com', required=True) }}
+        {{ select('status', 'Status', options=[('pago','Pago'),('pendente','Pendente')]) }}
+        {{ textarea('obs', 'Observações', rows=3) }}
+
+   ═══════════════════════════════════════════════════════════════════════════ #}
+{% macro input(name, label=None, type='text', value='', placeholder='', required=False, class='', id=None) -%}
+<div class="{{ class }}">
+  {% if label %}<label for="{{ id or name }}" class="label">{{ label }}</label>{% endif %}
+  <input type="{{ type }}" name="{{ name }}" id="{{ id or name }}"
+         value="{{ value }}" placeholder="{{ placeholder }}"
+         class="input{% if type == 'number' or type == 'text' and 'amount' in name %} input-mono{% endif %}"
+         {% if required %}required{% endif %}>
+</div>
+{%- endmacro %}
+
+{% macro select(name, label=None, options=[], selected='', class='', id=None) -%}
+<div class="{{ class }}">
+  {% if label %}<label for="{{ id or name }}" class="label">{{ label }}</label>{% endif %}
+  <select name="{{ name }}" id="{{ id or name }}" class="select">
+    {% for val, lbl in options %}
+    <option value="{{ val }}" {% if val == selected %}selected{% endif %}>{{ lbl }}</option>
+    {% endfor %}
+  </select>
+</div>
+{%- endmacro %}
+
+{% macro textarea(name, label=None, value='', placeholder='', rows=3, class='', id=None) -%}
+<div class="{{ class }}">
+  {% if label %}<label for="{{ id or name }}" class="label">{{ label }}</label>{% endif %}
+  <textarea name="{{ name }}" id="{{ id or name }}"
+            rows="{{ rows }}" placeholder="{{ placeholder }}"
+            class="input">{{ value }}</textarea>
+</div>
+{%- endmacro %}

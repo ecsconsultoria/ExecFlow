@@ -1,0 +1,20 @@
+{# ═══════════════════════════════════════════════════════════════════════════
+   Componente: Badge (Status)
+   Uso: {% from "components/badge.html" import badge with context %}
+        {{ badge('Pago', variant='success') }}
+        {{ badge('Pendente', variant='warning') }}
+
+   Variants: success, warning, danger, info, neutral, violet, teal
+   ═══════════════════════════════════════════════════════════════════════════ #}
+{% macro badge(label, variant='neutral') -%}
+{% set v = {
+  'success': 'badge-success',
+  'warning': 'badge-warning',
+  'danger':  'badge-danger',
+  'info':    'badge-info',
+  'neutral': 'badge-neutral',
+  'violet':  'badge-violet',
+  'teal':    'badge-teal',
+} %}
+<span class="{{ v.get(variant, 'badge-neutral') }}">{{ label }}</span>
+{%- endmacro %}

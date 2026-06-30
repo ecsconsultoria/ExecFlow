@@ -1,0 +1,23 @@
+{# ═══════════════════════════════════════════════════════════════════════════
+   Componente: Table + TableCard + EmptyState
+   Uso: {% from "components/table.html" import table_card, empty_state with context %}
+        {% call table_card() %}
+          <table class="table">...</table>
+        {% endcall %}
+        {{ empty_state('Nenhum registro encontrado') }}
+
+   ═══════════════════════════════════════════════════════════════════════════ #}
+{% macro table_card(class='') -%}
+<div class="table-card {{ class }}">
+  {{ caller() }}
+</div>
+{%- endmacro %}
+
+{% macro empty_state(message='Nenhum registro encontrado.', icon='fa-inbox') -%}
+<div class="empty-state">
+  <div class="empty-state-icon">
+    <i class="fa-solid {{ icon }}"></i>
+  </div>
+  <p class="empty-state-title">{{ message }}</p>
+</div>
+{%- endmacro %}

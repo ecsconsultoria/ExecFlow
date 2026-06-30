@@ -1,0 +1,16 @@
+{# ═══════════════════════════════════════════════════════════════════════════
+   Componente: Card
+   Uso: {% from "components/card.html" import card with context %}
+        {% call card(title='Detalhes', padding='p-5') %}
+          Conteudo do card aqui
+        {% endcall %}
+
+   ═══════════════════════════════════════════════════════════════════════════ #}
+{% macro card(title=None, padding='p-5', class='') -%}
+<div class="card {{ padding }} {{ class }}">
+  {% if title %}
+  <h3 class="section-title">{{ title }}</h3>
+  {% endif %}
+  {{ caller() }}
+</div>
+{%- endmacro %}

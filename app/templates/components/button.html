@@ -1,0 +1,38 @@
+{# ═══════════════════════════════════════════════════════════════════════════
+   Componente: Button
+   Uso: {% from "components/button.html" import btn with context %}
+        {{ btn('Salvar', url_for('save'), variant='primary', size='sm') }}
+
+   Variants: primary, success, danger, warning, neutral, ghost, outline
+   Sizes: xs, sm, md, lg, icon
+   ═══════════════════════════════════════════════════════════════════════════ #}
+{% macro btn(label, href=None, variant='primary', size='sm', icon=None, type='button', title=None, form=None, onclick=None) -%}
+{% set v = {
+  'primary': 'btn-primary',
+  'success': 'btn-success',
+  'danger':  'btn-danger',
+  'warning': 'btn-warning',
+  'neutral': 'btn-neutral',
+  'ghost':   'btn-ghost',
+  'outline': 'btn-outline',
+} %}
+{% set s = {
+  'xs':   'btn-xs',
+  'sm':   'btn-sm',
+  'md':   'btn-md',
+  'lg':   'btn-lg',
+  'icon': 'btn-icon',
+} %}
+{% set cls = v.get(variant, 'btn-primary') ~ ' ' ~ s.get(size, 'btn-sm') %}
+{% if href %}
+<a href="{{ href }}" class="{{ cls }}" {% if title %}title="{{ title }}"{% endif %} {% if onclick %}onclick="{{ onclick }}"{% endif %}>
+  {% if icon %}<i class="fa-solid {{ icon }} text-[11px]"></i>{% endif %}
+  {% if label %}{{ label }}{% endif %}
+</a>
+{% else %}
+<button type="{{ type }}" class="{{ cls }}" {% if title %}title="{{ title }}"{% endif %} {% if form %}form="{{ form }}"{% endif %} {% if onclick %}onclick="{{ onclick }}"{% endif %}>
+  {% if icon %}<i class="fa-solid {{ icon }} text-[11px]"></i>{% endif %}
+  {% if label %}{{ label }}{% endif %}
+</button>
+{% endif %}
+{%- endmacro %}

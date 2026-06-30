@@ -1,0 +1,28 @@
+{# ═══════════════════════════════════════════════════════════════════════════
+   Componente: Modal
+   Uso: {% from "components/modal.html" import modal with context %}
+        {% call modal(id='confirm-delete', title='Confirmar Exclusão') %}
+          <p>Tem certeza?</p>
+          {{ btn('Excluir', variant='danger', onclick='submitForm()') }}
+        {% endcall %}
+
+   ═══════════════════════════════════════════════════════════════════════════ #}
+{% macro modal(id, title, show_var='false', size='md') -%}
+{% set w = {'sm': 'max-w-sm', 'md': 'max-w-md', 'lg': 'max-w-lg', 'xl': 'max-w-xl'} %}
+<div x-show="{{ show_var }}" x-cloak
+     class="modal-backdrop"
+     @keydown.escape.window="{{ show_var }}=false">
+  <div @click.outside="{{ show_var }}=false"
+       class="modal-container {{ w.get(size, 'max-w-md') }}">
+    <div class="modal-header">
+      <h3 class="text-base font-semibold text-slate-800 dark:text-slate-100">{{ title }}</h3>
+      <button @click="{{ show_var }}=false" class="btn-icon-sm">
+        <i class="fa-solid fa-xmark text-sm"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      {{ caller() }}
+    </div>
+  </div>
+</div>
+{%- endmacro %}

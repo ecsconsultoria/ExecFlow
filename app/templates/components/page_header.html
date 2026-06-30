@@ -1,0 +1,19 @@
+{# ═══════════════════════════════════════════════════════════════════════════
+   Componente: PageHeader (título + ações)
+   Uso: {% from "components/page_header.html" import page_header with context %}
+        {% call page_header('Cotação RFQ-001', subtitle='Criado em 01/01/2026') %}
+          {{ btn('Editar', url_for('quotes.edit'), variant='primary', size='sm') }}
+        {% endcall %}
+
+   ═══════════════════════════════════════════════════════════════════════════ #}
+{% macro page_header(title, subtitle=None) -%}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ title }}</h1>
+    {% if subtitle %}<p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{{ subtitle }}</p>{% endif %}
+  </div>
+  <div class="flex items-center gap-2">
+    {{ caller() }}
+  </div>
+</div>
+{%- endmacro %}
