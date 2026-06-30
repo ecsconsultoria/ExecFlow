@@ -468,11 +468,13 @@
   <table class="w-full text-xs">
     <thead class="bg-slate-50 dark:bg-slate-700/70">
       <tr>
-        <th class="px-3 py-2 text-center font-semibold text-slate-500 uppercase w-8">#</th>
-        <th class="px-3 py-2 text-left font-semibold text-slate-500 uppercase">Serviço</th>
-        <th class="px-3 py-2 text-right font-semibold text-slate-500 uppercase w-10">Qtd</th>
-        <th class="px-3 py-2 text-right font-semibold text-slate-500 uppercase w-24">Unit.</th>
-        <th class="px-3 py-2 text-right font-semibold text-slate-500 uppercase w-24">Total</th>
+        <th class="px-3 py-2 text-center font-semibold text-slate-500 uppercase tracking-wide w-8">#</th>
+        <th class="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wide">Serviço</th>
+        <th class="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wide hidden sm:table-cell">Categoria</th>
+        <th class="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wide hidden sm:table-cell">Motorista</th>
+        <th class="px-3 py-2 text-right font-semibold text-slate-500 uppercase tracking-wide w-16">Qtd</th>
+        <th class="px-3 py-2 text-right font-semibold text-slate-500 uppercase tracking-wide w-24">Unit.</th>
+        <th class="px-3 py-2 text-right font-semibold text-slate-500 uppercase tracking-wide w-24">Total</th>
         <th class="px-3 py-2 w-16"></th>
       </tr>
     </thead>
@@ -485,16 +487,6 @@
             {% if item.ref_note %}<span class="text-slate-400 font-normal mr-1">[{{ item.ref_note }}]</span>{% endif %}
             {{ item.service.name if item.service else item.description or '–' }}
           </p>
-          {% if item.driver_name %}
-          <p class="text-slate-400 mt-0.5 leading-tight">
-            <i class="fa-solid fa-user w-3 opacity-50 mr-0.5"></i>{{ item.driver_name }}
-          </p>
-          {% endif %}
-          {% if item.category %}
-          <p class="text-slate-400 mt-0.5 leading-tight">
-            <i class="fa-solid fa-tag w-3 opacity-50 mr-0.5"></i>{{ item.category.name }}
-          </p>
-          {% endif %}
           {% if item.vehicle_description %}
           <p class="text-slate-400 mt-0.5 leading-tight">
             <i class="fa-solid fa-car w-3 opacity-50 mr-0.5"></i>{{ item.vehicle_description }}
@@ -510,6 +502,8 @@
           </p>
           {% endif %}
         </td>
+        <td class="px-3 py-2 text-slate-500 hidden sm:table-cell">{{ item.category.name if item.category else '–' }}</td>
+        <td class="px-3 py-2 text-slate-500 hidden sm:table-cell">{% if item.driver_name %}{{ item.driver_name }}{% else %}–{% endif %}</td>
         <td class="px-3 py-2 text-right text-slate-500">{{ item.quantity }}</td>
         <td class="px-3 py-2 text-right text-slate-500 font-mono whitespace-nowrap">{{ item.unit_price|currency }}</td>
         <td class="px-3 py-2 text-right font-bold text-slate-700 dark:text-slate-100 font-mono whitespace-nowrap">{{ item.total_price|currency }}</td>
@@ -567,7 +561,7 @@
       {% endfor %}
       {# Linha subtotal #}
       <tr class="bg-slate-50 dark:bg-slate-700/50">
-        <td colspan="4" class="px-3 py-2 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide">Subtotal</td>
+        <td colspan="6" class="px-3 py-2 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide">Subtotal</td>
         <td class="px-3 py-2 text-right font-bold text-slate-700 dark:text-slate-100 font-mono whitespace-nowrap">{{ order.total_amount|currency }}</td>
         <td></td>
       </tr>
