@@ -278,28 +278,4 @@
            hover:bg-slate-50 dark:hover:bg-slate-700
            transition-colors whitespace-nowrap cursor-pointer;
   }
-
-  /* ═══════════════════════════════════════════════════════════════════════
-     RESPONSIVE UTILITIES
-     ═══════════════════════════════════════════════════════════════════════ */
-
-  /* Mobile service card — tap feedback */
-  .mobile-service-card {
-    @apply bg-white dark:bg-slate-800 rounded-xl p-4
-           border border-slate-200 dark:border-slate-700 shadow-sm
-           transition-colors duration-150;
-  }
-  .mobile-service-card:active {
-    @apply bg-slate-50 dark:bg-slate-700/50;
-  }
-
-  /* Responsive button group — wraps and maintains spacing */
-  .btn-group-responsive {
-    @apply flex flex-wrap items-center gap-1.5;
-  }
-
-  /* Prevent horizontal overflow on all containers */
-  .no-overflow-x {
-    @apply overflow-x-hidden max-w-full;
-  }
 }
