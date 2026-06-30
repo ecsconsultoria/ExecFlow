@@ -1,50 +1,43 @@
 {% extends "base.html" %}
 {% block title %}Cotação {{ quote.number }}{% endblock %}
-
-{% block extra_head %}
-<style>
-  [x-cloak] { display: none !important; }
-</style>
-{% endblock %}
+{% from "components/button.html" import btn with context %}
+{% from "components/badge.html" import badge with context %}
 
 {% block page_title %}
 <div class="w-full">
   <div class="flex flex-wrap items-center gap-2">
     <a href="{{ url_for('quotes.index') }}" class="text-slate-400 hover:text-blue-500 text-sm"><i class="fa-solid fa-arrow-left"></i></a>
-    <span class="whitespace-nowrap">Cotação {{ quote.number }}</span>
-    <span class="whitespace-nowrap" style="{{ quote.status|status_badge_style }}"><span style="width:7px;height:7px;border-radius:50%;background:{{ quote.status|status_dot_color }};flex-shrink:0;display:inline-block"></span> {{ quote.status }}</span>
+    <span class="whitespace-nowrap font-bold text-slate-800 dark:text-white text-lg tracking-tight">Cotação {{ quote.number }}</span>
+
+    {# Status badge — migrado para componente #}
+    {% set status_variant = 'neutral' %}
+    {% if quote.status in ('aprovado','pago','reserva_confirmada') %}{% set status_variant = 'success' %}
+    {% elif quote.status == 'pendente' %}{% set status_variant = 'warning' %}
+    {% elif quote.status == 'reprovado' %}{% set status_variant = 'danger' %}
+    {% endif %}
+    {{ badge(quote.status, variant=status_variant) }}
 
     {% if quote.status == 'pendente' and has_perm('quote.approve') %}
     <form method="post" action="{{ url_for('quotes.approve', qid=quote.id) }}" class="inline-flex">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit" class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-emerald-600 hover:bg-emerald-700 text-white">
-        <i class="fa-solid fa-check text-[11px]"></i> Aprovar
-      </button>
+      {{ btn('Aprovar', variant='success', type='submit', icon='fa-check') }}
     </form>
-    <button type="button" onclick="openRejectModal()" class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-red-600 hover:bg-red-700 text-white">
-      <i class="fa-solid fa-xmark text-[11px]"></i> Rejeitar
-    </button>
+    {{ btn('Rejeitar', variant='danger', icon='fa-xmark', onclick='openRejectModal()') }}
     {% endif %}
 
     {% if quote.status in ('aprovado', 'pago') and not quote_order and has_perm('so.create') %}
     <form method="post" action="{{ url_for('orders.create', qid=quote.id) }}" class="inline-flex">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit" class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-blue-600 hover:bg-blue-700 text-white">
-        <i class="fa-solid fa-bag-shopping text-[11px]"></i> Criar SO
-      </button>
+      {{ btn('Criar SO', variant='primary', type='submit', icon='fa-bag-shopping') }}
     </form>
     {% endif %}
 
     {% if quote_order %}
-    <a href="{{ url_for('orders.detail', oid=quote_order.id) }}" class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-600 hover:bg-slate-700 text-white">
-      <i class="fa-solid fa-bag-shopping text-[11px]"></i> Ver Pedido
-    </a>
+    {{ btn('Ver Pedido', href=url_for('orders.detail', oid=quote_order.id), variant='neutral', icon='fa-bag-shopping') }}
     {% endif %}
 
     {% if has_perm('quote.edit') %}
-    <a href="{{ url_for('quotes.edit', qid=quote.id) }}" class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-blue-600 hover:bg-blue-700 text-white">
-      <i class="fa-solid fa-pen text-[11px]"></i> Editar
-    </a>
+    {{ btn('Editar', href=url_for('quotes.edit', qid=quote.id), variant='primary', icon='fa-pen') }}
     {% endif %}
 
     {% set _em = (quote.client.email if quote.client and quote.client.email else quote.email) %}
@@ -52,27 +45,24 @@
 
     {# PDF unified dropdown #}
     <div class="relative" x-data="{open:false}" @click.outside="open=false">
-      <button @click="open=!open" class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-600 hover:bg-slate-700 text-white">
+      <button @click="open=!open" class="btn-neutral btn-sm">
         <i class="fa-solid fa-file-pdf text-[11px]"></i> PDF
       </button>
       <div x-show="open" x-cloak
-           class="absolute left-0 top-full mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 py-1 overflow-hidden"
-           style="min-width:200px">
-        <div style="display:grid;grid-template-columns:1fr 1fr">
-          <a href="{{ url_for('quotes.pdf', qid=quote.id, lang='pt') }}"
-             @click="open=false"
+           class="absolute left-0 top-full mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 py-1 overflow-hidden min-w-[200px]">
+        <div class="grid grid-cols-2">
+          <a href="{{ url_for('quotes.pdf', qid=quote.id, lang='pt') }}" @click="open=false"
              class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
             <i class="fa-solid fa-download text-rose-500"></i> PDF PT
           </a>
-          <a href="{{ url_for('quotes.pdf', qid=quote.id, lang='en') }}"
-             @click="open=false"
+          <a href="{{ url_for('quotes.pdf', qid=quote.id, lang='en') }}" @click="open=false"
              class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
             <i class="fa-solid fa-download text-rose-700"></i> PDF EN
           </a>
         </div>
         {% if _em %}
         <hr class="my-1 border-slate-100 dark:border-slate-700">
-        <div style="display:grid;grid-template-columns:1fr 1fr">
+        <div class="grid grid-cols-2">
           <button onclick="sendEmail('pt')" @click="open=false"
                   class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
             <i class="fa-solid fa-envelope text-blue-500"></i> Email PT
@@ -85,7 +75,7 @@
         {% endif %}
         {% if _ph %}
         <hr class="my-1 border-slate-100 dark:border-slate-700">
-        <div style="display:grid;grid-template-columns:1fr 1fr">
+        <div class="grid grid-cols-2">
           <button onclick="openWhatsApp('pt')" @click="open=false"
                   class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
             <i class="fa-brands fa-whatsapp text-green-500"></i> WA PT
@@ -100,9 +90,7 @@
     </div>
 
     {% if has_perm('quote.delete') %}
-    <button onclick="window.dispatchEvent(new CustomEvent('open-delete-modal'))" class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-red-700 hover:bg-red-800 text-white">
-      <i class="fa-solid fa-trash text-[11px]"></i> Excluir
-    </button>
+    {{ btn('Excluir', variant='danger', icon='fa-trash', onclick="window.dispatchEvent(new CustomEvent('open-delete-modal'))") }}
     {% endif %}
 
     {# ── Histórico dropdown ── #}
