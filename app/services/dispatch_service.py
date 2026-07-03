@@ -10,7 +10,7 @@ from sqlalchemy import or_
 from sqlalchemy.orm import joinedload
 
 from ..extensions import db
-from ..models import Order, OrderItem, Client
+from ..models import Order, OrderItem, Client, ServiceOrder
 
 
 # ── Status labels ────────────────────────────────────────────────────────────
@@ -231,3 +231,58 @@ def cancel_item_from_dispatch(item_id):
     item.op_pickup_datetime = None
     db.session.commit()
     return True
+
+
+# ── Dashboard compatibility ──────────────────────────────────────────────────
+def get_summary(company_id, ref_date=None):
+    """Resumo para o Dashboard (mantém compatibilidade com ServiceOrder)."""
+    from sqlalchemy.orm import lazyload as _lazyload
+    from ..utils import now_br as _now_br
+
+    if ref_date is None:
+        ref_date = _now_br().date()
+
+    day_start = datetime.combine(ref_date, datetime.min.time())
+    day_end = datetime.combine(ref_date, datetime.max.time())
+
+    base = (ServiceOrder.query
+            .options(_lazyload('*'),
+                     joinedload(ServiceOrder.assigned_driver).lazyload('*'))
+            .filter_by(company_id=company_id)
+            .filter(ServiceOrder.deleted_at.is_(None)))
+
+    today_os = (base
+                .filter(ServiceOrder.pickup_datetime.between(day_start, day_end))
+                .filter(ServiceOrder.status.notin_(["cancelado", "finalizado"]))
+                .order_by(ServiceOrder.pickup_datetime.asc())
+                .all())
+
+    pending = (base
+               .filter(ServiceOrder.status.in_(["criado", "agendado"]))
+               .filter(ServiceOrder.assigned_driver_id.is_(None))
+               .filter(ServiceOrder.supplier_id.is_(None))
+               .order_by(ServiceOrder.pickup_datetime.asc())
+               .all())
+
+    in_progress = (base
+                   .filter_by(status="em_execucao")
+                   .order_by(ServiceOrder.pickup_datetime.asc())
+                   .all())
+
+    now_dt = _now_br()
+    overdue = (base
+               .filter(ServiceOrder.pickup_datetime < now_dt)
+               .filter(ServiceOrder.status.notin_(["finalizado", "cancelado"]))
+               .order_by(ServiceOrder.pickup_datetime.asc())
+               .all())
+
+    return {
+        "date": ref_date,
+        "today_count": len(today_os),
+        "today_list": today_os,
+        "pending": pending,
+        "in_progress": in_progress,
+        "overdue": overdue,
+        "pending_count": len(pending),
+        "overdue_count": len(overdue),
+    }
