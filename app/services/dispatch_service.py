@@ -131,21 +131,49 @@ def get_kpi_summary(company_id, ref_date=None):
 
 
 # ── Agendamento pendente ────────────────────────────────────────
-def count_pending_scheduling(company_id):
-    """Conta SOs abertas (novo/aberto) sem nenhum item com data/hora de pickup.
+def get_pending_scheduling(company_id):
+    """Serviços (itens) pendentes de agendamento, agrupados por SO.
 
-    Identifica pedidos que ainda precisam ser agendados operacionalmente
-    (nenhum OrderItem possui op_pickup_datetime preenchido).
+    Item pendente = SO aberta (novo/aberto) + item é um serviço
+    (service_id preenchido) + OrderItem.op_pickup_datetime ainda vazio.
+    Um mesmo SO pode ter itens já agendados e itens pendentes ao mesmo
+    tempo — cada item pendente é contado individualmente.
     """
-    scheduled_order_ids = (db.session.query(OrderItem.order_id)
-                           .filter(OrderItem.op_pickup_datetime.isnot(None)))
-
-    return (Order.query
+    rows = (OrderItem.query
+            .join(Order, OrderItem.order_id == Order.id)
+            .options(joinedload(OrderItem.order).joinedload(Order.client))
             .filter(Order.company_id == company_id)
             .filter(Order.deleted_at.is_(None))
             .filter(Order.status.in_(('novo', 'aberto')))
-            .filter(Order.id.notin_(scheduled_order_ids))
-            .count())
+            .filter(OrderItem.service_id.isnot(None))
+            .filter(OrderItem.op_pickup_datetime.is_(None))
+            .order_by(Order.number.asc(), OrderItem.sort_order.asc())
+            .all())
+
+    orders = {}
+    for it in rows:
+        o = it.order
+        grp = orders.get(o.id)
+        if grp is None:
+            grp = {
+                'order_id':     o.id,
+                'order_number': o.number,
+                'client_name':  (o.client.name if o.client
+                                 else (o.client_name or '–')),
+                'pend_items':   [],
+            }
+            orders[o.id] = grp
+        grp['pend_items'].append({
+            'id':          it.id,
+            'description':  it.description or '–',
+        })
+
+    orders_list = list(orders.values())
+    return {
+        'count':        len(rows),
+        'orders_count': len(orders_list),
+        'orders':       orders_list,
+    }
 
 
 # ── Item detail ──────────────────────────────────────────────────────────────
