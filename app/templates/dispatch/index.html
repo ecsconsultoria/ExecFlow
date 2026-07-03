@@ -2,23 +2,25 @@
 {% block title %}Centro de Operações{% endblock %}
 
 {% block page_title %}
-<div class="w-full">
-  <div class="flex flex-wrap items-center gap-2">
-    <i class="fa-solid fa-calendar-days text-blue-500"></i>
-    <span class="font-semibold text-slate-700 dark:text-slate-200">Centro de Operações</span>
-    <span class="text-xs text-slate-400 font-mono">{{ date_label }}</span>
-
-    {# View switcher #}
-    <div class="flex rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600 ml-4">
-      {% for v in ['day','week','month'] %}
-      <a href="{{ url_for('dispatch.index', view=v, date=ref_date) }}"
-         class="px-3 py-1 text-xs font-medium transition-colors
-                {% if view == v %}bg-blue-600 text-white{% else %}bg-white dark:bg-slate-800 text-slate-500 hover:bg-slate-50{% endif %}">
-        {{ {'day':'Dia','week':'Semana','month':'Mês'}[v] }}
-      </a>
-      {% endfor %}
-    </div>
+<div class="w-full flex flex-wrap items-center gap-3">
+  <div class="flex items-center gap-2">
+    <span class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center"><i class="fa-solid fa-calendar-days text-white text-sm"></i></span>
+    <span class="font-bold text-slate-800 dark:text-white text-lg">Centro de Operações</span>
   </div>
+
+  {# View switcher #}
+  <div class="flex rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600">
+    {% for v in ['day','week','month'] %}
+    <a href="{{ url_for('dispatch.index', view=v, date=ref_date) }}"
+       class="px-3 py-1.5 text-xs font-semibold transition-colors
+              {% if view == v %}bg-blue-600 text-white{% else %}bg-white dark:bg-slate-800 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700{% endif %}">
+      {{ {'day':'Dia','week':'Semana','month':'Mês'}[v] }}
+    </a>
+    {% endfor %}
+  </div>
+
+  <span class="text-sm font-medium text-slate-600 dark:text-slate-300 ml-auto" x-data="{t: new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}"
+        x-init="setInterval(() => t = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}), 30000)" x-text="t"></span>
 </div>
 {% endblock %}
 
@@ -28,19 +30,22 @@
 {# ══════════════════════════════════════════
    KPI Cards
 ══════════════════════════════════════════ #}
-<div class="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-4">
+<div class="grid grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
   {% set kpis = [
-    ('Agend. Hoje',  kpi.agendados_hoje,  'blue'),
-    ('Pend. Escala', kpi.pendente_escala,  'slate'),
-    ('Confirmados',  kpi.confirmados,      'emerald'),
-    ('Em Execução',  kpi.em_execucao,      'amber'),
-    ('Concluídos',   kpi.concluidos,       'slate'),
-    ('Cancelados',   kpi.cancelados,       'red'),
+    ('Agend. Hoje',  kpi.agendados_hoje,  'blue',    'fa-calendar-check'),
+    ('Pend. Escala', kpi.pendente_escala,  'slate',   'fa-user-clock'),
+    ('Confirmados',  kpi.confirmados,      'emerald', 'fa-circle-check'),
+    ('Em Execução',  kpi.em_execucao,      'amber',   'fa-spinner'),
+    ('Concluídos',   kpi.concluidos,       'slate',   'fa-flag-checkered'),
+    ('Cancelados',   kpi.cancelados,       'red',     'fa-ban'),
   ] %}
-  {% for label, value, color in kpis %}
-  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-3 text-center border-t-2 border-{{ color }}-400">
-    <p class="text-xl font-extrabold text-slate-800 dark:text-slate-100">{{ value }}</p>
-    <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mt-0.5">{{ label }}</p>
+  {% for label, value, color, icon in kpis %}
+  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-3 border-t-2 border-{{ color }}-400 hover:shadow-md transition-shadow">
+    <div class="flex items-center justify-between mb-1">
+      <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{{ label }}</span>
+      <i class="fa-solid {{ icon }} text-{{ color }}-400 text-xs"></i>
+    </div>
+    <p class="text-2xl font-extrabold text-slate-800 dark:text-slate-100">{{ value }}</p>
   </div>
   {% endfor %}
 </div>
@@ -48,50 +53,49 @@
 {# ══════════════════════════════════════════
    Navegação + Filtros
 ══════════════════════════════════════════ #}
-<div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-3 mb-4">
-  <div class="flex flex-wrap items-center gap-2">
-    {# Navegação #}
+<div class="flex flex-wrap items-center gap-2 mb-4">
+  {# Navegação #}
+  <div class="flex items-center gap-1 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-600 p-1">
     <a href="{{ url_for('dispatch.index', view=view, date=prev_date) }}"
-       class="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700">
-      <i class="fa-solid fa-chevron-left text-[10px]"></i>
+       class="w-8 h-8 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+      <i class="fa-solid fa-chevron-left text-xs"></i>
     </a>
-    <a href="{{ url_for('dispatch.index', view=view, date=today) }}"
-       class="h-7 px-2.5 text-[11px] font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">Hoje</a>
+    <span class="text-sm font-semibold text-slate-700 dark:text-slate-200 px-2 min-w-[140px] text-center">{{ date_label }}</span>
     <a href="{{ url_for('dispatch.index', view=view, date=next_date) }}"
-       class="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700">
-      <i class="fa-solid fa-chevron-right text-[10px]"></i>
+       class="w-8 h-8 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+      <i class="fa-solid fa-chevron-right text-xs"></i>
     </a>
+  </div>
 
-    {# Filtros #}
-    <button @click="showFilters = !showFilters"
-            class="h-7 px-2.5 text-[11px] font-semibold rounded-lg border border-slate-200 dark:border-slate-600 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 ml-2">
-      <i class="fa-solid fa-filter text-[10px] mr-1"></i>Filtros
-      <span x-show="activeFilters > 0" x-cloak class="ml-1 w-4 h-4 rounded-full bg-blue-500 text-white text-[9px] inline-flex items-center justify-center" x-text="activeFilters"></span>
+  <a href="{{ url_for('dispatch.index', view=view, date=today) }}"
+     class="h-9 px-3 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center transition-colors">Hoje</a>
+
+  {# Separator #}
+  <span class="w-px h-6 bg-slate-200 dark:bg-slate-600 mx-1 hidden sm:block"></span>
+
+  {# Filtros #}
+  <form method="get" action="{{ url_for('dispatch.index') }}" class="flex flex-wrap items-center gap-2 flex-1">
+    <input type="hidden" name="view" value="{{ view }}">
+    <input type="hidden" name="date" value="{{ ref_date }}">
+    <input type="text" name="search" placeholder="Buscar..." value="{{ request.args.get('search','') }}"
+           class="h-9 w-32 lg:w-40 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400">
+    <select name="status" class="h-9 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400">
+      <option value="">Status</option>
+      {% for k, v in status_labels.items() %}
+      <option value="{{ k }}" {{ 'selected' if request.args.get('status') == k }}>{{ v }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="h-9 px-3 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
+      <i class="fa-solid fa-magnifying-glass mr-1"></i>Filtrar
     </button>
+    {% if request.args.get('search') or request.args.get('status') %}
+    <a href="{{ url_for('dispatch.index', view=view, date=ref_date) }}" class="h-9 px-2 text-xs rounded-lg text-slate-400 hover:text-red-500 flex items-center transition-colors">
+      <i class="fa-solid fa-xmark mr-1"></i>Limpar
+    </a>
+    {% endif %}
+  </form>
 
-    <span class="ml-auto text-[11px] text-slate-400">{{ items_data|length }} agendamento(s)</span>
-  </div>
-
-  {# Painel de filtros #}
-  <div x-show="showFilters" x-cloak class="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
-    <form method="get" action="{{ url_for('dispatch.index') }}" class="grid grid-cols-1 sm:grid-cols-4 gap-2">
-      <input type="hidden" name="view" value="{{ view }}">
-      <input type="hidden" name="date" value="{{ ref_date }}">
-      <input type="text" name="search" placeholder="Buscar..." class="fi text-xs" value="{{ request.args.get('search','') }}">
-      <input type="text" name="driver" placeholder="Motorista..." class="fi text-xs" value="{{ request.args.get('driver','') }}">
-      <input type="text" name="client" placeholder="Cliente..." class="fi text-xs" value="{{ request.args.get('client','') }}">
-      <select name="status" class="fi text-xs">
-        <option value="">– Status –</option>
-        {% for k, v in status_labels.items() %}
-        <option value="{{ k }}" {{ 'selected' if request.args.get('status') == k }}>{{ v }}</option>
-        {% endfor %}
-      </select>
-      <div class="flex gap-1 sm:col-span-4">
-        <button type="submit" class="h-7 px-3 text-[11px] font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white">Filtrar</button>
-        <a href="{{ url_for('dispatch.index', view=view, date=ref_date) }}" class="h-7 px-2 text-[11px] rounded-lg border border-slate-200 dark:border-slate-600 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center">Limpar</a>
-      </div>
-    </form>
-  </div>
+  <span class="text-xs text-slate-400 ml-auto">{{ items_data|length }} agendamento(s)</span>
 </div>
 
 {# ══════════════════════════════════════════
@@ -101,11 +105,14 @@
 
   {% if view == 'day' %}
   {# ── DIA ── #}
-  <div class="p-4">
-    <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">
-      {% set dp = ref_date.split('-') %}{{ dp[2] }}/{{ dp[1] }}/{{ dp[0] }}
-    </h3>
+  {% set dp = ref_date.split('-') %}
+  <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-700 flex items-center gap-2">
+    <i class="fa-solid fa-calendar-day text-blue-500"></i>
+    <span class="font-semibold text-slate-700 dark:text-slate-200 text-sm">{{ dp[2] }}/{{ dp[1] }}/{{ dp[0] }}</span>
     {% set day_items = items_by_date.get(ref_date, []) %}
+    <span class="text-xs text-slate-400 ml-auto">{{ day_items|length }} serviço(s)</span>
+  </div>
+  <div class="p-4">
     {% if day_items %}
     <div class="space-y-2">
       {% for item in day_items|sort(attribute='time') %}
@@ -113,70 +120,90 @@
       {% endfor %}
     </div>
     {% else %}
-    <div class="text-center py-12 text-slate-400">
-      <i class="fa-solid fa-calendar-xmark text-3xl mb-2 block opacity-30"></i>
-      <p class="text-sm">Nenhum agendamento para esta data.</p>
+    <div class="text-center py-16 text-slate-400">
+      <i class="fa-solid fa-calendar-xmark text-4xl mb-3 block opacity-20"></i>
+      <p class="text-sm font-medium">Nenhum agendamento</p>
+      <p class="text-xs mt-1">Nenhum serviço programado para esta data.</p>
     </div>
     {% endif %}
   </div>
 
   {% elif view == 'month' %}
   {# ── MÊS ── #}
-  <div class="grid grid-cols-7 text-center border-b border-slate-100 dark:border-slate-700">
+  <div class="grid grid-cols-7 text-center border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
     {% for dname in ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'] %}
-    <div class="py-2 text-[10px] text-slate-400 uppercase font-semibold">{{ dname }}</div>
+    <div class="py-2.5 text-[11px] font-semibold text-slate-500 uppercase">{{ dname }}</div>
     {% endfor %}
   </div>
   <div class="grid grid-cols-7 divide-x divide-y divide-slate-100 dark:divide-slate-700">
     {% for _ in range(month_first_weekday) %}
-    <div class="min-h-[80px] p-1 bg-slate-50/50 dark:bg-slate-700/20"></div>
+    <div class="min-h-[90px] p-1.5 bg-slate-50/30 dark:bg-slate-800/50"></div>
     {% endfor %}
     {% for day_str in month_days %}
     {% set day_items = items_by_date.get(day_str, []) %}
     {% set day_num = day_str[-2:]|int %}
-    <div class="min-h-[80px] p-1.5 {% if day_str == today %}bg-blue-50/30 dark:bg-blue-900/5 ring-2 ring-blue-400 ring-inset{% endif %}">
-      <a href="{{ url_for('dispatch.index', view='day', date=day_str) }}"
-         class="block text-right text-xs font-semibold mb-0.5 {% if day_str == today %}text-blue-600{% else %}text-slate-500{% endif %} hover:underline">{{ day_num }}</a>
+    <div class="min-h-[90px] p-1.5 {% if day_str == today %}ring-2 ring-blue-400 ring-inset bg-blue-50/30 dark:bg-blue-900/5{% endif %} hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+      <div class="flex items-center justify-between mb-1">
+        <a href="{{ url_for('dispatch.index', view='day', date=day_str) }}"
+           class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold
+                  {% if day_str == today %}bg-blue-600 text-white{% else %}text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600{% endif %}">
+          {{ day_num }}
+        </a>
+        {% if day_items %}
+        <span class="text-[10px] font-semibold text-slate-400">{{ day_items|length }}</span>
+        {% endif %}
+      </div>
       {% for item in day_items[:3]|sort(attribute='time') %}
       <a href="{{ url_for('dispatch.index', view='day', date=day_str) }}"
-         class="block text-[10px] text-slate-600 dark:text-slate-300 truncate leading-tight px-1 py-0.5 rounded mb-0.5 border-l-2
-                {% if item.dispatch_status == 'confirmado' %}border-l-emerald-400 bg-emerald-50
-                {% elif item.dispatch_status == 'em_execucao' %}border-l-amber-400 bg-amber-50
-                {% elif item.dispatch_status == 'cancelado' %}border-l-red-400 bg-red-50
-                {% elif item.dispatch_status == 'pendente_escala' %}border-l-slate-300 bg-slate-50
-                {% else %}border-l-blue-400 bg-blue-50{% endif %}">
-        {{ item.time }} {{ item.client_name[:15] }}
+         class="block text-[10px] truncate leading-tight px-1.5 py-0.5 rounded mb-0.5 border-l-2
+                {% if item.dispatch_status == 'confirmado' %}border-l-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700
+                {% elif item.dispatch_status == 'em_execucao' %}border-l-amber-400 bg-amber-50 dark:bg-amber-900/20 text-amber-700
+                {% elif item.dispatch_status == 'cancelado' %}border-l-red-400 bg-red-50 dark:bg-red-900/20 text-red-500 line-through
+                {% elif item.dispatch_status == 'pendente_escala' %}border-l-slate-300 bg-slate-50 dark:bg-slate-800 text-slate-500
+                {% else %}border-l-blue-400 bg-blue-50 dark:bg-blue-900/20 text-blue-700{% endif %}">
+        {{ item.time }} {{ item.client_name[:14] }}
       </a>
       {% endfor %}
       {% if day_items|length > 3 %}
-      <a href="{{ url_for('dispatch.index', view='day', date=day_str) }}" class="block text-[10px] text-blue-500 hover:underline text-center">+{{ day_items|length - 3 }}</a>
+      <a href="{{ url_for('dispatch.index', view='day', date=day_str) }}" class="block text-[10px] text-blue-500 hover:underline text-center mt-0.5">+{{ day_items|length - 3 }}</a>
       {% endif %}
     </div>
     {% endfor %}
   </div>
 
   {% else %}
-  {# ── SEMANA ── #}
-  {% set day_names = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'] %}
-  <div class="grid grid-cols-7 text-center border-b border-slate-100 dark:border-slate-700">
+  {# ── SEMANA (padrão) ── #}
+  {% set day_names = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'] %}
+  {% set day_short = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'] %}
+  <div class="grid grid-cols-7 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
     {% for i in range(7) %}
     {% set ds = week_days[i] if week_days|length > i else '' %}
     {% set parts = ds.split('-') if ds else ['','',''] %}
-    <div class="py-2 {% if ds == today %}bg-blue-50 dark:bg-blue-900/20{% endif %}">
-      <p class="text-[10px] text-slate-400 uppercase font-semibold">{{ day_names[i] }}</p>
-      <p class="text-lg font-bold text-slate-700 dark:text-slate-200">{{ parts[2] if parts|length > 2 else '' }}</p>
+    {% set day_count = items_by_date.get(ds, [])|length %}
+    <div class="py-3 text-center {% if ds == today %}bg-blue-50 dark:bg-blue-900/20 border-b-2 border-blue-500{% endif %}">
+      <p class="text-[11px] font-semibold text-slate-500 uppercase">{{ day_short[i] }}</p>
+      <p class="text-2xl font-bold text-slate-800 dark:text-slate-100 mt-0.5">{{ parts[2] if parts|length > 2 else '' }}</p>
       <p class="text-[10px] text-slate-400">{{ parts[2] }}/{{ parts[1] if parts|length > 1 else '' }}</p>
+      {% if day_count > 0 %}
+      <span class="inline-block mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300">{{ day_count }} serviço(s)</span>
+      {% endif %}
     </div>
     {% endfor %}
   </div>
 
-  <div class="grid grid-cols-7 divide-x divide-slate-100 dark:divide-slate-700 min-h-[400px]">
+  <div class="grid grid-cols-7 divide-x divide-slate-100 dark:divide-slate-700 min-h-[500px]">
     {% for i in range(7) %}
     {% set ds = week_days[i] if week_days|length > i else '' %}
-    <div class="p-1.5 space-y-1.5 {% if ds == today %}bg-blue-50/30 dark:bg-blue-900/5{% endif %}">
-      {% for item in items_by_date.get(ds, [])|sort(attribute='time') %}
+    <div class="p-2 space-y-2 {% if ds == today %}bg-blue-50/20 dark:bg-blue-900/3{% endif %}">
+      {% set col_items = items_by_date.get(ds, [])|sort(attribute='time') %}
+      {% for item in col_items %}
       {% include 'dispatch/_item_card.html' %}
       {% endfor %}
+      {% if not col_items %}
+      <div class="flex items-center justify-center h-24 text-slate-300 dark:text-slate-600 text-xs">
+        <span>—</span>
+      </div>
+      {% endif %}
     </div>
     {% endfor %}
   </div>
@@ -189,125 +216,176 @@
 ══════════════════════════════════════════ #}
 <template x-teleport="body">
 <div x-show="drawerOpen" x-cloak class="fixed inset-0 z-50 flex">
-  <div @click="closeDrawer()" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+  <div @click="closeDrawer()" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
 
-  <div class="absolute inset-y-0 right-0 w-full max-w-md bg-white dark:bg-slate-800 shadow-2xl overflow-y-auto"
+  <div class="absolute inset-y-0 right-0 w-full max-w-lg bg-white dark:bg-slate-800 shadow-2xl flex flex-col"
        x-transition:enter="transition ease-out duration-300"
        x-transition:enter-start="translate-x-full"
        x-transition:enter-end="translate-x-0">
 
     {# Header #}
-    <div class="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 px-5 py-3 flex items-center justify-between z-10">
-      <h3 class="font-semibold text-slate-700 dark:text-slate-200 text-sm">
-        <i class="fa-solid fa-circle-info mr-2 text-blue-500"></i>Detalhes do Serviço
-      </h3>
-      <button @click="closeDrawer()" class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700 shrink-0">
+      <div>
+        <h3 class="font-bold text-slate-800 dark:text-slate-100 text-base" x-text="drawerData.order_number"></h3>
+        <p class="text-xs text-slate-400 mt-0.5" x-text="drawerData.client_name"></p>
+      </div>
+      <button @click="closeDrawer()" class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 text-lg">&times;</button>
+    </div>
+
+    {# Status banner #}
+    <div class="px-6 py-2.5 shrink-0"
+         :class="{
+           'bg-slate-50 dark:bg-slate-700/30': drawerData.dispatch_status === 'pendente_escala',
+           'bg-blue-50 dark:bg-blue-900/20': drawerData.dispatch_status === 'motorista_atribuido',
+           'bg-emerald-50 dark:bg-emerald-900/20': drawerData.dispatch_status === 'confirmado',
+           'bg-amber-50 dark:bg-amber-900/20': drawerData.dispatch_status === 'em_execucao',
+           'bg-red-50 dark:bg-red-900/20': drawerData.dispatch_status === 'cancelado',
+           'bg-slate-100 dark:bg-slate-700/50': drawerData.dispatch_status === 'concluido',
+         }">
+      <span class="text-xs font-semibold px-2 py-1 rounded-full"
+            :class="{
+              'bg-slate-200 text-slate-600': drawerData.dispatch_status === 'pendente_escala',
+              'bg-blue-100 text-blue-700': drawerData.dispatch_status === 'motorista_atribuido',
+              'bg-emerald-100 text-emerald-700': drawerData.dispatch_status === 'confirmado',
+              'bg-amber-100 text-amber-700': drawerData.dispatch_status === 'em_execucao',
+              'bg-red-100 text-red-700': drawerData.dispatch_status === 'cancelado',
+              'bg-slate-300 text-slate-600': drawerData.dispatch_status === 'concluido',
+            }" x-text="drawerData.dispatch_status_label"></span>
     </div>
 
     {# Loading #}
-    <div x-show="drawerLoading" class="flex items-center justify-center py-16">
+    <div x-show="drawerLoading" class="flex-1 flex items-center justify-center">
       <i class="fa-solid fa-circle-notch fa-spin text-slate-400 text-2xl"></i>
     </div>
 
     {# Content #}
-    <div x-show="!drawerLoading" class="px-5 py-4 space-y-4">
+    <div x-show="!drawerLoading" class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
 
-      <div class="flex items-center justify-between">
-        <span class="font-mono font-bold text-slate-700 dark:text-slate-200" x-text="drawerData.order_number"></span>
-        <span class="text-xs font-semibold px-2 py-1 rounded-full"
-              :class="{
-                'bg-slate-200 text-slate-600': drawerData.dispatch_status === 'pendente_escala',
-                'bg-blue-100 text-blue-700': drawerData.dispatch_status === 'motorista_atribuido',
-                'bg-emerald-100 text-emerald-700': drawerData.dispatch_status === 'confirmado',
-                'bg-amber-100 text-amber-700': drawerData.dispatch_status === 'em_execucao',
-                'bg-red-100 text-red-700': drawerData.dispatch_status === 'cancelado',
-                'bg-slate-300 text-slate-600': drawerData.dispatch_status === 'concluido',
-              }" x-text="drawerData.dispatch_status_label"></span>
-      </div>
-
-      <div><label class="lbl">Cliente</label><p class="text-sm font-semibold text-slate-700 dark:text-slate-200" x-text="drawerData.client_name"></p></div>
-
-      <div class="grid grid-cols-2 gap-3">
-        <div><label class="lbl">Data</label><p class="text-sm text-slate-700 dark:text-slate-200" x-text="drawerData.pickup_datetime ? new Date(drawerData.pickup_datetime).toLocaleDateString('pt-BR') : '–'"></p></div>
-        <div><label class="lbl">Hora</label><p class="text-sm text-slate-700 dark:text-slate-200" x-text="drawerData.pickup_datetime ? new Date(drawerData.pickup_datetime).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '–'"></p></div>
-      </div>
-
-      <div class="grid grid-cols-2 gap-3">
-        <div><label class="lbl">Origem</label><p class="text-sm text-slate-700 dark:text-slate-200 break-words" x-text="drawerData.pickup_location || '–'"></p></div>
-        <div><label class="lbl">Destino</label><p class="text-sm text-slate-700 dark:text-slate-200 break-words" x-text="drawerData.dropoff_location || '–'"></p></div>
-      </div>
-
-      <div class="card-divider"></div>
-
-      <div>
-        <label class="lbl">Motorista</label>
-        <div class="flex items-center gap-2">
-          <p class="text-sm font-semibold text-slate-700 dark:text-slate-200 flex-1" x-text="drawerData.driver_name || '–'"></p>
-          <button @click="showDriverForm = !showDriverForm" class="h-7 px-2 text-[11px] font-semibold rounded-lg border border-slate-200 dark:border-slate-600 text-slate-500 hover:bg-slate-50">Alterar</button>
-        </div>
-        <div x-show="showDriverForm" x-cloak class="mt-2 p-3 bg-slate-50 dark:bg-slate-700/30 rounded-lg space-y-2">
-          <input type="text" x-model="driverForm.name" placeholder="Nome do motorista" class="fi text-xs">
-          <input type="text" x-model="driverForm.phone" placeholder="Telefone" class="fi text-xs">
-          <div class="flex gap-1 justify-end">
-            <button @click="showDriverForm = false" class="h-7 px-2 text-[11px] rounded-lg border border-slate-200 dark:border-slate-600 text-slate-400">Cancelar</button>
-            <button @click="saveDriver()" class="h-7 px-2 text-[11px] font-semibold rounded-lg bg-blue-600 text-white">Salvar</button>
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <label class="lbl">Veículo</label>
-        <div class="flex items-center gap-2">
-          <p class="text-sm font-semibold text-slate-700 dark:text-slate-200 flex-1">
-            <span x-text="drawerData.vehicle_model || '–'"></span>
-            <template x-if="drawerData.vehicle_plate"><span class="font-mono text-slate-400" x-text="' · ' + drawerData.vehicle_plate"></span></template>
+      {# Data/Hora + Origem/Destino #}
+      <div class="grid grid-cols-2 gap-4">
+        <div class="bg-slate-50 dark:bg-slate-700/30 rounded-xl p-3">
+          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1 block">Data & Hora</label>
+          <p class="text-sm font-bold text-slate-800 dark:text-slate-100">
+            <span x-text="drawerData.pickup_datetime ? new Date(drawerData.pickup_datetime).toLocaleDateString('pt-BR') : '–'"></span>
+            <span class="text-slate-400 mx-1">·</span>
+            <span x-text="drawerData.pickup_datetime ? new Date(drawerData.pickup_datetime).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '–'"></span>
           </p>
-          <button @click="showVehicleForm = !showVehicleForm" class="h-7 px-2 text-[11px] font-semibold rounded-lg border border-slate-200 dark:border-slate-600 text-slate-500 hover:bg-slate-50">Alterar</button>
         </div>
-        <div x-show="showVehicleForm" x-cloak class="mt-2 p-3 bg-slate-50 dark:bg-slate-700/30 rounded-lg space-y-2">
-          <input type="text" x-model="vehicleForm.model" placeholder="Modelo do veículo" class="fi text-xs">
-          <input type="text" x-model="vehicleForm.plate" placeholder="Placa" class="fi text-xs">
-          <div class="flex gap-1 justify-end">
-            <button @click="showVehicleForm = false" class="h-7 px-2 text-[11px] rounded-lg border border-slate-200 dark:border-slate-600 text-slate-400">Cancelar</button>
-            <button @click="saveVehicle()" class="h-7 px-2 text-[11px] font-semibold rounded-lg bg-blue-600 text-white">Salvar</button>
+        <div class="bg-slate-50 dark:bg-slate-700/30 rounded-xl p-3">
+          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1 block">Serviço</label>
+          <p class="text-sm font-semibold text-slate-700 dark:text-slate-200" x-text="drawerData.description || '–'"></p>
+        </div>
+      </div>
+
+      {# Origem → Destino #}
+      <div class="bg-slate-50 dark:bg-slate-700/30 rounded-xl p-3">
+        <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2 block">Rota</label>
+        <div class="flex items-center gap-3">
+          <div class="flex-1">
+            <p class="text-[10px] text-slate-400 uppercase font-semibold mb-0.5">Origem</p>
+            <p class="text-sm font-medium text-slate-700 dark:text-slate-200" x-text="drawerData.pickup_location || '–'"></p>
+          </div>
+          <div class="text-slate-300 dark:text-slate-500 text-lg"><i class="fa-solid fa-arrow-right"></i></div>
+          <div class="flex-1 text-right">
+            <p class="text-[10px] text-slate-400 uppercase font-semibold mb-0.5">Destino</p>
+            <p class="text-sm font-medium text-slate-700 dark:text-slate-200" x-text="drawerData.dropoff_location || '–'"></p>
           </div>
         </div>
       </div>
 
-      <div class="card-divider"></div>
+      <div class="border-t border-slate-100 dark:border-slate-700"></div>
 
-      <div class="grid grid-cols-3 gap-3">
-        <div><label class="lbl">Passageiro</label><p class="text-sm text-slate-700 dark:text-slate-200" x-text="drawerData.passenger_name || '–'"></p></div>
-        <div><label class="lbl">Voo</label><p class="text-sm text-slate-700 dark:text-slate-200" x-text="drawerData.flight_number || '–'"></p></div>
-        <div><label class="lbl">Categoria</label><p class="text-sm text-slate-700 dark:text-slate-200" x-text="drawerData.category_name || '–'"></p></div>
+      {# Motorista #}
+      <div class="flex items-start justify-between">
+        <div class="flex items-center gap-3">
+          <span class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0"><i class="fa-solid fa-user"></i></span>
+          <div>
+            <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block">Motorista</label>
+            <p class="text-sm font-semibold text-slate-700 dark:text-slate-200" x-text="drawerData.driver_name || 'Não atribuído'"></p>
+            <p class="text-xs text-slate-400" x-show="drawerData.driver_phone" x-text="drawerData.driver_phone"></p>
+          </div>
+        </div>
+        <button @click="showDriverForm = !showDriverForm" class="text-xs text-blue-500 hover:text-blue-700 font-semibold shrink-0">Alterar</button>
+      </div>
+      <div x-show="showDriverForm" x-cloak class="bg-slate-50 dark:bg-slate-700/30 rounded-xl p-3 space-y-2">
+        <input type="text" x-model="driverForm.name" placeholder="Nome do motorista" class="fi text-xs">
+        <input type="text" x-model="driverForm.phone" placeholder="Telefone" class="fi text-xs">
+        <div class="flex gap-2 justify-end">
+          <button @click="showDriverForm = false" class="text-xs text-slate-400 hover:text-slate-600 px-3 py-1.5">Cancelar</button>
+          <button @click="saveDriver()" class="text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg">Salvar</button>
+        </div>
       </div>
 
-      <div x-show="drawerData.notes" class="card-divider pt-2"><label class="lbl">Observações</label><p class="text-sm text-slate-600 dark:text-slate-300 italic" x-text="drawerData.notes"></p></div>
-
-      <div class="card-divider"></div>
-
-      <div class="space-y-2">
-        <p class="lbl">Ações</p>
-        <div class="flex flex-wrap gap-2">
-          <button @click="startService()" :disabled="drawerData.order_status !== 'aberto'"
-                  class="h-8 px-3 text-xs font-medium rounded-lg bg-amber-500 hover:bg-amber-600 text-white disabled:opacity-40 transition-colors">
-            <i class="fa-solid fa-play text-[11px] mr-1"></i>Iniciar
-          </button>
-          <button @click="completeService()" :disabled="drawerData.order_status !== 'faturado'"
-                  class="h-8 px-3 text-xs font-medium rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-40 transition-colors">
-            <i class="fa-solid fa-flag-checkered text-[11px] mr-1"></i>Concluir
-          </button>
-          <button @click="cancelService()"
-                  class="h-8 px-3 text-xs font-medium rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors">
-            <i class="fa-solid fa-ban text-[11px] mr-1"></i>Cancelar
-          </button>
-          <a :href="'/orders/' + drawerData.order_id"
-             class="h-8 px-3 text-xs font-medium rounded-lg bg-slate-600 hover:bg-slate-700 text-white inline-flex items-center transition-colors">
-            <i class="fa-solid fa-bag-shopping text-[11px] mr-1"></i>Abrir SO
-          </a>
+      {# Veículo #}
+      <div class="flex items-start justify-between">
+        <div class="flex items-center gap-3">
+          <span class="w-10 h-10 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-violet-600 dark:text-violet-400 shrink-0"><i class="fa-solid fa-car-side"></i></span>
+          <div>
+            <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block">Veículo</label>
+            <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">
+              <span x-text="drawerData.vehicle_model || 'Não definido'"></span>
+              <template x-if="drawerData.vehicle_plate">
+                <span class="font-mono text-slate-400 ml-1" x-text="'· ' + drawerData.vehicle_plate"></span>
+              </template>
+            </p>
+          </div>
         </div>
+        <button @click="showVehicleForm = !showVehicleForm" class="text-xs text-blue-500 hover:text-blue-700 font-semibold shrink-0">Alterar</button>
+      </div>
+      <div x-show="showVehicleForm" x-cloak class="bg-slate-50 dark:bg-slate-700/30 rounded-xl p-3 space-y-2">
+        <input type="text" x-model="vehicleForm.model" placeholder="Modelo do veículo" class="fi text-xs">
+        <input type="text" x-model="vehicleForm.plate" placeholder="Placa" class="fi text-xs">
+        <div class="flex gap-2 justify-end">
+          <button @click="showVehicleForm = false" class="text-xs text-slate-400 hover:text-slate-600 px-3 py-1.5">Cancelar</button>
+          <button @click="saveVehicle()" class="text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg">Salvar</button>
+        </div>
+      </div>
+
+      <div class="border-t border-slate-100 dark:border-slate-700"></div>
+
+      {# Passageiro / Voo / Categoria #}
+      <div class="grid grid-cols-3 gap-3">
+        <div class="bg-slate-50 dark:bg-slate-700/30 rounded-xl p-3 text-center">
+          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">Passageiro</label>
+          <p class="text-sm font-semibold text-slate-700 dark:text-slate-200" x-text="drawerData.passenger_name || '–'"></p>
+        </div>
+        <div class="bg-slate-50 dark:bg-slate-700/30 rounded-xl p-3 text-center">
+          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">Voo</label>
+          <p class="text-sm font-semibold text-slate-700 dark:text-slate-200 font-mono" x-text="drawerData.flight_number || '–'"></p>
+        </div>
+        <div class="bg-slate-50 dark:bg-slate-700/30 rounded-xl p-3 text-center">
+          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">Categoria</label>
+          <p class="text-sm font-semibold text-slate-700 dark:text-slate-200" x-text="drawerData.category_name || '–'"></p>
+        </div>
+      </div>
+
+      {# Observações #}
+      <div x-show="drawerData.notes" class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-3">
+        <label class="text-[10px] font-semibold text-amber-600 uppercase tracking-wide block mb-1"><i class="fa-solid fa-note-sticky mr-1"></i>Observações</label>
+        <p class="text-sm text-slate-600 dark:text-slate-300" x-text="drawerData.notes"></p>
+      </div>
+
+    </div>
+
+    {# Footer com Ações #}
+    <div class="px-6 py-4 border-t border-slate-100 dark:border-slate-700 shrink-0 bg-slate-50 dark:bg-slate-800/50">
+      <div class="flex gap-2">
+        <button @click="startService()" :disabled="drawerData.order_status !== 'aberto'"
+                class="flex-1 h-10 text-xs font-bold rounded-xl bg-amber-500 hover:bg-amber-600 text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+          <i class="fa-solid fa-play mr-1"></i> Iniciar
+        </button>
+        <button @click="completeService()" :disabled="drawerData.order_status !== 'faturado'"
+                class="flex-1 h-10 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+          <i class="fa-solid fa-flag-checkered mr-1"></i> Concluir
+        </button>
+        <button @click="cancelService()"
+                class="flex-1 h-10 text-xs font-bold rounded-xl bg-red-500 hover:bg-red-600 text-white transition-colors">
+          <i class="fa-solid fa-ban mr-1"></i> Cancelar
+        </button>
+        <a :href="'/orders/' + drawerData.order_id" target="_blank"
+           class="h-10 px-4 text-xs font-bold rounded-xl bg-slate-600 hover:bg-slate-700 text-white flex items-center transition-colors">
+          <i class="fa-solid fa-arrow-up-right-from-square mr-1"></i> SO
+        </a>
       </div>
     </div>
   </div>
@@ -323,29 +401,17 @@
 <script>
 function dispatchCalendar() {
   return {
-    showFilters: {{ 'true' if request.args.get('search') or request.args.get('driver') or request.args.get('client') or request.args.get('status') else 'false' }},
-    activeFilters: {{ (1 if request.args.get('search') else 0) + (1 if request.args.get('driver') else 0) + (1 if request.args.get('client') else 0) + (1 if request.args.get('status') else 0) }},
-
-    drawerOpen: false,
-    drawerLoading: false,
-    drawerData: {},
-    drawerItemId: null,
-
-    showDriverForm: false,
-    showVehicleForm: false,
-    driverForm: { name: '', phone: '' },
-    vehicleForm: { model: '', plate: '' },
+    drawerOpen: false, drawerLoading: false, drawerData: {}, drawerItemId: null,
+    showDriverForm: false, showVehicleForm: false,
+    driverForm: { name: '', phone: '' }, vehicleForm: { model: '', plate: '' },
 
     get csrfToken() {
       return document.querySelector('meta[name="csrf-token"]')?.content || '';
     },
 
     async openDrawer(itemId) {
-      this.drawerItemId = itemId;
-      this.drawerOpen = true;
-      this.drawerLoading = true;
-      this.showDriverForm = false;
-      this.showVehicleForm = false;
+      this.drawerItemId = itemId; this.drawerOpen = true; this.drawerLoading = true;
+      this.showDriverForm = false; this.showVehicleForm = false;
       try {
         const r = await fetch('/dispatch/item/' + itemId);
         const d = await r.json();
@@ -365,8 +431,7 @@ function dispatchCalendar() {
     async saveDriver() {
       if (!this.driverForm.name.trim()) return;
       await fetch('/dispatch/item/' + this.drawerItemId + '/driver', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.csrfToken},
+        method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.csrfToken},
         body: JSON.stringify({driver_name: this.driverForm.name, driver_phone: this.driverForm.phone}),
       });
       location.reload();
@@ -375,32 +440,25 @@ function dispatchCalendar() {
     async saveVehicle() {
       if (!this.vehicleForm.model.trim()) return;
       await fetch('/dispatch/item/' + this.drawerItemId + '/vehicle', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.csrfToken},
+        method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.csrfToken},
         body: JSON.stringify({vehicle_model: this.vehicleForm.model, vehicle_plate: this.vehicleForm.plate}),
       });
       location.reload();
     },
 
     async startService() {
-      await fetch('/dispatch/item/' + this.drawerItemId + '/start', {
-        method: 'POST', headers: {'X-CSRFToken': this.csrfToken},
-      });
+      await fetch('/dispatch/item/' + this.drawerItemId + '/start', {method: 'POST', headers: {'X-CSRFToken': this.csrfToken}});
       location.reload();
     },
 
     async completeService() {
-      await fetch('/dispatch/item/' + this.drawerItemId + '/complete', {
-        method: 'POST', headers: {'X-CSRFToken': this.csrfToken},
-      });
+      await fetch('/dispatch/item/' + this.drawerItemId + '/complete', {method: 'POST', headers: {'X-CSRFToken': this.csrfToken}});
       location.reload();
     },
 
     async cancelService() {
       if (!confirm('Cancelar este agendamento?')) return;
-      await fetch('/dispatch/item/' + this.drawerItemId + '/cancel', {
-        method: 'POST', headers: {'X-CSRFToken': this.csrfToken},
-      });
+      await fetch('/dispatch/item/' + this.drawerItemId + '/cancel', {method: 'POST', headers: {'X-CSRFToken': this.csrfToken}});
       location.reload();
     },
   }
