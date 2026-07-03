@@ -1,131 +1,409 @@
 {% extends "base.html" %}
-{% block title %}Centro de Despacho{% endblock %}
+{% block title %}Centro de Operações{% endblock %}
+
 {% block page_title %}
-  <i class="fa-solid fa-tower-broadcast mr-2 text-blue-500"></i>Centro de Despacho
-  <span class="ml-3 text-xs text-slate-400 font-normal">{{ ref_date }}</span>
-  {% if ref_date == today %}
-  <span class="ml-2 text-xs bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-full">
-    <span class="w-1.5 h-1.5 rounded-full bg-green-500 inline-block mr-1 align-middle" style="animation:pulse 2s infinite"></span>AO VIVO
-  </span>
-  {% endif %}
+<div class="w-full">
+  <div class="flex flex-wrap items-center gap-2">
+    <i class="fa-solid fa-calendar-days text-blue-500"></i>
+    <span class="font-semibold text-slate-700 dark:text-slate-200">Centro de Operações</span>
+    <span class="text-xs text-slate-400 font-mono">{{ date_label }}</span>
+
+    {# View switcher #}
+    <div class="flex rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600 ml-4">
+      {% for v in ['day','week','month'] %}
+      <a href="{{ url_for('dispatch.index', view=v, date=ref_date) }}"
+         class="px-3 py-1 text-xs font-medium transition-colors
+                {% if view == v %}bg-blue-600 text-white{% else %}bg-white dark:bg-slate-800 text-slate-500 hover:bg-slate-50{% endif %}">
+        {{ {'day':'Dia','week':'Semana','month':'Mês'}[v] }}
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block content %}
-<!-- ── Date Navigation ─────────────────────────────────────────────────── -->
-<div class="flex items-center gap-2 mb-5">
-  <a href="{{ url_for('dispatch.index', date=prev_date) }}"
-     class="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors text-sm">
-    <i class="fa-solid fa-chevron-left"></i>
-  </a>
-  <form method="get" class="flex items-center">
-    <input type="date" name="date" value="{{ ref_date }}"
-           onchange="this.form.submit()"
-           class="border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
-  </form>
-  <a href="{{ url_for('dispatch.index', date=next_date) }}"
-     class="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors text-sm">
-    <i class="fa-solid fa-chevron-right"></i>
-  </a>
-  {% if ref_date != today %}
-  <a href="{{ url_for('dispatch.index') }}"
-     class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
-    Hoje
-  </a>
-  {% endif %}
-  <a href="{{ url_for('purchase_orders.new') }}"
-     class="ml-auto px-3 py-2 bg-violet-700 hover:bg-violet-600 text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
-    <i class="fa-solid fa-plus text-xs"></i> Nova PO
-  </a>
+<div x-data="dispatchCalendar()">
+
+{# ══════════════════════════════════════════
+   KPI Cards
+══════════════════════════════════════════ #}
+<div class="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-4">
+  {% set kpis = [
+    ('Agend. Hoje',  kpi.agendados_hoje,  'blue'),
+    ('Pend. Escala', kpi.pendente_escala,  'slate'),
+    ('Confirmados',  kpi.confirmados,      'emerald'),
+    ('Em Execução',  kpi.em_execucao,      'amber'),
+    ('Concluídos',   kpi.concluidos,       'slate'),
+    ('Cancelados',   kpi.cancelados,       'red'),
+  ] %}
+  {% for label, value, color in kpis %}
+  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-3 text-center border-t-2 border-{{ color }}-400">
+    <p class="text-xl font-extrabold text-slate-800 dark:text-slate-100">{{ value }}</p>
+    <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mt-0.5">{{ label }}</p>
+  </div>
+  {% endfor %}
 </div>
 
-<!-- ── Summary Bar ─────────────────────────────────────────────────────── -->
-<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 border-blue-500">
-    <p class="text-2xl font-bold text-blue-600">{{ summary.today_count }}</p>
-    <p class="text-xs text-slate-500 mt-0.5">OS Hoje</p>
+{# ══════════════════════════════════════════
+   Navegação + Filtros
+══════════════════════════════════════════ #}
+<div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-3 mb-4">
+  <div class="flex flex-wrap items-center gap-2">
+    {# Navegação #}
+    <a href="{{ url_for('dispatch.index', view=view, date=prev_date) }}"
+       class="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700">
+      <i class="fa-solid fa-chevron-left text-[10px]"></i>
+    </a>
+    <a href="{{ url_for('dispatch.index', view=view, date=today) }}"
+       class="h-7 px-2.5 text-[11px] font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700">Hoje</a>
+    <a href="{{ url_for('dispatch.index', view=view, date=next_date) }}"
+       class="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700">
+      <i class="fa-solid fa-chevron-right text-[10px]"></i>
+    </a>
+
+    {# Filtros #}
+    <button @click="showFilters = !showFilters"
+            class="h-7 px-2.5 text-[11px] font-semibold rounded-lg border border-slate-200 dark:border-slate-600 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 ml-2">
+      <i class="fa-solid fa-filter text-[10px] mr-1"></i>Filtros
+      <span x-show="activeFilters > 0" x-cloak class="ml-1 w-4 h-4 rounded-full bg-blue-500 text-white text-[9px] inline-flex items-center justify-center" x-text="activeFilters"></span>
+    </button>
+
+    <span class="ml-auto text-[11px] text-slate-400">{{ items_data|length }} agendamento(s)</span>
   </div>
-  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 border-amber-400">
-    <p class="text-2xl font-bold text-amber-500">{{ summary.pending_count }}</p>
-    <p class="text-xs text-slate-500 mt-0.5">Pend. Atribuição</p>
-  </div>
-  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 border-cyan-500">
-    <p class="text-2xl font-bold text-cyan-600">{{ summary.in_progress|length }}</p>
-    <p class="text-xs text-slate-500 mt-0.5">Em Execução</p>
-  </div>
-  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 {% if summary.overdue %}border-red-500{% else %}border-slate-200 dark:border-slate-600{% endif %}">
-    <p class="text-2xl font-bold {% if summary.overdue %}text-red-500{% else %}text-slate-400{% endif %}">{{ summary.overdue_count }}</p>
-    <p class="text-xs text-slate-500 mt-0.5">Atrasadas</p>
+
+  {# Painel de filtros #}
+  <div x-show="showFilters" x-cloak class="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
+    <form method="get" action="{{ url_for('dispatch.index') }}" class="grid grid-cols-1 sm:grid-cols-4 gap-2">
+      <input type="hidden" name="view" value="{{ view }}">
+      <input type="hidden" name="date" value="{{ ref_date }}">
+      <input type="text" name="search" placeholder="Buscar..." class="fi text-xs" value="{{ request.args.get('search','') }}">
+      <input type="text" name="driver" placeholder="Motorista..." class="fi text-xs" value="{{ request.args.get('driver','') }}">
+      <input type="text" name="client" placeholder="Cliente..." class="fi text-xs" value="{{ request.args.get('client','') }}">
+      <select name="status" class="fi text-xs">
+        <option value="">– Status –</option>
+        {% for k, v in status_labels.items() %}
+        <option value="{{ k }}" {{ 'selected' if request.args.get('status') == k }}>{{ v }}</option>
+        {% endfor %}
+      </select>
+      <div class="flex gap-1 sm:col-span-4">
+        <button type="submit" class="h-7 px-3 text-[11px] font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white">Filtrar</button>
+        <a href="{{ url_for('dispatch.index', view=view, date=ref_date) }}" class="h-7 px-2 text-[11px] rounded-lg border border-slate-200 dark:border-slate-600 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center">Limpar</a>
+      </div>
+    </form>
   </div>
 </div>
 
-<!-- ── OS Boards ───────────────────────────────────────────────────────── -->
-<div class="grid lg:grid-cols-2 gap-5">
+{# ══════════════════════════════════════════
+   Calendário
+══════════════════════════════════════════ #}
+<div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
 
-  <!-- OS do Dia -->
-  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
-    <div class="flex items-center gap-2 px-5 py-3.5 border-b border-slate-100 dark:border-slate-700 bg-blue-50 dark:bg-blue-900/20">
-      <i class="fa-solid fa-calendar-day text-blue-500 text-sm"></i>
-      <h2 class="font-semibold text-slate-700 dark:text-slate-200 text-sm">OS do Dia</h2>
-      <span class="ml-auto text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">{{ summary.today_list|length }}</span>
-    </div>
-    {% if summary.today_list %}
-    <div class="divide-y divide-slate-50 dark:divide-slate-700/50">
-      {% for os in summary.today_list %}{% include "dispatch/_os_card.html" %}{% endfor %}
+  {% if view == 'day' %}
+  {# ── DIA ── #}
+  <div class="p-4">
+    <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">
+      {% set dp = ref_date.split('-') %}{{ dp[2] }}/{{ dp[1] }}/{{ dp[0] }}
+    </h3>
+    {% set day_items = items_by_date.get(ref_date, []) %}
+    {% if day_items %}
+    <div class="space-y-2">
+      {% for item in day_items|sort(attribute='time') %}
+      {% include 'dispatch/_item_card.html' %}
+      {% endfor %}
     </div>
     {% else %}
-    <p class="text-sm text-slate-400 text-center py-10">Nenhuma OS programada para hoje.</p>
+    <div class="text-center py-12 text-slate-400">
+      <i class="fa-solid fa-calendar-xmark text-3xl mb-2 block opacity-30"></i>
+      <p class="text-sm">Nenhum agendamento para esta data.</p>
+    </div>
     {% endif %}
   </div>
 
-  <!-- Pendente Atribuição -->
-  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
-    <div class="flex items-center gap-2 px-5 py-3.5 border-b border-slate-100 dark:border-slate-700 bg-amber-50 dark:bg-amber-900/20">
-      <i class="fa-solid fa-user-clock text-amber-500 text-sm"></i>
-      <h2 class="font-semibold text-slate-700 dark:text-slate-200 text-sm">Pendente Atribuição</h2>
-      <span class="ml-auto text-xs bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full">{{ summary.pending|length }}</span>
-    </div>
-    {% if summary.pending %}
-    <div class="divide-y divide-slate-50 dark:divide-slate-700/50">
-      {% for os in summary.pending %}{% include "dispatch/_os_card.html" %}{% endfor %}
-    </div>
-    {% else %}
-    <p class="text-sm text-slate-400 text-center py-10">Nenhuma OS aguardando atribuição.</p>
-    {% endif %}
+  {% elif view == 'month' %}
+  {# ── MÊS ── #}
+  <div class="grid grid-cols-7 text-center border-b border-slate-100 dark:border-slate-700">
+    {% for dname in ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'] %}
+    <div class="py-2 text-[10px] text-slate-400 uppercase font-semibold">{{ dname }}</div>
+    {% endfor %}
   </div>
-
-  <!-- Em Execução -->
-  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
-    <div class="flex items-center gap-2 px-5 py-3.5 border-b border-slate-100 dark:border-slate-700 bg-cyan-50 dark:bg-cyan-900/20">
-      <i class="fa-solid fa-car-on text-cyan-500 text-sm"></i>
-      <h2 class="font-semibold text-slate-700 dark:text-slate-200 text-sm">Em Execução</h2>
-      <span class="ml-auto text-xs bg-cyan-100 dark:bg-cyan-900/50 text-cyan-700 dark:text-cyan-300 px-2 py-0.5 rounded-full">{{ summary.in_progress|length }}</span>
-    </div>
-    {% if summary.in_progress %}
-    <div class="divide-y divide-slate-50 dark:divide-slate-700/50">
-      {% for os in summary.in_progress %}{% include "dispatch/_os_card.html" %}{% endfor %}
-    </div>
-    {% else %}
-    <p class="text-sm text-slate-400 text-center py-10">Nenhuma OS em execução.</p>
-    {% endif %}
-  </div>
-
-  <!-- Atrasadas -->
-  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden {% if summary.overdue %}ring-1 ring-red-200 dark:ring-red-800{% endif %}">
-    <div class="flex items-center gap-2 px-5 py-3.5 border-b border-slate-100 dark:border-slate-700 {% if summary.overdue %}bg-red-50 dark:bg-red-900/20{% endif %}">
-      <i class="fa-solid fa-triangle-exclamation {% if summary.overdue %}text-red-500{% else %}text-slate-400{% endif %} text-sm"></i>
-      <h2 class="font-semibold {% if summary.overdue %}text-red-600 dark:text-red-400{% else %}text-slate-500{% endif %} text-sm">Atrasadas</h2>
-      {% if summary.overdue %}
-      <span class="ml-auto text-xs bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 px-2 py-0.5 rounded-full">{{ summary.overdue|length }}</span>
+  <div class="grid grid-cols-7 divide-x divide-y divide-slate-100 dark:divide-slate-700">
+    {% for _ in range(month_first_weekday) %}
+    <div class="min-h-[80px] p-1 bg-slate-50/50 dark:bg-slate-700/20"></div>
+    {% endfor %}
+    {% for day_str in month_days %}
+    {% set day_items = items_by_date.get(day_str, []) %}
+    {% set day_num = day_str[-2:]|int %}
+    <div class="min-h-[80px] p-1.5 {% if day_str == today %}bg-blue-50/30 dark:bg-blue-900/5 ring-2 ring-blue-400 ring-inset{% endif %}">
+      <a href="{{ url_for('dispatch.index', view='day', date=day_str) }}"
+         class="block text-right text-xs font-semibold mb-0.5 {% if day_str == today %}text-blue-600{% else %}text-slate-500{% endif %} hover:underline">{{ day_num }}</a>
+      {% for item in day_items[:3]|sort(attribute='time') %}
+      <a href="{{ url_for('dispatch.index', view='day', date=day_str) }}"
+         class="block text-[10px] text-slate-600 dark:text-slate-300 truncate leading-tight px-1 py-0.5 rounded mb-0.5 border-l-2
+                {% if item.dispatch_status == 'confirmado' %}border-l-emerald-400 bg-emerald-50
+                {% elif item.dispatch_status == 'em_execucao' %}border-l-amber-400 bg-amber-50
+                {% elif item.dispatch_status == 'cancelado' %}border-l-red-400 bg-red-50
+                {% elif item.dispatch_status == 'pendente_escala' %}border-l-slate-300 bg-slate-50
+                {% else %}border-l-blue-400 bg-blue-50{% endif %}">
+        {{ item.time }} {{ item.client_name[:15] }}
+      </a>
+      {% endfor %}
+      {% if day_items|length > 3 %}
+      <a href="{{ url_for('dispatch.index', view='day', date=day_str) }}" class="block text-[10px] text-blue-500 hover:underline text-center">+{{ day_items|length - 3 }}</a>
       {% endif %}
     </div>
-    {% if summary.overdue %}
-    <div class="divide-y divide-red-50 dark:divide-red-900/20">
-      {% for os in summary.overdue %}{% include "dispatch/_os_card.html" %}{% endfor %}
-    </div>
-    {% else %}
-    <p class="text-sm text-slate-400 text-center py-10"><i class="fa-solid fa-circle-check text-green-400 mr-2"></i>Sem OS atrasadas.</p>
-    {% endif %}
+    {% endfor %}
   </div>
 
+  {% else %}
+  {# ── SEMANA ── #}
+  {% set day_names = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'] %}
+  <div class="grid grid-cols-7 text-center border-b border-slate-100 dark:border-slate-700">
+    {% for i in range(7) %}
+    {% set ds = week_days[i] if week_days|length > i else '' %}
+    {% set parts = ds.split('-') if ds else ['','',''] %}
+    <div class="py-2 {% if ds == today %}bg-blue-50 dark:bg-blue-900/20{% endif %}">
+      <p class="text-[10px] text-slate-400 uppercase font-semibold">{{ day_names[i] }}</p>
+      <p class="text-lg font-bold text-slate-700 dark:text-slate-200">{{ parts[2] if parts|length > 2 else '' }}</p>
+      <p class="text-[10px] text-slate-400">{{ parts[2] }}/{{ parts[1] if parts|length > 1 else '' }}</p>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="grid grid-cols-7 divide-x divide-slate-100 dark:divide-slate-700 min-h-[400px]">
+    {% for i in range(7) %}
+    {% set ds = week_days[i] if week_days|length > i else '' %}
+    <div class="p-1.5 space-y-1.5 {% if ds == today %}bg-blue-50/30 dark:bg-blue-900/5{% endif %}">
+      {% for item in items_by_date.get(ds, [])|sort(attribute='time') %}
+      {% include 'dispatch/_item_card.html' %}
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
 </div>
+
+{# ══════════════════════════════════════════
+   Drawer
+══════════════════════════════════════════ #}
+<template x-teleport="body">
+<div x-show="drawerOpen" x-cloak class="fixed inset-0 z-50 flex">
+  <div @click="closeDrawer()" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+
+  <div class="absolute inset-y-0 right-0 w-full max-w-md bg-white dark:bg-slate-800 shadow-2xl overflow-y-auto"
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="translate-x-full"
+       x-transition:enter-end="translate-x-0">
+
+    {# Header #}
+    <div class="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 px-5 py-3 flex items-center justify-between z-10">
+      <h3 class="font-semibold text-slate-700 dark:text-slate-200 text-sm">
+        <i class="fa-solid fa-circle-info mr-2 text-blue-500"></i>Detalhes do Serviço
+      </h3>
+      <button @click="closeDrawer()" class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    {# Loading #}
+    <div x-show="drawerLoading" class="flex items-center justify-center py-16">
+      <i class="fa-solid fa-circle-notch fa-spin text-slate-400 text-2xl"></i>
+    </div>
+
+    {# Content #}
+    <div x-show="!drawerLoading" class="px-5 py-4 space-y-4">
+
+      <div class="flex items-center justify-between">
+        <span class="font-mono font-bold text-slate-700 dark:text-slate-200" x-text="drawerData.order_number"></span>
+        <span class="text-xs font-semibold px-2 py-1 rounded-full"
+              :class="{
+                'bg-slate-200 text-slate-600': drawerData.dispatch_status === 'pendente_escala',
+                'bg-blue-100 text-blue-700': drawerData.dispatch_status === 'motorista_atribuido',
+                'bg-emerald-100 text-emerald-700': drawerData.dispatch_status === 'confirmado',
+                'bg-amber-100 text-amber-700': drawerData.dispatch_status === 'em_execucao',
+                'bg-red-100 text-red-700': drawerData.dispatch_status === 'cancelado',
+                'bg-slate-300 text-slate-600': drawerData.dispatch_status === 'concluido',
+              }" x-text="drawerData.dispatch_status_label"></span>
+      </div>
+
+      <div><label class="lbl">Cliente</label><p class="text-sm font-semibold text-slate-700 dark:text-slate-200" x-text="drawerData.client_name"></p></div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="lbl">Data</label><p class="text-sm text-slate-700 dark:text-slate-200" x-text="drawerData.pickup_datetime ? new Date(drawerData.pickup_datetime).toLocaleDateString('pt-BR') : '–'"></p></div>
+        <div><label class="lbl">Hora</label><p class="text-sm text-slate-700 dark:text-slate-200" x-text="drawerData.pickup_datetime ? new Date(drawerData.pickup_datetime).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '–'"></p></div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="lbl">Origem</label><p class="text-sm text-slate-700 dark:text-slate-200 break-words" x-text="drawerData.pickup_location || '–'"></p></div>
+        <div><label class="lbl">Destino</label><p class="text-sm text-slate-700 dark:text-slate-200 break-words" x-text="drawerData.dropoff_location || '–'"></p></div>
+      </div>
+
+      <div class="card-divider"></div>
+
+      <div>
+        <label class="lbl">Motorista</label>
+        <div class="flex items-center gap-2">
+          <p class="text-sm font-semibold text-slate-700 dark:text-slate-200 flex-1" x-text="drawerData.driver_name || '–'"></p>
+          <button @click="showDriverForm = !showDriverForm" class="h-7 px-2 text-[11px] font-semibold rounded-lg border border-slate-200 dark:border-slate-600 text-slate-500 hover:bg-slate-50">Alterar</button>
+        </div>
+        <div x-show="showDriverForm" x-cloak class="mt-2 p-3 bg-slate-50 dark:bg-slate-700/30 rounded-lg space-y-2">
+          <input type="text" x-model="driverForm.name" placeholder="Nome do motorista" class="fi text-xs">
+          <input type="text" x-model="driverForm.phone" placeholder="Telefone" class="fi text-xs">
+          <div class="flex gap-1 justify-end">
+            <button @click="showDriverForm = false" class="h-7 px-2 text-[11px] rounded-lg border border-slate-200 dark:border-slate-600 text-slate-400">Cancelar</button>
+            <button @click="saveDriver()" class="h-7 px-2 text-[11px] font-semibold rounded-lg bg-blue-600 text-white">Salvar</button>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <label class="lbl">Veículo</label>
+        <div class="flex items-center gap-2">
+          <p class="text-sm font-semibold text-slate-700 dark:text-slate-200 flex-1">
+            <span x-text="drawerData.vehicle_model || '–'"></span>
+            <template x-if="drawerData.vehicle_plate"><span class="font-mono text-slate-400" x-text="' · ' + drawerData.vehicle_plate"></span></template>
+          </p>
+          <button @click="showVehicleForm = !showVehicleForm" class="h-7 px-2 text-[11px] font-semibold rounded-lg border border-slate-200 dark:border-slate-600 text-slate-500 hover:bg-slate-50">Alterar</button>
+        </div>
+        <div x-show="showVehicleForm" x-cloak class="mt-2 p-3 bg-slate-50 dark:bg-slate-700/30 rounded-lg space-y-2">
+          <input type="text" x-model="vehicleForm.model" placeholder="Modelo do veículo" class="fi text-xs">
+          <input type="text" x-model="vehicleForm.plate" placeholder="Placa" class="fi text-xs">
+          <div class="flex gap-1 justify-end">
+            <button @click="showVehicleForm = false" class="h-7 px-2 text-[11px] rounded-lg border border-slate-200 dark:border-slate-600 text-slate-400">Cancelar</button>
+            <button @click="saveVehicle()" class="h-7 px-2 text-[11px] font-semibold rounded-lg bg-blue-600 text-white">Salvar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-divider"></div>
+
+      <div class="grid grid-cols-3 gap-3">
+        <div><label class="lbl">Passageiro</label><p class="text-sm text-slate-700 dark:text-slate-200" x-text="drawerData.passenger_name || '–'"></p></div>
+        <div><label class="lbl">Voo</label><p class="text-sm text-slate-700 dark:text-slate-200" x-text="drawerData.flight_number || '–'"></p></div>
+        <div><label class="lbl">Categoria</label><p class="text-sm text-slate-700 dark:text-slate-200" x-text="drawerData.category_name || '–'"></p></div>
+      </div>
+
+      <div x-show="drawerData.notes" class="card-divider pt-2"><label class="lbl">Observações</label><p class="text-sm text-slate-600 dark:text-slate-300 italic" x-text="drawerData.notes"></p></div>
+
+      <div class="card-divider"></div>
+
+      <div class="space-y-2">
+        <p class="lbl">Ações</p>
+        <div class="flex flex-wrap gap-2">
+          <button @click="startService()" :disabled="drawerData.order_status !== 'aberto'"
+                  class="h-8 px-3 text-xs font-medium rounded-lg bg-amber-500 hover:bg-amber-600 text-white disabled:opacity-40 transition-colors">
+            <i class="fa-solid fa-play text-[11px] mr-1"></i>Iniciar
+          </button>
+          <button @click="completeService()" :disabled="drawerData.order_status !== 'faturado'"
+                  class="h-8 px-3 text-xs font-medium rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-40 transition-colors">
+            <i class="fa-solid fa-flag-checkered text-[11px] mr-1"></i>Concluir
+          </button>
+          <button @click="cancelService()"
+                  class="h-8 px-3 text-xs font-medium rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors">
+            <i class="fa-solid fa-ban text-[11px] mr-1"></i>Cancelar
+          </button>
+          <a :href="'/orders/' + drawerData.order_id"
+             class="h-8 px-3 text-xs font-medium rounded-lg bg-slate-600 hover:bg-slate-700 text-white inline-flex items-center transition-colors">
+            <i class="fa-solid fa-bag-shopping text-[11px] mr-1"></i>Abrir SO
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</template>
+
+</div>
+{# /x-data #}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function dispatchCalendar() {
+  return {
+    showFilters: {{ 'true' if request.args.get('search') or request.args.get('driver') or request.args.get('client') or request.args.get('status') else 'false' }},
+    activeFilters: {{ (1 if request.args.get('search') else 0) + (1 if request.args.get('driver') else 0) + (1 if request.args.get('client') else 0) + (1 if request.args.get('status') else 0) }},
+
+    drawerOpen: false,
+    drawerLoading: false,
+    drawerData: {},
+    drawerItemId: null,
+
+    showDriverForm: false,
+    showVehicleForm: false,
+    driverForm: { name: '', phone: '' },
+    vehicleForm: { model: '', plate: '' },
+
+    get csrfToken() {
+      return document.querySelector('meta[name="csrf-token"]')?.content || '';
+    },
+
+    async openDrawer(itemId) {
+      this.drawerItemId = itemId;
+      this.drawerOpen = true;
+      this.drawerLoading = true;
+      this.showDriverForm = false;
+      this.showVehicleForm = false;
+      try {
+        const r = await fetch('/dispatch/item/' + itemId);
+        const d = await r.json();
+        if (d.ok) {
+          this.drawerData = d.item;
+          this.driverForm.name = d.item.driver_name || '';
+          this.driverForm.phone = d.item.driver_phone || '';
+          this.vehicleForm.model = d.item.vehicle_model || '';
+          this.vehicleForm.plate = d.item.vehicle_plate || '';
+        }
+      } catch (e) { console.error(e); }
+      this.drawerLoading = false;
+    },
+
+    closeDrawer() { this.drawerOpen = false; },
+
+    async saveDriver() {
+      if (!this.driverForm.name.trim()) return;
+      await fetch('/dispatch/item/' + this.drawerItemId + '/driver', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.csrfToken},
+        body: JSON.stringify({driver_name: this.driverForm.name, driver_phone: this.driverForm.phone}),
+      });
+      location.reload();
+    },
+
+    async saveVehicle() {
+      if (!this.vehicleForm.model.trim()) return;
+      await fetch('/dispatch/item/' + this.drawerItemId + '/vehicle', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.csrfToken},
+        body: JSON.stringify({vehicle_model: this.vehicleForm.model, vehicle_plate: this.vehicleForm.plate}),
+      });
+      location.reload();
+    },
+
+    async startService() {
+      await fetch('/dispatch/item/' + this.drawerItemId + '/start', {
+        method: 'POST', headers: {'X-CSRFToken': this.csrfToken},
+      });
+      location.reload();
+    },
+
+    async completeService() {
+      await fetch('/dispatch/item/' + this.drawerItemId + '/complete', {
+        method: 'POST', headers: {'X-CSRFToken': this.csrfToken},
+      });
+      location.reload();
+    },
+
+    async cancelService() {
+      if (!confirm('Cancelar este agendamento?')) return;
+      await fetch('/dispatch/item/' + this.drawerItemId + '/cancel', {
+        method: 'POST', headers: {'X-CSRFToken': this.csrfToken},
+      });
+      location.reload();
+    },
+  }
+}
+</script>
 {% endblock %}
