@@ -26,6 +26,11 @@
 {% set kpi_done  = items_data|selectattr('dispatch_status','equalto','concluido')|list|length %}
 {% set kpi_canc  = items_data|selectattr('dispatch_status','equalto','cancelado')|list|length %}
 
+{# ═══════════════════════════════════════════════════════════════════
+   DESKTOP (≥1024px) — layout aprovado, NÃO alterar
+═══════════════════════════════════════════════════════════════════ #}
+<div class="hidden lg:block">
+
 {# ══════════════════════════════════════════
    Toolbar: view switcher + navegação + ações
 ══════════════════════════════════════════ #}
@@ -311,6 +316,202 @@
   </button>
 </div>
 
+</div>
+{# /DESKTOP #}
+
+{# ═══════════════════════════════════════════════════════════════════
+   MOBILE (<1024px) — experiência própria estilo app nativo
+═══════════════════════════════════════════════════════════════════ #}
+<script type="application/json" id="dispatch-mobile-data">
+{{ {'days': week_days, 'itemsByDate': items_by_date, 'today': today, 'refDate': ref_date}|tojson }}
+</script>
+
+<div class="lg:hidden">
+
+  {# ── KPIs: carrossel horizontal ── #}
+  <div class="-mx-4 px-4 mb-4">
+    <div class="flex gap-2.5 overflow-x-auto pb-1 snap-x">
+      {% set mkpis = [
+        ('Total Serviços',    kpi_total,     'blue',    'fa-calendar-check'),
+        ('Pendentes',         pending.count, 'orange',  'fa-hourglass-half'),
+        ('Motoristas Pend.',  kpi_mot,       'violet',  'fa-user-clock'),
+        ('Em Andamento',      kpi_exec,      'amber',   'fa-person-running'),
+        ('Concluídos',        kpi_done,      'emerald', 'fa-circle-check'),
+        ('Cancelados',        kpi_canc,      'red',     'fa-ban'),
+      ] %}
+      {% for lbl, val, col, icon in mkpis %}
+      <div class="snap-start shrink-0 w-32 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-3.5">
+        <span class="w-8 h-8 rounded-lg bg-{{ col }}-50 dark:bg-{{ col }}-900/20 flex items-center justify-center mb-2.5">
+          <i class="fa-solid {{ icon }} text-{{ col }}-500 text-sm"></i>
+        </span>
+        <p class="text-2xl font-extrabold text-slate-800 dark:text-slate-100 leading-none">{{ val }}</p>
+        <p class="text-[11px] font-medium text-slate-400 mt-1 truncate">{{ lbl }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# ── Barra da semana (scroll horizontal) ── #}
+  <div class="flex items-center gap-1.5 mb-4">
+    <a href="{{ url_for('dispatch.index', view='week', date=prev_date) }}"
+       class="w-9 h-14 shrink-0 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 active:scale-95 transition-transform">
+      <i class="fa-solid fa-chevron-left text-xs"></i>
+    </a>
+    <div class="flex-1 overflow-x-auto">
+      <div class="flex gap-1.5 min-w-max">
+        <template x-for="day in mobileDays" :key="day.iso">
+          <button type="button" @click="selectedDay = day.iso"
+                  class="shrink-0 w-[52px] h-14 rounded-xl flex flex-col items-center justify-center gap-0.5 border active:scale-95 transition-all"
+                  :class="selectedDay === day.iso ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300'">
+            <span class="text-[9px] font-bold uppercase tracking-wide" x-text="day.dow"></span>
+            <span class="text-lg font-extrabold leading-none" x-text="day.day"></span>
+            <span class="min-h-[10px] flex items-center">
+              <template x-if="day.count > 0">
+                <span class="w-1.5 h-1.5 rounded-full"
+                      :class="selectedDay === day.iso ? 'bg-white' : 'bg-blue-500'"></span>
+              </template>
+            </span>
+          </button>
+        </template>
+      </div>
+    </div>
+    <a href="{{ url_for('dispatch.index', view='week', date=next_date) }}"
+       class="w-9 h-14 shrink-0 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 active:scale-95 transition-transform">
+      <i class="fa-solid fa-chevron-right text-xs"></i>
+    </a>
+  </div>
+
+  {# ── Cabeçalho do dia + Filtros ── #}
+  <div class="flex items-center justify-between gap-2 mb-3">
+    <div class="min-w-0">
+      <p class="text-sm font-bold text-slate-800 dark:text-slate-100 capitalize truncate" x-text="selectedDayLabel()"></p>
+      <p class="text-[11px] text-slate-400"><span x-text="filteredDayItems().length"></span> serviço(s)</p>
+    </div>
+    <button type="button" @click="showFilterSheet = true"
+            class="h-9 px-3.5 shrink-0 text-xs font-semibold rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 flex items-center gap-1.5 active:scale-95 transition-transform">
+      <i class="fa-solid fa-sliders text-slate-400"></i>Filtros
+      <span x-show="activeFilterCount > 0" class="ml-0.5 text-[10px] font-bold bg-blue-600 text-white rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center" x-text="activeFilterCount"></span>
+    </button>
+  </div>
+
+  {# ── Lista de serviços do dia selecionado ── #}
+  <div class="space-y-3 pb-6">
+    <template x-if="filteredDayItems().length === 0">
+      <div class="text-center py-16 text-slate-400 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700">
+        <i class="fa-solid fa-calendar-xmark text-4xl mb-3 block opacity-20"></i>
+        <p class="text-sm font-medium">Nenhum agendamento</p>
+        <p class="text-xs mt-1">Nenhum serviço para este dia.</p>
+      </div>
+    </template>
+
+    <template x-for="item in filteredDayItems()" :key="item.id">
+      <div @click="openDrawer(item.id)"
+           class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 border-l-4 shadow-sm active:scale-[0.98] transition-transform cursor-pointer overflow-hidden"
+           :class="statusStyle(item.dispatch_status).border">
+        <div class="p-4">
+          {# Hora + SO + Status #}
+          <div class="flex items-center justify-between gap-2 mb-3">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="text-lg font-extrabold text-slate-800 dark:text-slate-100 leading-none shrink-0" x-text="item.time || '--:--'"></span>
+              <span class="font-mono text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full truncate" x-text="item.order_number"></span>
+            </div>
+            <span class="text-[10px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap shrink-0" :class="statusStyle(item.dispatch_status).badge" x-text="item.status_label"></span>
+          </div>
+          {# Rota: origem ↓ destino #}
+          <div class="space-y-1.5 mb-3">
+            <div class="flex items-center gap-2.5">
+              <i class="fa-solid fa-circle-dot text-blue-500 text-xs w-4 text-center shrink-0"></i>
+              <span class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate" x-text="item.pickup_location || '–'"></span>
+            </div>
+            <div class="flex items-center gap-2.5">
+              <i class="fa-solid fa-location-dot text-red-500 text-xs w-4 text-center shrink-0"></i>
+              <span class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate" x-text="item.dropoff_location || '–'"></span>
+            </div>
+          </div>
+          {# Cliente / Motorista / Veículo #}
+          <div class="space-y-1.5 pt-3 border-t border-slate-100 dark:border-slate-700">
+            <div class="flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-300">
+              <i class="fa-solid fa-user text-slate-400 w-4 text-center shrink-0"></i>
+              <span class="font-semibold truncate" x-text="item.client_name"></span>
+            </div>
+            <div class="flex items-center gap-2.5 text-xs text-slate-500 dark:text-slate-400">
+              <i class="fa-solid fa-id-card text-slate-400 w-4 text-center shrink-0"></i>
+              <span class="truncate" x-text="item.driver_name || 'Sem motorista'"></span>
+            </div>
+            <div class="flex items-center gap-2.5 text-xs text-slate-500 dark:text-slate-400" x-show="item.vehicle_model">
+              <i class="fa-solid fa-car-side text-slate-400 w-4 text-center shrink-0"></i>
+              <span class="truncate">
+                <span x-text="item.vehicle_model"></span><template x-if="item.vehicle_plate"><span class="font-mono text-slate-400" x-text="' · ' + item.vehicle_plate"></span></template>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="w-full py-2.5 text-xs font-bold text-blue-600 dark:text-blue-400 bg-slate-50 dark:bg-slate-700/40 border-t border-slate-100 dark:border-slate-700 flex items-center justify-center gap-1.5">
+          Ver detalhes <i class="fa-solid fa-chevron-right text-[10px]"></i>
+        </div>
+      </div>
+    </template>
+  </div>
+</div>
+{# /MOBILE #}
+
+{# ── Bottom Sheet: Filtros (mobile) ── #}
+<div x-show="showFilterSheet" x-cloak class="lg:hidden fixed inset-0 z-50">
+  <div @click="showFilterSheet = false" x-show="showFilterSheet" x-transition.opacity class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+  <div x-show="showFilterSheet"
+       x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-y-full" x-transition:enter-end="translate-y-0"
+       x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-y-0" x-transition:leave-end="translate-y-full"
+       class="absolute inset-x-0 bottom-0 bg-white dark:bg-slate-800 rounded-t-3xl shadow-2xl max-h-[88vh] flex flex-col">
+    <div class="pt-3 pb-1 flex justify-center shrink-0"><span class="w-10 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600"></span></div>
+    <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 dark:border-slate-700 shrink-0">
+      <h3 class="font-bold text-slate-800 dark:text-slate-100">Filtros</h3>
+      <button @click="clearFilters()" class="text-xs font-semibold text-blue-600 active:opacity-60">Limpar tudo</button>
+    </div>
+    <div class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+      <div>
+        <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Motorista</label>
+        <input type="text" x-model="filters.driver" placeholder="Nome do motorista"
+               class="w-full h-11 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl px-3.5 text-sm text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
+      </div>
+      <div>
+        <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Status</label>
+        <select x-model="filters.status"
+                class="w-full h-11 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl px-3 text-sm text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
+          <option value="">Todos os status</option>
+          {% for k, v in status_labels.items() %}
+          <option value="{{ k }}">{{ v }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Cliente</label>
+        <input type="text" x-model="filters.client" placeholder="Nome do cliente"
+               class="w-full h-11 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl px-3.5 text-sm text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
+      </div>
+      <div>
+        <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Veículo</label>
+        <input type="text" x-model="filters.vehicle" placeholder="Modelo ou placa"
+               class="w-full h-11 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl px-3.5 text-sm text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
+      </div>
+      <div>
+        <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Data</label>
+        <input type="date" x-model="filters.date" @change="pickDate($event.target.value)"
+               class="w-full h-11 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl px-3.5 text-sm text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
+      </div>
+      <div>
+        <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Categoria / Serviço</label>
+        <input type="text" x-model="filters.category" placeholder="Categoria ou descrição do serviço"
+               class="w-full h-11 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl px-3.5 text-sm text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
+      </div>
+    </div>
+    <div class="px-5 py-4 border-t border-slate-100 dark:border-slate-700 shrink-0">
+      <button @click="showFilterSheet = false" class="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm active:scale-95 transition-transform">
+        Ver <span x-text="filteredDayItems().length"></span> serviço(s)
+      </button>
+    </div>
+  </div>
+</div>
+
 {# ══════════════════════════════════════════
    Drawer
 ══════════════════════════════════════════ #}
@@ -504,6 +705,84 @@ function dispatchCalendar() {
     drawerOpen: false, drawerLoading: false, drawerData: {}, drawerItemId: null,
     showDriverForm: false, showVehicleForm: false, showFilters: false, showPending: false,
     driverForm: { name: '', phone: '' }, vehicleForm: { model: '', plate: '' },
+
+    // ── Mobile ──
+    showFilterSheet: false,
+    selectedDay: '',
+    mobileDays: [],
+    mobileItems: {},
+    filters: { driver: '', status: '', client: '', vehicle: '', date: '', category: '' },
+
+    init() {
+      try {
+        const el = document.getElementById('dispatch-mobile-data');
+        if (el) {
+          const d = JSON.parse(el.textContent);
+          this.initMobile(d.days || [], d.itemsByDate || {}, d.today, d.refDate);
+        }
+      } catch (e) { console.error('mobile data', e); }
+    },
+
+    initMobile(days, itemsByDate, today, refDate) {
+      this.mobileItems = itemsByDate || {};
+      const dow = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM'];
+      this.mobileDays = (days || []).map(iso => {
+        const p = iso.split('-').map(Number);
+        const dt = new Date(p[0], p[1] - 1, p[2]);
+        const idx = (dt.getDay() + 6) % 7; // 0=Seg .. 6=Dom
+        return { iso, dow: dow[idx], day: String(p[2]).padStart(2, '0'), count: (this.mobileItems[iso] || []).length };
+      });
+      if (refDate && days.includes(refDate)) this.selectedDay = refDate;
+      else if (today && days.includes(today)) this.selectedDay = today;
+      else {
+        const withItems = this.mobileDays.find(x => x.count > 0);
+        this.selectedDay = withItems ? withItems.iso : (days[0] || today || '');
+      }
+      this.filters.date = this.selectedDay;
+    },
+
+    get activeFilterCount() {
+      return ['driver', 'status', 'client', 'vehicle', 'category'].filter(k => this.filters[k]).length;
+    },
+
+    selectedDayLabel() {
+      if (!this.selectedDay) return '';
+      const p = this.selectedDay.split('-').map(Number);
+      return new Date(p[0], p[1] - 1, p[2]).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
+    },
+
+    statusStyle(s) {
+      const m = {
+        pendente_escala:     { border: 'border-l-slate-400', badge: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300' },
+        motorista_atribuido: { border: 'border-l-blue-500',  badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
+        confirmado:          { border: 'border-l-emerald-500', badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' },
+        em_execucao:         { border: 'border-l-amber-500', badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' },
+        concluido:           { border: 'border-l-slate-500', badge: 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400' },
+        cancelado:           { border: 'border-l-red-500',   badge: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-300' },
+      };
+      return m[s] || { border: 'border-l-slate-300', badge: 'bg-slate-100 text-slate-600' };
+    },
+
+    filteredDayItems() {
+      let list = (this.mobileItems[this.selectedDay] || []).slice();
+      const f = this.filters;
+      if (f.driver)   list = list.filter(i => (i.driver_name || '').toLowerCase().includes(f.driver.toLowerCase()));
+      if (f.status)   list = list.filter(i => i.dispatch_status === f.status);
+      if (f.client)   list = list.filter(i => (i.client_name || '').toLowerCase().includes(f.client.toLowerCase()));
+      if (f.vehicle)  list = list.filter(i => ((i.vehicle_model || '') + ' ' + (i.vehicle_plate || '')).toLowerCase().includes(f.vehicle.toLowerCase()));
+      if (f.category) list = list.filter(i => (i.description || '').toLowerCase().includes(f.category.toLowerCase()));
+      return list;
+    },
+
+    clearFilters() {
+      this.filters = { driver: '', status: '', client: '', vehicle: '', date: this.selectedDay, category: '' };
+    },
+
+    pickDate(v) {
+      if (!v) return;
+      if (this.mobileDays.some(d => d.iso === v)) { this.selectedDay = v; }
+      else { window.location.href = '?view=week&date=' + v; }
+    },
 
     get csrfToken() {
       return document.querySelector('meta[name="csrf-token"]')?.content || '';
