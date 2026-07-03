@@ -56,6 +56,10 @@ def _item_to_dict(item):
     """Serializa OrderItem para dict (apenas campos que existem no model)."""
     order = item.order
     status = dispatch_service.derive_dispatch_status(item, order)
+    driver_complete = bool(item.op_driver_name and item.op_driver_phone
+                           and item.op_vehicle_model and item.op_vehicle_plate)
+    driver_pending = (status not in ('em_execucao', 'concluido', 'cancelado')
+                      and not driver_complete)
     return {
         'id':              item.id,
         'order_id':        order.id,
@@ -73,10 +77,12 @@ def _item_to_dict(item):
         'pickup_location':  item.op_pickup_location or '',
         'dropoff_location': item.op_dropoff_location or '',
         'driver_name':      item.op_driver_name or '',
+        'driver_phone':     item.op_driver_phone or '',
         'vehicle_model':    item.op_vehicle_model or '',
         'vehicle_plate':    item.op_vehicle_plate or '',
         'passenger_name':   item.op_passenger_name or '',
         'description':      item.description or '',
+        'driver_pending':   driver_pending,
     }
 
 

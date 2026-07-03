@@ -21,8 +21,9 @@
 
 {# KPIs calculados a partir dos itens exibidos no período atual #}
 {% set kpi_total = items_data|length %}
-{% set kpi_conf  = items_data|selectattr('dispatch_status','in',['confirmado','motorista_atribuido'])|list|length %}
+{% set kpi_mot   = items_data|selectattr('driver_pending')|list|length %}
 {% set kpi_exec  = items_data|selectattr('dispatch_status','equalto','em_execucao')|list|length %}
+{% set kpi_done  = items_data|selectattr('dispatch_status','equalto','concluido')|list|length %}
 {% set kpi_canc  = items_data|selectattr('dispatch_status','equalto','cancelado')|list|length %}
 
 {# ══════════════════════════════════════════
@@ -30,10 +31,10 @@
 ══════════════════════════════════════════ #}
 <div class="flex flex-wrap items-center gap-2 mb-4">
   {# View switcher #}
-  <div class="flex rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600 shrink-0">
+  <div class="flex rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600 basis-full sm:basis-auto sm:shrink-0">
     {% for v in ['day','week','month'] %}
     <a href="{{ url_for('dispatch.index', view=v, date=ref_date) }}"
-       class="px-3 py-1.5 text-xs font-semibold transition-colors
+       class="flex-1 sm:flex-none text-center px-3 py-1.5 text-xs font-semibold transition-colors
               {% if view == v %}bg-blue-600 text-white{% else %}bg-white dark:bg-slate-800 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700{% endif %}">
       {{ {'day':'Dia','week':'Semana','month':'Mês'}[v] }}
     </a>
@@ -41,33 +42,29 @@
   </div>
 
   {# Navegação #}
-  <div class="flex items-center gap-1 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-600 p-1">
+  <div class="flex items-center justify-between sm:justify-start gap-1 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-600 p-1 basis-full sm:basis-auto sm:w-auto">
     <a href="{{ url_for('dispatch.index', view=view, date=prev_date) }}"
-       class="w-8 h-8 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+       class="w-8 h-8 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shrink-0">
       <i class="fa-solid fa-chevron-left text-xs"></i>
     </a>
-    <span class="text-sm font-semibold text-slate-700 dark:text-slate-200 px-2 min-w-[150px] text-center">
+    <span class="text-sm font-semibold text-slate-700 dark:text-slate-200 px-2 flex-1 sm:flex-none sm:min-w-[150px] text-center">
       <i class="fa-regular fa-calendar text-slate-400 mr-1"></i>{{ date_label }}
     </span>
     <a href="{{ url_for('dispatch.index', view=view, date=next_date) }}"
-       class="w-8 h-8 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+       class="w-8 h-8 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shrink-0">
       <i class="fa-solid fa-chevron-right text-xs"></i>
     </a>
   </div>
 
   <a href="{{ url_for('dispatch.index', view=view, date=today) }}"
-     class="h-9 px-3 text-xs font-semibold rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center transition-colors">Hoje</a>
+     class="h-9 px-3 text-xs font-semibold rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center justify-center flex-1 sm:flex-none transition-colors">Hoje</a>
 
   {# Ações à direita #}
-  <div class="flex items-center gap-2 ml-auto">
+  <div class="flex items-center gap-2 flex-1 sm:flex-none sm:ml-auto">
     <button type="button" @click="showFilters = !showFilters"
-            class="h-9 px-3 text-xs font-semibold rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-1.5 transition-colors">
+            class="h-9 px-3 text-xs font-semibold rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center justify-center gap-1.5 w-full sm:w-auto transition-colors">
       <i class="fa-solid fa-filter text-slate-400"></i>Filtros
       {% if request.args.get('search') or request.args.get('status') %}<span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>{% endif %}
-    </button>
-    <button type="button"
-            class="h-9 px-4 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 transition-colors">
-      <i class="fa-solid fa-plus"></i>Novo Agendamento
     </button>
   </div>
 </div>
@@ -75,24 +72,25 @@
 {# ══════════════════════════════════════════
    KPI Cards
 ══════════════════════════════════════════ #}
-<div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
+<div class="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-4">
   {% set kpi_cards = [
     ('Total de Serviços',    kpi_total,     'blue',    'fa-calendar-check', 'period'),
     ('Agendamento Pendente', pending.count, 'orange',  'fa-hourglass-half', 'pending'),
-    ('Serviços Confirmados', kpi_conf,      'emerald', 'fa-circle-check',   'pct'),
+    ('Motorista Pendente',   kpi_mot,       'violet',  'fa-user-clock',     'pct'),
     ('Em Andamento',         kpi_exec,      'amber',   'fa-person-running', 'pct'),
+    ('Concluído',            kpi_done,      'emerald', 'fa-circle-check',   'pct'),
     ('Cancelados',           kpi_canc,      'red',     'fa-ban',            'pct'),
   ] %}
   {% for label, value, color, icon, mode in kpi_cards %}
-  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-4 border border-slate-100 dark:border-slate-700 hover:shadow-md transition-shadow flex items-center gap-3 {% if mode == 'pending' %}cursor-pointer{% endif %}"
+  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-3 border border-slate-100 dark:border-slate-700 hover:shadow-md transition-shadow flex items-center gap-2.5 {% if mode == 'pending' %}cursor-pointer{% endif %}"
        {% if mode == 'pending' %}@click="showPending = !showPending" :class="showPending ? 'ring-2 ring-orange-300 dark:ring-orange-500' : ''"{% endif %}>
-    <span class="w-11 h-11 rounded-xl bg-{{ color }}-50 dark:bg-{{ color }}-900/20 flex items-center justify-center shrink-0">
-      <i class="fa-solid {{ icon }} text-{{ color }}-500 text-lg"></i>
+    <span class="w-9 h-9 rounded-lg bg-{{ color }}-50 dark:bg-{{ color }}-900/20 flex items-center justify-center shrink-0">
+      <i class="fa-solid {{ icon }} text-{{ color }}-500 text-base"></i>
     </span>
     <div class="min-w-0">
-      <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wide truncate">{{ label }}</p>
-      <p class="text-2xl font-extrabold text-slate-800 dark:text-slate-100 leading-tight">{{ value }}</p>
-      <p class="text-[10px] text-slate-400">
+      <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide truncate">{{ label }}</p>
+      <p class="text-xl font-extrabold text-slate-800 dark:text-slate-100 leading-tight">{{ value }}</p>
+      <p class="text-[10px] text-slate-400 truncate">
         {% if mode == 'pct' %}{{ (value / kpi_total * 100)|round(1) if kpi_total else 0 }}% do total
         {% elif mode == 'pending' %}em {{ pending.orders_count }} SO(s){% if pending.count %} · <span class="text-orange-500 font-semibold">ver</span>{% endif %}
         {% else %}no período{% endif %}

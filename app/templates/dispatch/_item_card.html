@@ -21,10 +21,17 @@
      @click="openDrawer({{ item.id }})">
 
   {# Hora + número da OS #}
+  {% if view == 'day' %}
+  <div class="mb-1 leading-tight">
+    <div class="font-mono font-bold text-slate-800 dark:text-slate-100 text-sm">{{ item.time or '--:--' }}</div>
+    <span class="inline-block mt-0.5 font-mono text-[9px] text-slate-400 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">{{ item.order_number }}</span>
+  </div>
+  {% else %}
   <div class="flex items-center justify-between mb-1">
     <span class="font-mono font-bold text-slate-800 dark:text-slate-100 text-sm">{{ item.time or '--:--' }}</span>
     <span class="font-mono text-[9px] text-slate-400 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">{{ item.order_number }}</span>
   </div>
+  {% endif %}
 
   {# Rota: origem → destino #}
   <div class="flex items-center gap-1 text-[11px] font-medium text-slate-700 dark:text-slate-200 mb-1 leading-tight">
@@ -45,7 +52,7 @@
   {# Rodapé: badge de status + passageiro #}
   <div class="flex items-center justify-between pt-1.5 border-t border-slate-100 dark:border-slate-700">
     <span class="text-[9px] font-semibold px-2 py-0.5 rounded-full {{ badge_map.get(s, '') }} whitespace-nowrap">{{ status_labels.get(s, s) }}</span>
-    {% if item.passenger_name %}
+    {% if item.passenger_name and view != 'day' %}
     <span class="flex items-center gap-1 text-[10px] text-slate-400 truncate max-w-[45%]">
       <i class="fa-solid fa-user text-[9px]"></i>{{ item.passenger_name.split(' ')[0] }}
     </span>
