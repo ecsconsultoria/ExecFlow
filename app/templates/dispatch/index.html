@@ -108,10 +108,13 @@
   {% if view == 'day' %}
   {# ── Visão DIA ── #}
   <div class="p-4">
-    <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">{{ ref_date[:10] }}</h3>
-    {% if items_data %}
+    <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">
+      {% set dp = ref_date.split('-') %}{{ dp[2] }}/{{ dp[1] }}/{{ dp[0] }}
+    </h3>
+    {% set day_items = items_by_date.get(ref_date, []) %}
+    {% if day_items %}
     <div class="space-y-2">
-      {% for item in items_data|sort(attribute='time') %}
+      {% for item in day_items|sort(attribute='time') %}
       {% include 'dispatch/_item_card.html' %}
       {% endfor %}
     </div>
@@ -125,41 +128,68 @@
 
   {% elif view == 'month' %}
   {# ── Visão MÊS ── #}
-  {% set first_weekday = start_date[:10] %}
-  {# compute weekday from iso string at template level is hard, let's do header only #}
   <div class="grid grid-cols-7 text-center border-b border-slate-100 dark:border-slate-700">
     {% for dname in ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'] %}
     <div class="py-2 text-[10px] text-slate-400 uppercase font-semibold">{{ dname }}</div>
     {% endfor %}
   </div>
-  <div class="p-8 text-center text-slate-400">
-    <i class="fa-solid fa-calendar-days text-3xl mb-2 block opacity-30"></i>
-    <p class="text-sm">Visão mensal — selecione um dia para ver os agendamentos.</p>
-    <p class="text-xs mt-1">Use a navegação ← → para mudar o mês.</p>
+
+  <div class="grid grid-cols-7 divide-x divide-y divide-slate-100 dark:divide-slate-700">
+    {# Empty padding cells before first day #}
+    {% for _ in range(month_first_weekday) %}
+    <div class="min-h-[80px] p-1 bg-slate-50/50 dark:bg-slate-700/20"></div>
+    {% endfor %}
+
+    {% for day_str in month_days %}
+    {% set day_items = items_by_date.get(day_str, []) %}
+    {% set day_num = day_str[-2:]|int %}
+    <div class="min-h-[80px] p-1.5 {% if day_str == today %}bg-blue-50/30 dark:bg-blue-900/5 ring-2 ring-blue-400 ring-inset{% endif %}">
+      <a href="{{ url_for('dispatch.index', view='day', date=day_str) }}"
+         class="block text-right text-xs font-semibold mb-0.5
+                {% if day_str == today %}text-blue-600{% else %}text-slate-500{% endif %} hover:underline">
+        {{ day_num }}
+      </a>
+      {% for item in day_items[:3]|sort(attribute='time') %}
+      <a href="{{ url_for('dispatch.index', view='day', date=day_str) }}"
+         class="block text-[10px] text-slate-600 dark:text-slate-300 truncate leading-tight px-1 py-0.5 rounded mb-0.5 border-l-2
+                {% if item.dispatch_status == 'confirmado' %}border-l-emerald-400 bg-emerald-50 dark:bg-emerald-900/20
+                {% elif item.dispatch_status == 'em_execucao' %}border-l-amber-400 bg-amber-50 dark:bg-amber-900/20
+                {% elif item.dispatch_status == 'pendente_escala' %}border-l-slate-300 bg-slate-50 dark:bg-slate-700/30
+                {% elif item.dispatch_status == 'cancelado' %}border-l-red-400 bg-red-50 dark:bg-red-900/20
+                {% else %}border-l-blue-400 bg-blue-50 dark:bg-blue-900/20{% endif %}">
+        {{ item.time }} {{ item.client_name[:18] }}
+      </a>
+      {% endfor %}
+      {% if day_items|length > 3 %}
+      <a href="{{ url_for('dispatch.index', view='day', date=day_str) }}"
+         class="block text-[10px] text-blue-500 hover:underline text-center">+{{ day_items|length - 3 }} mais</a>
+      {% endif %}
+    </div>
+    {% endfor %}
   </div>
 
   {% else %}
   {# ── Visão SEMANA (padrão) ── #}
-  {% set week_start = start_date[:10] %}
+  {% set day_names = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'] %}
   <div class="grid grid-cols-7 text-center border-b border-slate-100 dark:border-slate-700">
-    {% set day_names = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'] %}
     {% for i in range(7) %}
-    <div class="py-2">
+    <div class="py-2 {% if week_days[i] == today %}bg-blue-50 dark:bg-blue-900/20{% endif %}">
       <p class="text-[10px] text-slate-400 uppercase font-semibold">{{ day_names[i] }}</p>
+      {% if week_days and week_days|length > i %}
+      {% set day_parts = week_days[i].split('-') %}
+      <p class="text-lg font-bold text-slate-700 dark:text-slate-200">{{ day_parts[2]|int }}</p>
+      <p class="text-[10px] text-slate-400">{{ day_parts[2] }}/{{ day_parts[1] }}</p>
+      {% endif %}
     </div>
     {% endfor %}
   </div>
 
   <div class="grid grid-cols-7 divide-x divide-slate-100 dark:divide-slate-700 min-h-[400px]">
     {% for i in range(7) %}
-    <div class="p-1.5 space-y-1.5">
-      <p class="text-[10px] text-slate-400 text-center font-semibold py-1">
-        Dia {{ i + 1 }}
-      </p>
-      {% for item in items_data|sort(attribute='time') %}
-      {% if item.date_iso %}
+    {% set day_str = week_days[i] if week_days and week_days|length > i else '' %}
+    <div class="p-1.5 space-y-1.5 {% if day_str == today %}bg-blue-50/30 dark:bg-blue-900/5{% endif %}">
+      {% for item in items_by_date.get(day_str, [])|sort(attribute='time') %}
       {% include 'dispatch/_item_card.html' %}
-      {% endif %}
       {% endfor %}
     </div>
     {% endfor %}

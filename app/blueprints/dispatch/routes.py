@@ -120,6 +120,24 @@ def index():
     for d in items_data:
         items_by_date[d['date_iso']].append(d)
 
+    # Generate week_days list for weekly view
+    week_days = []
+    if view == 'week':
+        d = start_date
+        for _ in range(7):
+            week_days.append(d.isoformat())
+            d += timedelta(days=1)
+
+    # Generate month_days for monthly view
+    month_days = []
+    month_first_weekday = 0
+    if view == 'month':
+        month_first_weekday = start_date.weekday()  # 0=Seg
+        d = start_date
+        while d <= end_date:
+            month_days.append(d.isoformat())
+            d += timedelta(days=1)
+
     return render_template(
         "dispatch/index.html",
         items_data=items_data,
@@ -133,6 +151,9 @@ def index():
         date_label=date_label,
         start_date=start_date.isoformat(),
         end_date=end_date.isoformat(),
+        week_days=week_days,
+        month_days=month_days,
+        month_first_weekday=month_first_weekday,
         status_labels=dispatch_service.STATUS_LABELS,
         status_colors=dispatch_service.STATUS_COLORS,
     )
