@@ -1,4 +1,4 @@
-{# ── Card de Agendamento — TMS profissional ─────────────────────────── #}
+{# ── Card de Agendamento — estilo TMS (layout anexo + cores ERP) ────────── #}
 {% set s = item.dispatch_status %}
 {% set border_map = {
     'pendente_escala':     'border-l-slate-400',
@@ -9,57 +9,46 @@
     'concluido':           'border-l-slate-500',
 } %}
 {% set badge_map = {
-    'pendente_escala':     'bg-slate-200 text-slate-600',
-    'motorista_atribuido': 'bg-blue-100 text-blue-700',
-    'confirmado':          'bg-emerald-100 text-emerald-700',
-    'em_execucao':         'bg-amber-100 text-amber-700',
-    'cancelado':           'bg-red-100 text-red-600',
-    'concluido':           'bg-slate-200 text-slate-500',
+    'pendente_escala':     'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+    'motorista_atribuido': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+    'confirmado':          'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+    'em_execucao':         'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+    'cancelado':           'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-300',
+    'concluido':           'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400',
 } %}
 
-<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 border-l-[3px] {{ border_map.get(s, 'border-l-slate-300') }} shadow-sm hover:shadow-md transition-shadow cursor-pointer p-3"
+<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 border-l-[3px] {{ border_map.get(s, 'border-l-slate-300') }} shadow-sm hover:shadow-md hover:-translate-y-px transition-all cursor-pointer p-2.5 {% if s == 'cancelado' %}opacity-75{% endif %}"
      @click="openDrawer({{ item.id }})">
 
-  {# Top: Hora + badge status #}
-  <div class="flex items-center justify-between mb-2">
-    <div class="flex items-center gap-2">
-      <span class="font-mono font-bold text-slate-800 dark:text-slate-100 text-sm">{{ item.time or '--:--' }}</span>
-      <span class="font-mono text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">{{ item.order_number }}</span>
-    </div>
-    <span class="text-[9px] font-semibold px-1.5 py-0.5 rounded-full {{ badge_map.get(s, '') }} whitespace-nowrap">{{ status_labels.get(s, s) }}</span>
+  {# Hora + número da OS #}
+  <div class="flex items-center justify-between mb-1">
+    <span class="font-mono font-bold text-slate-800 dark:text-slate-100 text-sm">{{ item.time or '--:--' }}</span>
+    <span class="font-mono text-[9px] text-slate-400 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">{{ item.order_number }}</span>
+  </div>
+
+  {# Rota: origem → destino #}
+  <div class="flex items-center gap-1 text-[11px] font-medium text-slate-700 dark:text-slate-200 mb-1 leading-tight">
+    <span class="truncate max-w-[42%]">{{ item.pickup_location[:16] if item.pickup_location else '–' }}</span>
+    <i class="fa-solid fa-arrow-right text-[9px] text-slate-300 dark:text-slate-500 flex-shrink-0"></i>
+    <span class="truncate max-w-[52%]">{{ item.dropoff_location[:20] if item.dropoff_location else '–' }}</span>
   </div>
 
   {# Cliente #}
-  <p class="text-[13px] font-semibold text-slate-800 dark:text-slate-100 truncate mb-1.5">{{ item.client_name }}</p>
+  <p class="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate">{{ item.client_name }}</p>
 
-  {# Rota #}
-  <div class="flex items-center gap-1.5 text-[11px] text-slate-500 mb-2">
-    <span class="truncate max-w-[45%]">{{ item.pickup_location[:20] if item.pickup_location else '–' }}</span>
-    <i class="fa-solid fa-arrow-right text-[9px] text-slate-300 flex-shrink-0"></i>
-    <span class="truncate max-w-[45%]">{{ item.dropoff_location[:20] if item.dropoff_location else '–' }}</span>
-  </div>
+  {# Motorista / Veículo #}
+  <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate mb-2">
+    {% if item.driver_name %}{{ item.driver_name }}{% else %}<span class="italic text-slate-400">Sem motorista</span>{% endif %}
+    {% if item.vehicle_model %}<span class="text-slate-300 dark:text-slate-600 mx-0.5">·</span>{{ item.vehicle_model }}{% if item.vehicle_plate %} <span class="font-mono text-slate-400">{{ item.vehicle_plate }}</span>{% endif %}{% endif %}
+  </p>
 
-  {# Motorista & Veículo inline #}
-  <div class="flex items-center gap-3 text-[11px] text-slate-500 mb-2">
-    <span class="truncate flex-1">
-      <i class="fa-solid fa-user text-[10px] text-slate-400 mr-1"></i>
-      {{ item.driver_name if item.driver_name else 'Pend. motorista' }}
+  {# Rodapé: badge de status + passageiro #}
+  <div class="flex items-center justify-between pt-1.5 border-t border-slate-100 dark:border-slate-700">
+    <span class="text-[9px] font-semibold px-2 py-0.5 rounded-full {{ badge_map.get(s, '') }} whitespace-nowrap">{{ status_labels.get(s, s) }}</span>
+    {% if item.passenger_name %}
+    <span class="flex items-center gap-1 text-[10px] text-slate-400 truncate max-w-[45%]">
+      <i class="fa-solid fa-user text-[9px]"></i>{{ item.passenger_name.split(' ')[0] }}
     </span>
-    {% if item.vehicle_model %}
-    <span class="truncate flex-1 text-right">
-      <i class="fa-solid fa-car text-[10px] text-slate-400 mr-1"></i>
-      {{ item.vehicle_model }}
-    </span>
-    {% endif %}
-  </div>
-
-  {# Footer: PAX #}
-  <div class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-700">
-    <span class="text-[10px] text-slate-400">
-      {% if item.passenger_name %}PAX: {{ item.passenger_name }}{% else %}{{ item.description[:20] if item.description else '' }}{% endif %}
-    </span>
-    {% if item.vehicle_plate %}
-    <span class="text-[10px] font-mono text-slate-400">{{ item.vehicle_plate }}</span>
     {% endif %}
   </div>
 </div>

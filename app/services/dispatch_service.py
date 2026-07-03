@@ -18,7 +18,7 @@ STATUS_LABELS = {
     'pendente_escala':    'Pend. Escala',
     'motorista_atribuido': 'Motorista Atrib.',
     'confirmado':         'Confirmado',
-    'em_execucao':        'Em Execução',
+    'em_execucao':        'Em Andamento',
     'concluido':          'Concluído',
     'cancelado':          'Cancelado',
 }
@@ -128,6 +128,24 @@ def get_kpi_summary(company_id, ref_date=None):
         'concluidos': counts.get('concluido', 0),
         'cancelados': counts.get('cancelado', 0),
     }
+
+
+# ── Agendamento pendente ────────────────────────────────────────
+def count_pending_scheduling(company_id):
+    """Conta SOs abertas (novo/aberto) sem nenhum item com data/hora de pickup.
+
+    Identifica pedidos que ainda precisam ser agendados operacionalmente
+    (nenhum OrderItem possui op_pickup_datetime preenchido).
+    """
+    scheduled_order_ids = (db.session.query(OrderItem.order_id)
+                           .filter(OrderItem.op_pickup_datetime.isnot(None)))
+
+    return (Order.query
+            .filter(Order.company_id == company_id)
+            .filter(Order.deleted_at.is_(None))
+            .filter(Order.status.in_(('novo', 'aberto')))
+            .filter(Order.id.notin_(scheduled_order_ids))
+            .count())
 
 
 # ── Item detail ──────────────────────────────────────────────────────────────

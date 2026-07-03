@@ -3,13 +3,34 @@
 
 {% block page_title %}
 <div class="w-full flex flex-wrap items-center gap-3">
-  <div class="flex items-center gap-2">
-    <span class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center"><i class="fa-solid fa-calendar-days text-white text-sm"></i></span>
-    <span class="font-bold text-slate-800 dark:text-white text-lg">Centro de Operações</span>
+  <div class="flex items-center gap-3">
+    <span class="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-calendar-days text-white text-sm"></i></span>
+    <div class="leading-tight">
+      <span class="block font-bold text-slate-800 dark:text-white text-lg">Agendamentos</span>
+      <span class="block text-xs text-slate-400">Visualize e gerencie todos os serviços agendados</span>
+    </div>
   </div>
 
+  <span class="text-sm font-medium text-slate-600 dark:text-slate-300 ml-auto" x-data="{t: new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}"
+        x-init="setInterval(() => t = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}), 30000)" x-text="t"></span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div x-data="dispatchCalendar()" x-init="showFilters = {{ 'true' if (request.args.get('search') or request.args.get('status')) else 'false' }}">
+
+{# KPIs calculados a partir dos itens exibidos no período atual #}
+{% set kpi_total = items_data|length %}
+{% set kpi_conf  = items_data|selectattr('dispatch_status','in',['confirmado','motorista_atribuido'])|list|length %}
+{% set kpi_exec  = items_data|selectattr('dispatch_status','equalto','em_execucao')|list|length %}
+{% set kpi_canc  = items_data|selectattr('dispatch_status','equalto','cancelado')|list|length %}
+
+{# ══════════════════════════════════════════
+   Toolbar: view switcher + navegação + ações
+══════════════════════════════════════════ #}
+<div class="flex flex-wrap items-center gap-2 mb-4">
   {# View switcher #}
-  <div class="flex rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600">
+  <div class="flex rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600 shrink-0">
     {% for v in ['day','week','month'] %}
     <a href="{{ url_for('dispatch.index', view=v, date=ref_date) }}"
        class="px-3 py-1.5 text-xs font-semibold transition-colors
@@ -19,48 +40,15 @@
     {% endfor %}
   </div>
 
-  <span class="text-sm font-medium text-slate-600 dark:text-slate-300 ml-auto" x-data="{t: new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}"
-        x-init="setInterval(() => t = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}), 30000)" x-text="t"></span>
-</div>
-{% endblock %}
-
-{% block content %}
-<div x-data="dispatchCalendar()">
-
-{# ══════════════════════════════════════════
-   KPI Cards
-══════════════════════════════════════════ #}
-<div class="grid grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
-  {% set kpis = [
-    ('Agend. Hoje',  kpi.agendados_hoje,  'blue',    'fa-calendar-check'),
-    ('Pend. Escala', kpi.pendente_escala,  'slate',   'fa-user-clock'),
-    ('Confirmados',  kpi.confirmados,      'emerald', 'fa-circle-check'),
-    ('Em Execução',  kpi.em_execucao,      'amber',   'fa-spinner'),
-    ('Concluídos',   kpi.concluidos,       'slate',   'fa-flag-checkered'),
-    ('Cancelados',   kpi.cancelados,       'red',     'fa-ban'),
-  ] %}
-  {% for label, value, color, icon in kpis %}
-  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-3 border-t-2 border-{{ color }}-400 hover:shadow-md transition-shadow">
-    <div class="flex items-center justify-between mb-1">
-      <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{{ label }}</span>
-      <i class="fa-solid {{ icon }} text-{{ color }}-400 text-xs"></i>
-    </div>
-    <p class="text-2xl font-extrabold text-slate-800 dark:text-slate-100">{{ value }}</p>
-  </div>
-  {% endfor %}
-</div>
-
-{# ══════════════════════════════════════════
-   Navegação + Filtros
-══════════════════════════════════════════ #}
-<div class="flex flex-wrap items-center gap-2 mb-4">
   {# Navegação #}
   <div class="flex items-center gap-1 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-600 p-1">
     <a href="{{ url_for('dispatch.index', view=view, date=prev_date) }}"
        class="w-8 h-8 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
       <i class="fa-solid fa-chevron-left text-xs"></i>
     </a>
-    <span class="text-sm font-semibold text-slate-700 dark:text-slate-200 px-2 min-w-[140px] text-center">{{ date_label }}</span>
+    <span class="text-sm font-semibold text-slate-700 dark:text-slate-200 px-2 min-w-[150px] text-center">
+      <i class="fa-regular fa-calendar text-slate-400 mr-1"></i>{{ date_label }}
+    </span>
     <a href="{{ url_for('dispatch.index', view=view, date=next_date) }}"
        class="w-8 h-8 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
       <i class="fa-solid fa-chevron-right text-xs"></i>
@@ -68,24 +56,67 @@
   </div>
 
   <a href="{{ url_for('dispatch.index', view=view, date=today) }}"
-     class="h-9 px-3 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center transition-colors">Hoje</a>
+     class="h-9 px-3 text-xs font-semibold rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center transition-colors">Hoje</a>
 
-  {# Separator #}
-  <span class="w-px h-6 bg-slate-200 dark:bg-slate-600 mx-1 hidden sm:block"></span>
+  {# Ações à direita #}
+  <div class="flex items-center gap-2 ml-auto">
+    <button type="button" @click="showFilters = !showFilters"
+            class="h-9 px-3 text-xs font-semibold rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-1.5 transition-colors">
+      <i class="fa-solid fa-filter text-slate-400"></i>Filtros
+      {% if request.args.get('search') or request.args.get('status') %}<span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>{% endif %}
+    </button>
+    <button type="button"
+            class="h-9 px-4 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 transition-colors">
+      <i class="fa-solid fa-plus"></i>Novo Agendamento
+    </button>
+  </div>
+</div>
 
-  {# Filtros #}
-  <form method="get" action="{{ url_for('dispatch.index') }}" class="flex flex-wrap items-center gap-2 flex-1">
+{# ══════════════════════════════════════════
+   KPI Cards
+══════════════════════════════════════════ #}
+<div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
+  {% set kpi_cards = [
+    ('Total de Serviços',    kpi_total,          'blue',    'fa-calendar-check', 'period'),
+    ('Agendamento Pendente', pending_scheduling, 'orange',  'fa-hourglass-half', 'pending'),
+    ('Serviços Confirmados', kpi_conf,           'emerald', 'fa-circle-check',   'pct'),
+    ('Em Andamento',         kpi_exec,           'amber',   'fa-person-running', 'pct'),
+    ('Cancelados',           kpi_canc,           'red',     'fa-ban',            'pct'),
+  ] %}
+  {% for label, value, color, icon, mode in kpi_cards %}
+  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-4 border border-slate-100 dark:border-slate-700 hover:shadow-md transition-shadow flex items-center gap-3">
+    <span class="w-11 h-11 rounded-xl bg-{{ color }}-50 dark:bg-{{ color }}-900/20 flex items-center justify-center shrink-0">
+      <i class="fa-solid {{ icon }} text-{{ color }}-500 text-lg"></i>
+    </span>
+    <div class="min-w-0">
+      <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wide truncate">{{ label }}</p>
+      <p class="text-2xl font-extrabold text-slate-800 dark:text-slate-100 leading-tight">{{ value }}</p>
+      <p class="text-[10px] text-slate-400">
+        {% if mode == 'pct' %}{{ (value / kpi_total * 100)|round(1) if kpi_total else 0 }}% do total
+        {% elif mode == 'pending' %}SO sem agenda
+        {% else %}no período{% endif %}
+      </p>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{# ══════════════════════════════════════════
+   Filtros (colapsáveis)
+══════════════════════════════════════════ #}
+<div x-show="showFilters" x-cloak class="mb-4">
+  <form method="get" action="{{ url_for('dispatch.index') }}" class="flex flex-wrap items-center gap-2 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-3">
     <input type="hidden" name="view" value="{{ view }}">
     <input type="hidden" name="date" value="{{ ref_date }}">
-    <input type="text" name="search" placeholder="Buscar..." value="{{ request.args.get('search','') }}"
-           class="h-9 w-32 lg:w-40 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400">
+    <input type="text" name="search" placeholder="Buscar cliente, motorista, passageiro..." value="{{ request.args.get('search','') }}"
+           class="h-9 w-48 lg:w-64 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400">
     <select name="status" class="h-9 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400">
-      <option value="">Status</option>
+      <option value="">Todos os status</option>
       {% for k, v in status_labels.items() %}
       <option value="{{ k }}" {{ 'selected' if request.args.get('status') == k }}>{{ v }}</option>
       {% endfor %}
     </select>
-    <button type="submit" class="h-9 px-3 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
+    <button type="submit" class="h-9 px-3 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center transition-colors">
       <i class="fa-solid fa-magnifying-glass mr-1"></i>Filtrar
     </button>
     {% if request.args.get('search') or request.args.get('status') %}
@@ -93,9 +124,8 @@
       <i class="fa-solid fa-xmark mr-1"></i>Limpar
     </a>
     {% endif %}
+    <span class="text-xs text-slate-400 ml-auto">{{ items_data|length }} agendamento(s)</span>
   </form>
-
-  <span class="text-xs text-slate-400 ml-auto">{{ items_data|length }} agendamento(s)</span>
 </div>
 
 {# ══════════════════════════════════════════
@@ -196,9 +226,14 @@
     {% set ds = week_days[i] if week_days|length > i else '' %}
     <div class="p-2 space-y-2 {% if ds == today %}bg-blue-50/20 dark:bg-blue-900/3{% endif %}">
       {% set col_items = items_by_date.get(ds, [])|sort(attribute='time') %}
-      {% for item in col_items %}
+      {% set week_limit = 3 %}
+      {% for item in col_items[:week_limit] %}
       {% include 'dispatch/_item_card.html' %}
       {% endfor %}
+      {% if col_items|length > week_limit %}
+      <a href="{{ url_for('dispatch.index', view='day', date=ds) }}"
+         class="block text-center text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline py-1.5">+{{ col_items|length - week_limit }} serviço(s)</a>
+      {% endif %}
       {% if not col_items %}
       <div class="flex items-center justify-center h-24 text-slate-300 dark:text-slate-600 text-xs">
         <span>—</span>
@@ -209,6 +244,29 @@
   </div>
   {% endif %}
 
+</div>
+
+{# ════════════════════════════════════════════
+   Legenda + Exportação
+════════════════════════════════════════════ #}
+<div class="flex flex-wrap items-center gap-4 mt-4 px-1">
+  <span class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Legenda:</span>
+  {% set legend = [
+    ('Confirmado',   'bg-emerald-500'),
+    ('Em Andamento', 'bg-amber-500'),
+    ('Pend. Escala', 'bg-slate-400'),
+    ('Cancelado',    'bg-red-500'),
+  ] %}
+  {% for lbl, dot in legend %}
+  <span class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+    <span class="w-2.5 h-2.5 rounded-full {{ dot }}"></span>{{ lbl }}
+  </span>
+  {% endfor %}
+
+  <button type="button"
+          class="ml-auto h-9 px-4 text-xs font-semibold rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-1.5 transition-colors">
+    <i class="fa-solid fa-download text-slate-400"></i>Exportar Agenda
+  </button>
 </div>
 
 {# ══════════════════════════════════════════
@@ -402,7 +460,7 @@
 function dispatchCalendar() {
   return {
     drawerOpen: false, drawerLoading: false, drawerData: {}, drawerItemId: null,
-    showDriverForm: false, showVehicleForm: false,
+    showDriverForm: false, showVehicleForm: false, showFilters: false,
     driverForm: { name: '', phone: '' }, vehicleForm: { model: '', plate: '' },
 
     get csrfToken() {

@@ -111,6 +111,7 @@ def index():
 
     items = dispatch_service.get_calendar_items(cid, start_date, end_date, filters)
     kpi = dispatch_service.get_kpi_summary(cid, ref_date)
+    pending_scheduling = dispatch_service.count_pending_scheduling(cid)
 
     items_data = [_item_to_dict(it) for it in items]
 
@@ -142,6 +143,7 @@ def index():
         items_data=items_data,
         items_by_date=dict(items_by_date),
         kpi=kpi,
+        pending_scheduling=pending_scheduling,
         view=view,
         ref_date=ref_date.isoformat(),
         today=now_br().date().isoformat(),
