@@ -75,8 +75,8 @@ def _item_to_dict(item):
         'vehicle_model':    item.op_vehicle_model or '',
         'vehicle_plate':    item.op_vehicle_plate or '',
         'passenger_name':   item.op_passenger_name or '',
-        'pax_count':        item.op_pax_count or '',
-        'service_name':     item.service.name if item.service else (item.description or '–'),
+        'pax_count':        '',
+        'service_name':     item.description or '–',
     }
 
 

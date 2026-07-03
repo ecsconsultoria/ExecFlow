@@ -10,8 +10,7 @@ from sqlalchemy import func, and_, or_
 from sqlalchemy.orm import joinedload
 
 from ..extensions import db
-from ..models.order import Order, OrderItem
-from ..models.client import Client
+from ..models import Order, OrderItem, Client
 
 
 # ── Status derivation ────────────────────────────────────────────────────────
@@ -175,9 +174,9 @@ def get_item_detail(item_id: int):
         'passenger_name':       item.op_passenger_name or '',
         'passenger_phone':      item.op_passenger_phone or '',
         'flight_number':        item.op_flight_number or '',
-        'pax_count':            item.op_pax_count or '',
+        'pax_count':            '',
         'notes':                item.op_notes or '',
-        'service_name':         item.service.name if item.service else (item.description or '–'),
+        'service_name':         item.description or '–',
         'category_name':        item.category.name if item.category else '–',
     }
 
