@@ -126,6 +126,9 @@ def update_adjustments(order: Order, data: dict) -> None:
     order.freight_amount     = _parse_float(data.get("freight_amount", 0))
     order.other_costs_amount = _parse_float(data.get("other_costs_amount", 0))
     order.other_costs_label  = data.get("other_costs_label", "") or ""
+    if "usd_rate" in data:
+        rate = _parse_float(data.get("usd_rate", 0))
+        order.usd_rate = rate if rate and rate > 0 else None
     margin_service.recalculate_order(order)
     db.session.commit()
 

@@ -141,6 +141,21 @@ def _fmt_brl(value: float) -> str:
     return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
+def _fmt_usd(value: float) -> str:
+    # Formato americano: USD 1,234.56
+    return f"USD {value:,.2f}"
+
+
+def _total_cell_text(brl_total: float, lang: str, usd_rate) -> str:
+    """Total em R$; no PDF em inglês com cotação informada, acrescenta o valor
+    em USD (menor) na mesma célula."""
+    base = _fmt_brl(brl_total)
+    if lang == "en" and usd_rate and usd_rate > 0:
+        usd_val = brl_total / usd_rate
+        return f'{base}<br/><font size="7" color="#555555">{_fmt_usd(usd_val)}</font>'
+    return base
+
+
 # ---------------------------------------------------------------------------
 # Translation helpers for English PDF (V2-style)
 # ---------------------------------------------------------------------------
@@ -591,7 +606,7 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
             [Paragraph(_title_case(payment_cell_text), cell_body_c),
              Paragraph(_title_case(fiscal_cell_text),   cell_body_c),
              Paragraph(_title_case(prazo_cell_text),    cell_body_c),
-             Paragraph(_fmt_brl(grand_total), cell_bold_r)],
+             Paragraph(_total_cell_text(grand_total, lang, getattr(quote, "usd_rate", None)), cell_bold_r)],
         ],
         colWidths=[W * 0.27, W * 0.27, W * 0.24, W * 0.22],
     )

@@ -39,6 +39,7 @@ class Order(db.Model, TimestampMixin, SoftDeleteMixin):
     billing_type = db.Column(db.String(50),  default="recibo")
     obs          = db.Column(db.Text)
     total_amount = db.Column(db.Float,       default=0)
+    usd_rate     = db.Column(db.Float,       nullable=True)  # cotação R$/USD p/ PDF em inglês
 
     payment_method = db.Column(db.String(50))
     payment_terms  = db.Column(db.String(100))

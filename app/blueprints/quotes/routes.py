@@ -103,6 +103,7 @@ def new():
                 "obs":         request.form.get("notes", ""),
                 "billing_type": request.form.get("billing_type", "recibo"),
                 "language":    request.form.get("language", "pt"),
+                "usd_rate":    request.form.get("usd_rate", ""),
                 "items":       [],
                 "inclusions":  [],
             }
@@ -192,6 +193,7 @@ def edit(qid):
         "billing_type": quote.billing_type or "recibo",
         "payment_method": quote.payment_method or "",
         "payment_terms":  quote.payment_terms  or "",
+        "usd_rate": quote.usd_rate or "",
         "obs": quote.obs or "",
         "inclusions": [{"text_pt": inc.text_pt, "text_en": inc.text_en or "",
                          "included": inc.included, "sort_order": inc.sort_order}

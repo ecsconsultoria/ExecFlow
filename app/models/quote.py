@@ -23,6 +23,7 @@ class Quote(db.Model, TimestampMixin, SoftDeleteMixin):
     status        = db.Column(db.String(50), default="pendente")
     obs           = db.Column(db.Text)
     total_amount  = db.Column(db.Float, default=0)
+    usd_rate      = db.Column(db.Float, nullable=True)  # cotação R$/USD p/ PDF em inglês
     pdf_file      = db.Column(db.String(500))
 
     # Commercial payment (belongs to Quote, not Operation)

@@ -10,6 +10,17 @@ def _next_number(company_id: int) -> str:
     return numbering_service.next_rfq(company_id)
 
 
+def _parse_usd_rate(raw) -> float | None:
+    """Converte a cotação R$/USD informada em float; retorna None se vazio/inválido."""
+    if raw is None or str(raw).strip() == "":
+        return None
+    try:
+        val = float(str(raw).replace(".", "").replace(",", ".")) if "," in str(raw) else float(raw)
+    except (ValueError, TypeError):
+        return None
+    return val if val > 0 else None
+
+
 class QuoteService:
 
     @staticmethod
@@ -39,6 +50,7 @@ class QuoteService:
             payment_method = data.get("payment_method", "") or "",
             payment_terms  = data.get("payment_terms",  "") or "",
             obs            = data.get("obs", ""),
+            usd_rate       = _parse_usd_rate(data.get("usd_rate")),
             valid_until    = valid_until_val,
             status         = "pendente",
             created_by     = created_by,
@@ -126,6 +138,8 @@ class QuoteService:
         quote.payment_method = data.get("payment_method", quote.payment_method)
         quote.payment_terms  = data.get("payment_terms",  quote.payment_terms)
         quote.obs            = data.get("obs",            quote.obs)
+        if "usd_rate" in data:
+            quote.usd_rate   = _parse_usd_rate(data.get("usd_rate"))
 
         for item in list(quote.items):
             db.session.delete(item)

@@ -14,7 +14,7 @@
 <div x-data="quoteBuilder()" x-init="init()" class="space-y-5 max-w-6xl mx-auto">
 
   <!-- Header: cliente + billing -->
-  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-5 grid sm:grid-cols-2 md:grid-cols-4 gap-4">
+  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-5 grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
     <div>
       <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cliente *</label>
       <select x-model="clientId" required
@@ -59,6 +59,13 @@
         <option value="25 DIAS">25 DIAS</option>
         <option value="30 DIAS">30 DIAS</option>
       </select>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cotação USD (R$)</label>
+      <input type="number" min="0" step="0.0001" x-model="usdRate" placeholder="Ex: 5,40"
+             class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono">
+      <p class="text-[11px] text-slate-400 mt-1">Exibe o total em USD no PDF em inglês.</p>
     </div>
 
   </div>
@@ -352,6 +359,7 @@ function quoteBuilder() {
     paymentMethod:  '',
     paymentTerms:   '',
     language:       'pt',
+    usdRate:        '',
     notes:          '',
     saving:    false,
     catalog:   CATALOG,
@@ -373,6 +381,7 @@ function quoteBuilder() {
         this.paymentMethod = f.payment_method || '';
         this.paymentTerms  = f.payment_terms  || '';
         this.language      = f.language       || 'pt';
+        this.usdRate       = f.usd_rate       || '';
         this.notes         = f.obs            || '';
         if (f.items && f.items.length) {
           this.cart = f.items.map((it, i) => ({
@@ -527,6 +536,7 @@ function quoteBuilder() {
         payment_method: this.paymentMethod,
         payment_terms:  this.paymentTerms,
         language: this.language, obs: this.notes,
+        usd_rate: this.usdRate,
         items: this.cart.map((item, i) => ({
           service_id:          item.service_id,
           category_id:         item.category_id,
