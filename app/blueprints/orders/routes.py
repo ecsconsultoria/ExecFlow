@@ -437,7 +437,8 @@ def baixa(pid):
         db.session.commit()
 
         # Se todas as parcelas foram pagas e SO está em status permitido, concluir
-        all_paid = all(p.is_paid for p in order.payments) if order.payments.count() > 0 else False
+        payments_list = list(order.payments)
+        all_paid = all(p.is_paid for p in payments_list) if payments_list else False
         if all_paid and order.status in ('rascunho', 'novo', 'aberto', 'faturado'):
             order.status = 'concluido'
             log_activity("order", order.id, order.company_id, "SO concluída automaticamente (todas as parcelas pagas)", current_user.id)
