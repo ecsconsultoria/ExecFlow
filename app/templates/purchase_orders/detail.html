@@ -22,6 +22,7 @@
 {% endblock %}
 
 {% block page_title %}
+{% set locked = po and po.status in ('concluido', 'faturado', 'pago', 'cancelado', 'excluido') %}
 <div class="w-full">
   <div class="flex flex-wrap items-center gap-2">
     <a href="{{ url_for('purchase_orders.index') }}"
