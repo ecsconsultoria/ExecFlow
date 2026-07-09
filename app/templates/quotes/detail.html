@@ -22,10 +22,10 @@
 
   @media (max-width: 639px) {
     .pa-wrap{display:grid!important;grid-template-columns:1fr 1fr;gap:6px}
-    .pa-full{grid-column:1/-1}
-    .pa-wrap>button,.pa-wrap>a[class*="h-8"],.pa-wrap>form{width:100%!important;height:36px!important;justify-content:center!important}
+    .pa-wrap>a:first-child,.pa-wrap>span.whitespace-nowrap:first-of-type{grid-column:1/-1}
+    .pa-wrap button,.pa-wrap>a[href],.pa-wrap>form{height:36px!important;width:100%!important;justify-content:center!important;font-size:12px!important}
     .pa-wrap>form>button{width:100%!important;height:100%!important}
-    .pa-right{grid-column:1/-1;display:flex;justify-content:flex-end;margin-left:0!important}
+    .pa-wrap>.ml-auto{grid-column:1/-1;justify-self:end;margin-left:0!important}
   }
 </style>
 {% endblock %}
@@ -34,7 +34,7 @@
 <div class="w-full">
   <div class="flex flex-wrap items-center gap-2 pa-wrap">
     <a href="{{ url_for('quotes.index') }}"
-       class="text-slate-400 hover:text-blue-500 text-sm font-normal pa-full">
+       class="text-slate-400 hover:text-blue-500 text-sm font-normal">
       <i class="fa-solid fa-arrow-left"></i>
     </a>
     <span class="whitespace-nowrap">RFQ <span class="font-mono font-bold">{{ quote.number }}</span></span>
@@ -160,7 +160,7 @@
     {% endif %}
 
     {# ── Histórico dropdown ── #}
-    <div class="relative ml-auto pa-right" x-data="{ histOpen: false }">
+    <div class="relative ml-auto" x-data="{ histOpen: false }">
       <button type="button" @click="histOpen = !histOpen"
               class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600">
         <i class="fa-solid fa-clock-rotate-left text-[11px]"></i>
