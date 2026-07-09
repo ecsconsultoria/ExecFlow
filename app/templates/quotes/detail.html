@@ -22,12 +22,13 @@
 
   @media (max-width: 639px) {
     .pa-wrap{gap:8px!important;justify-content:flex-start!important;align-items:center!important}
-    .pa-wrap>a:first-child{margin-left:-4px!important;padding-left:0!important;flex-shrink:0!important}
-    .pa-wrap button,.pa-wrap>a[href]:not(:first-child){width:34px!important;height:34px!important;padding:0!important;font-size:0!important;border-radius:8px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;flex-shrink:0!important}
-    .pa-wrap button i,.pa-wrap>a[href]:not(:first-child) i{font-size:15px!important;margin:0!important}
-    .pa-wrap>form{width:34px!important;height:34px!important;flex-shrink:0!important}
-    .pa-wrap>form>button{width:34px!important;height:34px!important;padding:0!important;font-size:0!important;border-radius:8px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important}
-    .pa-wrap>form>button i{font-size:15px!important;margin:0!important}
+    .pa-header{flex-shrink:0!important}
+    .pa-back{margin-left:-4px!important}
+    .pa-wrap :not(.pa-header)>button,.pa-wrap>:not(.pa-header)>a[href]{width:34px!important;height:34px!important;padding:0!important;font-size:0!important;border-radius:8px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;flex-shrink:0!important}
+    .pa-wrap :not(.pa-header)>button i,.pa-wrap>:not(.pa-header)>a[href] i{font-size:15px!important;margin:0!important}
+    .pa-wrap>:not(.pa-header)>form{width:34px!important;height:34px!important;flex-shrink:0!important}
+    .pa-wrap>:not(.pa-header)>form>button{width:34px!important;height:34px!important;padding:0!important;font-size:0!important;border-radius:8px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important}
+    .pa-wrap>:not(.pa-header)>form>button i{font-size:15px!important;margin:0!important}
     .pa-wrap>.ml-auto{margin-left:0!important}
   }
 </style>
@@ -36,11 +37,11 @@
 {% block page_title %}
 <div class="w-full">
   <div class="flex flex-wrap items-center gap-2 pa-wrap">
-    <a href="{{ url_for('quotes.index') }}"
-       class="text-slate-400 hover:text-blue-500 text-sm font-normal">
-      <i class="fa-solid fa-arrow-left"></i>
-    </a>
-    <span class="inline-flex items-center gap-2 flex-shrink-0">
+    <span class="inline-flex items-center gap-2 flex-shrink-0 pa-header">
+      <a href="{{ url_for('quotes.index') }}"
+         class="text-slate-400 hover:text-blue-500 text-sm font-normal pa-back">
+        <i class="fa-solid fa-arrow-left"></i>
+      </a>
       <span class="whitespace-nowrap font-mono font-bold">{{ quote.number }}</span>
       {% set status_variant = 'neutral' %}
       {% if quote.status in ('aprovado','pago','reserva_confirmada') %}{% set status_variant = 'success' %}
