@@ -21,10 +21,13 @@
   .dark .card-divider{ border-color:#334155 }
 
   @media (max-width: 639px) {
-    .pa-wrap{gap:4px!important}
-    .pa-wrap button,.pa-wrap>a[href],.pa-wrap>form{height:34px!important;padding:0 10px!important;font-size:11px!important;flex-shrink:0!important;width:auto!important;display:inline-flex!important;align-items:center!important;gap:4px!important;border-radius:8px!important}
-    .pa-wrap>form>button{width:auto!important;height:100%!important;padding:0 10px!important}
-    .pa-wrap>.ml-auto{margin-left:auto!important;flex-shrink:0!important}
+    .pa-wrap{gap:3px!important}
+    .pa-wrap button,.pa-wrap>a[href]{width:34px!important;height:34px!important;padding:0!important;justify-content:center!important;font-size:0!important;border-radius:8px!important;overflow:hidden;flex-shrink:0!important}
+    .pa-wrap button i,.pa-wrap>a[href] i{font-size:15px!important;margin:0!important}
+    .pa-wrap>form{width:34px!important;height:34px!important;flex-shrink:0!important}
+    .pa-wrap>form>button{width:34px!important;height:34px!important;padding:0!important;font-size:0!important;border-radius:8px!important}
+    .pa-wrap>form>button i{font-size:15px!important;margin:0!important}
+    .pa-wrap>.ml-auto{margin-left:auto!important}
   }
 </style>
 {% endblock %}
