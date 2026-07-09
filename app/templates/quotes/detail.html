@@ -73,6 +73,17 @@
     </a>
     {% endif %}
 
+    {# Reabrir (SO foi excluída) #}
+    {% if quote.status in ('aprovado', 'pago') and not quote_order and has_perm('quote.approve') %}
+    <form method="post" action="{{ url_for('quotes.reopen', qid=quote.id) }}" class="inline-flex">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit"
+              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-amber-500 hover:bg-amber-600 text-white">
+        <i class="fa-solid fa-rotate-left text-[11px]"></i> Reabrir
+      </button>
+    </form>
+    {% endif %}
+
     {# Editar #}
     {% if has_perm('quote.edit') %}
     <a href="{{ url_for('quotes.edit', qid=quote.id) }}"

@@ -257,6 +257,33 @@ def approve(qid):
     return redirect(url_for("quotes.detail", qid=qid))
 
 
+@quotes_bp.route("/<int:qid>/reopen", methods=["POST"])
+@login_required
+@require_permission("quote.approve")
+def reopen(qid):
+    """Reabre RFQ aprovada (volta para pendente) — apenas se não houver SO ativa."""
+    quote = Quote.query.filter_by(id=qid, company_id=current_user.company_id, deleted_at=None).first_or_404()
+    if quote.status not in ('aprovado', 'pago'):
+        flash("Apenas orçamentos aprovados podem ser reabertos.", "warning")
+        return redirect(url_for("quotes.detail", qid=qid))
+
+    # Verifica se existe SO ativa vinculada
+    from ...models.order import Order
+    active_order = Order.query.filter_by(quote_id=quote.id, deleted_at=None).filter(
+        Order.status.notin_(['cancelado', 'excluido'])).first()
+    if active_order:
+        flash(f"Não é possível reabrir: existe SO ativa ({active_order.number}).", "warning")
+        return redirect(url_for("quotes.detail", qid=qid))
+
+    quote.status      = "pendente"
+    quote.approved_at = None
+    quote.approved_by = None
+    log_activity("quote", quote.id, current_user.company_id, "Reaberto (SO excluída)", current_user.id)
+    db.session.commit()
+    flash("Orçamento reaberto. Agora você pode editar ou reprovar.", "success")
+    return redirect(url_for("quotes.detail", qid=qid))
+
+
 @quotes_bp.route("/<int:qid>/reject", methods=["POST"])
 @login_required
 @require_permission("quote.approve")
