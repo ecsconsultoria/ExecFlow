@@ -266,7 +266,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         [Paragraph(order.client_name  or "–", cell_body_c),
          Paragraph(order.contact_name or "–", cell_body_c),
          Paragraph(order.email        or "–", cell_body_c),
-         Paragraph(getattr(order, "celular", None) or order.phone or "–", cell_body_c)],
+         Paragraph((getattr(order, "celular", None) or order.phone or "–").replace('\xa0', ' '), cell_body_c)],
     ]
     client_tbl = Table(client_tbl_data,
                        colWidths=[W * 0.28, W * 0.24, W * 0.30, W * 0.18])
@@ -643,7 +643,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         cells = []
         for lk, v in filled:
             label = _t(lk, lang)
-            safe = (v or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            safe = (v or "").replace('\xa0', ' ').replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
             cells.append(Paragraph(f"<b>{label}:</b> {safe}", op_value_st))
 
         # Preenche para múltiplo de COLS

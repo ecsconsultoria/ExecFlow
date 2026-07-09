@@ -453,7 +453,7 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
     contact_name = quote.contact_name or "–"
     email_str    = quote.email or (quote.client.email if quote.client else None) or "–"
     _cphn        = (quote.client.phone or getattr(quote.client, 'whatsapp', None)) if quote.client else None
-    phone_str    = quote.phone or _cphn or "–"
+    phone_str    = (quote.phone or _cphn or "–").replace('\xa0', ' ')
     c_col_w = [W * 0.22, W * 0.20, W * 0.27, W * 0.17, W * 0.14]
 
     status_key = quote.status or "pendente"
