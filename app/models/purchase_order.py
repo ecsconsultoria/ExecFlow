@@ -137,7 +137,7 @@ class PurchaseOrder(db.Model, TimestampMixin, SoftDeleteMixin):
             "enviado":     "Aberto",
             "aprovado":    "Aprovado",
             "em_execucao": "Em Execução",
-            "concluido":   "Executado",
+            "concluido":   "Concluído",
             "faturado":    "Faturado",
             "pago":        "Concluído",
             "cancelado":   "Cancelado",
