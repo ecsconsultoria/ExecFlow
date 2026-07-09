@@ -166,7 +166,7 @@
            x-transition:leave="transition ease-in duration-150"
            x-transition:leave-start="opacity-100 translate-y-0"
            x-transition:leave-end="opacity-0 -translate-y-1"
-           class="absolute right-0 top-full mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 py-3 px-4 min-w-[320px] max-h-[70vh] overflow-y-auto">
+           class="absolute right-0 top-full mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 py-3 px-4 w-[calc(100vw-2rem)] max-w-[380px] max-h-[70vh] overflow-y-auto">
         {% if audit_logs %}
         <ol class="relative border-l border-slate-200 dark:border-slate-600 ml-2 space-y-3">
           {% for log in audit_logs %}
@@ -585,7 +585,7 @@
                     data-op-flight-number="{{ (item.op_flight_number or '')|e }}"
                     data-op-notes="{{ (item.op_notes or '')|e }}"
                     @click="openOpItem($el)"
-                    class="p-1.5 rounded text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/20 relative"
+                    class="p-2 rounded text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/20 relative"
                     title="Dados operacionais do item">
               <i class="fa-solid fa-car-side text-xs"></i>
               {% if item.op_passenger_name or item.op_pickup_location or item.op_driver_name %}
@@ -600,14 +600,14 @@
                       {{ item.quantity }},
                       '{{ '%.2f'|format(item.unit_price or 0)|replace('.', ',') }}'
                     )"
-                    class="p-1.5 rounded text-sky-500 hover:bg-sky-50 dark:hover:bg-sky-900/20"
+                    class="p-2 rounded text-sky-500 hover:bg-sky-50 dark:hover:bg-sky-900/20"
                     title="Editar item">
               <i class="fa-solid fa-pen-to-square text-xs"></i>
             </button>
             {# Deletar — disparado via JS para evitar form aninhado #}
             <button type="button"
                     data-del-item="{{ item.id }}"
-                    class="p-1.5 rounded text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    class="p-2 rounded text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
                     title="Remover item">
               <i class="fa-solid fa-trash-can text-xs"></i>
             </button>
@@ -811,7 +811,7 @@
                 data-amount="{{ '%.2f'|format(pmt.amount or 0)|replace('.', ',') }}">
               {% if order.status not in ('cancelado', 'novo', 'rascunho') %}
               <button type="button" onclick="openBaixaO({{ pmt.id }})"
-                      class="p-1 rounded text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-900/30"
+                      class="p-2 rounded text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-900/30"
                       title="Dar baixa">
                 <i class="fa-solid fa-circle-check"></i>
               </button>
@@ -821,7 +821,7 @@
             <td class="px-2 py-1.5 text-center">
               {% if not locked %}
               <button type="button" onclick="deletePmt({{ pmt.id }})"
-                      class="p-1 rounded text-red-400 hover:bg-red-100" title="Excluir">
+                      class="p-2 rounded text-red-400 hover:bg-red-100" title="Excluir">
                 <i class="fa-solid fa-trash-can" style="font-size:9px"></i>
               </button>
               {% endif %}
@@ -842,7 +842,7 @@
             <td class="px-2 py-1.5 text-center">
               {% if order.status in ('faturado', 'aberto') %}
               <button type="button" onclick="estornarPmt({{ pmt.id }})"
-                      class="p-1 rounded text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/30"
+                      class="p-2 rounded text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/30"
                       title="Estornar pagamento">
                 <i class="fa-solid fa-rotate-left"></i>
               </button>
@@ -1048,11 +1048,11 @@
     tdBx.id = 'baixa-o-td-' + p.id;
     tdBx.dataset.url = bxUrl;
     tdBx.dataset.amount = amtVal;
-    tdBx.innerHTML = '<button type="button" class="p-1 rounded text-emerald-600 hover:bg-emerald-100" title="Dar baixa" onclick="openBaixaO(' + p.id + ')"><i class="fa-solid fa-circle-check"></i></button>';
+    tdBx.innerHTML = '<button type="button" class="p-2 rounded text-emerald-600 hover:bg-emerald-100" title="Dar baixa" onclick="openBaixaO(' + p.id + ')"><i class="fa-solid fa-circle-check"></i></button>';
     tr.appendChild(tdBx);
     const tdDel = document.createElement('td');
     tdDel.className = 'px-2 py-1.5 text-center';
-    tdDel.innerHTML = '<button type="button" onclick="deletePmt(' + p.id + ')" class="p-1 rounded text-red-400 hover:bg-red-100" title="Excluir"><i class="fa-solid fa-trash-can" style="font-size:9px"></i></button>';
+    tdDel.innerHTML = '<button type="button" onclick="deletePmt(' + p.id + ')" class="p-2 rounded text-red-400 hover:bg-red-100" title="Excluir"><i class="fa-solid fa-trash-can" style="font-size:9px"></i></button>';
     tr.appendChild(tdDel);
     return tr;
   }
