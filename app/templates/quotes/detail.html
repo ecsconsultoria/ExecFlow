@@ -85,7 +85,7 @@
     {% endif %}
 
     {# Editar #}
-    {% if has_perm('quote.edit') %}
+    {% if quote.status not in ('reprovado', 'cancelado') and has_perm('quote.edit') %}
     <a href="{{ url_for('quotes.edit', qid=quote.id) }}"
        class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-blue-600 hover:bg-blue-700 text-white">
       <i class="fa-solid fa-pen text-[11px]"></i> Editar
