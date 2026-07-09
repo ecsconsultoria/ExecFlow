@@ -563,6 +563,14 @@ def baixa(pid):
         pos.baixa(pmt, paid_amount, current_user.id, paid_date=paid_date)
         log_activity("po", po.id, po.company_id, f"Parcela {pmt.installment_no} baixada", current_user.id)
         db.session.commit()
+
+        # Se todas as parcelas foram pagas e PO está em status permitido, concluir
+        all_paid = all(p.is_paid for p in po.payments) if po.payments.count() > 0 else False
+        if all_paid and po.status in ('rascunho', 'aberto', 'faturado'):
+            po.status = 'concluido'
+            log_activity("po", po.id, po.company_id, "PO concluída automaticamente (todas as parcelas pagas)", current_user.id)
+            db.session.commit()
+
         flash("Pagamento registrado.", "success")
     except Exception as e:
         flash(str(e), "warning")
