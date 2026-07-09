@@ -76,7 +76,7 @@
       {% endif %}
 
       {# Faturar #}
-      {% if po.status not in ('faturado', 'pago', 'cancelado') and has_perm('financial.manage') %}
+      {% if po.status not in ('concluido', 'faturado', 'pago', 'cancelado') and has_perm('financial.manage') %}
       <button type="button"
               @click="
                 const sid = document.querySelector('[name=supplier_id]');
