@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Cotação {{ quote.number }}{% endblock %}
+{% block title %}{{ quote.number }}{% endblock %}
 {% from "components/badge.html" import badge with context %}
 
 {% block extra_head %}
@@ -39,15 +39,15 @@
        class="text-slate-400 hover:text-blue-500 text-sm font-normal">
       <i class="fa-solid fa-arrow-left"></i>
     </a>
-    <span class="whitespace-nowrap">RFQ <span class="font-mono font-bold">{{ quote.number }}</span></span>
-
-    {# Status badge #}
-    {% set status_variant = 'neutral' %}
-    {% if quote.status in ('aprovado','pago','reserva_confirmada') %}{% set status_variant = 'success' %}
-    {% elif quote.status == 'pendente' %}{% set status_variant = 'warning' %}
-    {% elif quote.status == 'reprovado' %}{% set status_variant = 'danger' %}
-    {% endif %}
-    {{ badge(quote.status, variant=status_variant) }}
+    <span class="inline-flex items-center gap-2 flex-shrink-0">
+      <span class="whitespace-nowrap font-mono font-bold">{{ quote.number }}</span>
+      {% set status_variant = 'neutral' %}
+      {% if quote.status in ('aprovado','pago','reserva_confirmada') %}{% set status_variant = 'success' %}
+      {% elif quote.status == 'pendente' %}{% set status_variant = 'warning' %}
+      {% elif quote.status == 'reprovado' %}{% set status_variant = 'danger' %}
+      {% endif %}
+      {{ badge(quote.status, variant=status_variant) }}
+    </span>
 
     {# Aprovar + Rejeitar #}
     {% if quote.status == 'pendente' and has_perm('quote.approve') %}
