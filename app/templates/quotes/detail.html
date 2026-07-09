@@ -21,15 +21,17 @@
   .dark .card-divider{ border-color:#334155 }
 
   @media (max-width: 639px) {
-    .pa-wrap{gap:8px!important;justify-content:flex-start!important;align-items:center!important}
+    .pa-wrap{gap:6px!important;align-items:center!important}
     .pa-header{flex-shrink:0!important}
-    .pa-back{margin-left:-4px!important}
-    .pa-wrap :not(.pa-header)>button,.pa-wrap>:not(.pa-header)>a[href]{width:34px!important;height:34px!important;padding:0!important;font-size:0!important;border-radius:8px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;flex-shrink:0!important}
-    .pa-wrap :not(.pa-header)>button i,.pa-wrap>:not(.pa-header)>a[href] i{font-size:15px!important;margin:0!important}
-    .pa-wrap>:not(.pa-header)>form{width:34px!important;height:34px!important;flex-shrink:0!important}
-    .pa-wrap>:not(.pa-header)>form>button{width:34px!important;height:34px!important;padding:0!important;font-size:0!important;border-radius:8px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important}
-    .pa-wrap>:not(.pa-header)>form>button i{font-size:15px!important;margin:0!important}
+    .pa-back{margin-left:-8px!important}
+    .pa-wrap button:not(.pa-header button),.pa-wrap>a[href]:not(.pa-header a){width:34px!important;height:34px!important;padding:0!important;font-size:0!important;border-radius:8px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;flex-shrink:0!important}
+    .pa-wrap button:not(.pa-header button) i,.pa-wrap>a[href]:not(.pa-header a) i{font-size:15px!important;margin:0!important}
+    .pa-wrap>form:not(.pa-header form){width:34px!important;height:34px!important;flex-shrink:0!important}
+    .pa-wrap>form:not(.pa-header form)>button{width:34px!important;height:34px!important;padding:0!important;font-size:0!important;border-radius:8px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important}
+    .pa-wrap>form:not(.pa-header form)>button i{font-size:15px!important;margin:0!important}
     .pa-wrap>.ml-auto{margin-left:0!important}
+    .pa-wrap>.ml-auto button{width:34px!important;height:34px!important;padding:0!important;font-size:0!important;border-radius:8px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;flex-shrink:0!important}
+    .pa-wrap>.ml-auto button i{font-size:15px!important;margin:0!important}
   }
 </style>
 {% endblock %}
