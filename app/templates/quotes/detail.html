@@ -23,7 +23,7 @@
   @media (max-width: 639px) {
     .pa-wrap{gap:6px!important;align-items:center!important}
     .pa-header{flex-shrink:0!important}
-    .pa-back{margin-left:-8px!important}
+    .pa-back{margin-left:0!important}
     .pa-wrap button:not(.pa-header button),.pa-wrap>a[href]:not(.pa-header a){width:34px!important;height:34px!important;padding:0!important;font-size:0!important;border-radius:8px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;flex-shrink:0!important}
     .pa-wrap button:not(.pa-header button) i,.pa-wrap>a[href]:not(.pa-header a) i{font-size:15px!important;margin:0!important}
     .pa-wrap>form:not(.pa-header form){width:34px!important;height:34px!important;flex-shrink:0!important}
@@ -41,8 +41,8 @@
   <div class="flex flex-wrap items-center gap-2 pa-wrap">
     <span class="inline-flex items-center gap-2 flex-shrink-0 pa-header">
       <a href="{{ url_for('quotes.index') }}"
-         class="text-slate-400 hover:text-blue-500 text-sm font-normal pa-back">
-        <i class="fa-solid fa-arrow-left"></i>
+         class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm pa-back">
+        <i class="fa-solid fa-arrow-left text-base"></i>
       </a>
       <span class="whitespace-nowrap font-mono font-bold">{{ quote.number }}</span>
       {% set status_variant = 'neutral' %}
