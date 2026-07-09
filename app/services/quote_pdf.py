@@ -152,7 +152,7 @@ def _total_cell_text(brl_total: float, lang: str, usd_rate) -> str:
     base = _fmt_brl(brl_total)
     if lang == "en" and usd_rate and usd_rate > 0:
         usd_val = brl_total / usd_rate
-        return f'{base}<br/><font size="7" color="#555555">{_fmt_usd(usd_val)}</font>'
+        return f'{base} <font size="7" color="#555555">/ {_fmt_usd(usd_val)}</font>'
     return base
 
 
