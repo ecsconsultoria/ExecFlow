@@ -1,0 +1,58 @@
+{# ═══════════════════════════════════════════════════════════════════════════
+   Componente: Page Actions (Header responsivo para documentos)
+   Uso: {% from "components/page_actions.html" import page_actions with context %}
+        {% call page_actions(
+              back_url=url_for('orders.index'),
+              title='Sales Order',
+              number=order.number,
+              badge_html=badge_html,
+              history_html=history_html
+           ) %}
+          {% block desktop_buttons %}{% endblock %}
+        {% endcall %}
+
+   Desktop: linha única flex-wrap (preservado)
+   Mobile: 3 linhas com grid 2 colunas para botões
+   ═══════════════════════════════════════════════════════════════════════════ #}
+{% macro page_actions(back_url, title, number=None, badge_html='', history_html='') -%}
+<div class="w-full">
+
+  {# ═══ DESKTOP: linha única flex-wrap (layout original preservado) ═══ #}
+  <div class="hidden sm:flex flex-wrap items-center gap-2">
+    <a href="{{ back_url }}" class="text-slate-400 hover:text-blue-500 text-sm font-normal">
+      <i class="fa-solid fa-arrow-left"></i>
+    </a>
+    <span class="whitespace-nowrap">{{ title }}{% if number %} <span class="font-mono font-bold">{{ number }}</span>{% endif %}</span>
+    {{ badge_html }}
+    {{ caller() }}
+    {{ history_html }}
+  </div>
+
+  {# ═══ MOBILE: 3 linhas (NOVO layout para celular) ═══ #}
+  <div class="sm:hidden w-full">
+    {# Linha 1: voltar + título #}
+    <div class="flex items-center gap-2 mb-2">
+      <a href="{{ back_url }}" class="text-slate-400 hover:text-blue-500 flex-shrink-0">
+        <i class="fa-solid fa-arrow-left"></i>
+      </a>
+      <span class="font-bold text-slate-800 dark:text-white text-base truncate">{{ title }}{% if number %} <span class="font-mono font-bold">{{ number }}</span>{% endif %}</span>
+    </div>
+
+    {# Linha 2: badge status #}
+    {% if badge_html|trim %}
+    <div class="mb-2">{{ badge_html }}</div>
+    {% endif %}
+
+    {# Linha 3: botões em grid 2 colunas #}
+    <div class="grid grid-cols-2 gap-1.5">
+      {{ caller() }}
+    </div>
+
+    {# Linha 4: histórico à direita #}
+    {% if history_html|trim %}
+    <div class="mt-2 flex justify-end">{{ history_html }}</div>
+    {% endif %}
+  </div>
+
+</div>
+{%- endmacro %}

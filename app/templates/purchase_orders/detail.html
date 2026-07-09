@@ -24,7 +24,8 @@
 {% block page_title %}
 {% set locked = po and po.status in ('concluido', 'faturado', 'pago', 'cancelado', 'excluido') %}
 <div class="w-full">
-  <div class="flex flex-wrap items-center gap-2">
+  {# ═══ DESKTOP ═══ #}
+  <div class="hidden sm:flex flex-wrap items-center gap-2">
     <a href="{{ url_for('purchase_orders.index') }}"
        class="text-slate-400 hover:text-violet-500 text-sm font-normal">
       <i class="fa-solid fa-arrow-left"></i>
@@ -274,6 +275,49 @@
              class="text-xs font-mono text-teal-600 hover:underline">{{ linked_order.number }}</a>
         </div>
         {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ═══ MOBILE ═══ #}
+  <div class="sm:hidden w-full">
+    <div class="flex items-center gap-2 mb-2">
+      <a href="{{ url_for('purchase_orders.index') }}" class="text-slate-400 hover:text-violet-500 flex-shrink-0"><i class="fa-solid fa-arrow-left"></i></a>
+      <span class="font-bold text-slate-800 dark:text-white text-base truncate">{% if po %}PO <span class="font-mono font-bold">{{ po.number }}</span>{% else %}Nova PO{% endif %}</span>
+    </div>
+    {% if po %}
+    <div class="mb-2"><span class="whitespace-nowrap" style="{{ po.status|status_badge_style }}"><span style="width:7px;height:7px;border-radius:50%;background:{{ po.status|status_dot_color }};flex-shrink:0;display:inline-block"></span> {{ po.status_label }}</span></div>
+    <div class="grid grid-cols-2 gap-1.5">
+      {% if not locked and has_perm('po.edit') %}
+      <button type="submit" form="main-form" class="h-9 w-full px-3 text-xs font-medium rounded-lg inline-flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white col-span-1"><i class="fa-solid fa-floppy-disk text-[11px]"></i> Salvar</button>
+      {% endif %}
+      {% if po.status == 'rascunho' and has_perm('po.edit') %}
+      <button type="button" onclick="document.getElementById('po-open-form').submit()" class="h-9 w-full px-3 text-xs font-medium rounded-lg inline-flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white col-span-1"><i class="fa-solid fa-folder-open text-[11px]"></i> Abrir PO</button>
+      {% endif %}
+      {% if po.status == 'aprovado' and has_perm('po.edit') %}
+      <button type="button" onclick="document.getElementById('po-start-form').submit()" class="h-9 w-full px-3 text-xs font-medium rounded-lg inline-flex items-center justify-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white col-span-1"><i class="fa-solid fa-play text-[11px]"></i> Iniciar</button>
+      {% endif %}
+      {% if po.status not in ('faturado', 'pago', 'cancelado') and has_perm('financial.manage') %}
+      <button type="button" @click="document.getElementById('po-faturar-form').submit()" class="h-9 w-full px-3 text-xs font-medium rounded-lg inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white col-span-1"><i class="fa-solid fa-file-invoice text-[11px]"></i> Faturar</button>
+      {% endif %}
+      <div class="relative col-span-1" x-data="{open:false}" @click.outside="open=false">
+        <button type="button" @click="open=!open" class="h-9 w-full px-3 text-xs font-medium rounded-lg inline-flex items-center justify-center gap-1.5 bg-slate-600 hover:bg-slate-700 text-white"><i class="fa-solid fa-file-pdf text-[11px]"></i> PDF</button>
+        <div x-show="open" x-cloak class="absolute left-0 top-full mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 py-1 overflow-hidden min-w-[200px] max-w-[calc(100vw-2rem)]">
+          <div style="display:grid;grid-template-columns:1fr 1fr"><a href="{{ url_for('purchase_orders.pdf', po_id=po.id, lang='pt') }}" @click="open=false" class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap"><i class="fa-solid fa-download text-rose-500"></i> PDF PT</a><a href="{{ url_for('purchase_orders.pdf', po_id=po.id, lang='en') }}" @click="open=false" class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700"><i class="fa-solid fa-download text-rose-700"></i> PDF EN</a></div>
+        </div>
+      </div>
+      {% if po.status not in ('concluido', 'faturado', 'pago', 'cancelado') and has_perm('po.cancel') %}
+      <button type="button" onclick="window.dispatchEvent(new CustomEvent('open-po-cancel-modal'))" class="h-9 w-full px-3 text-xs font-medium rounded-lg inline-flex items-center justify-center gap-1.5 bg-red-500 hover:bg-red-600 text-white col-span-1"><i class="fa-solid fa-ban text-[11px]"></i> Cancelar</button>
+      {% endif %}
+      {% if has_perm('po.delete') %}
+      <button type="button" onclick="window.dispatchEvent(new CustomEvent('open-po-delete-modal'))" class="h-9 w-full px-3 text-xs font-medium rounded-lg inline-flex items-center justify-center gap-1.5 bg-red-700 hover:bg-red-800 text-white col-span-1"><i class="fa-solid fa-trash text-[11px]"></i> Excluir</button>
+      {% endif %}
+    </div>
+    {% endif %}
+    <div class="relative mt-2 flex justify-end" x-data="{ histOpen: false }">
+      <button type="button" @click="histOpen = !histOpen" class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600"><i class="fa-solid fa-clock-rotate-left text-[11px]"></i> Histórico</button>
+      <div x-show="histOpen" @click.outside="histOpen = false" class="absolute right-0 top-full mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 py-3 px-4 w-[calc(100vw-2rem)] max-w-[380px] max-h-[70vh] overflow-y-auto">
+        <dl class="space-y-1.5 text-xs"><div class="flex justify-between gap-2"><dt class="text-slate-500">Criado</dt><dd class="text-slate-600">{{ po.created_at|fdatetime if po and po.created_at else '–' }}</dd></div></dl>
       </div>
     </div>
   </div>
