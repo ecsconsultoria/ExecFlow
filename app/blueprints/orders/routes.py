@@ -626,11 +626,17 @@ def pdf(oid, lang):
              .filter_by(id=oid, company_id=current_user.company_id, deleted_at=None)
              .first_or_404())
     lang  = lang if lang in ("pt", "en") else "pt"
+    # Força refresh dos dados do banco (evita cache de sessão)
+    db.session.refresh(order)
     buf   = generate_order_pdf(order, lang=lang)
     gc.collect()
     filename = f"{order.number}.pdf"
-    return send_file(buf, mimetype="application/pdf",
-                     as_attachment=True, download_name=filename)
+    resp = make_response(send_file(buf, mimetype="application/pdf",
+                           as_attachment=True, download_name=filename))
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
 
 
 # ─────────────────────────────────────────────────────────────────────────────
