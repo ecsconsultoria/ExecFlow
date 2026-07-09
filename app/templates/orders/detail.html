@@ -23,16 +23,11 @@
   .dark .card-divider{ border-color:#334155 }
 
   @media (max-width: 639px) {
-    header.flex{flex-wrap:wrap!important}
-    header>div.flex-1{flex-basis:100%!important}
     .pa-wrap{gap:6px!important;align-items:center!important}
     .pa-header{flex-shrink:0!important}
     .pa-back{margin-left:-10px!important;justify-content:center!important}
     header>button.lg\:hidden{align-self:flex-start!important}
-    header>div.shrink-0{flex-basis:100%!important;display:flex!important;justify-content:flex-end!important;gap:6px!important;margin-top:6px!important;padding-right:0!important}
-    header>div.shrink-0 button,header>div.shrink-0 a{width:34px!important;height:34px!important;padding:0!important;font-size:0!important;border-radius:8px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important}
-    header>div.shrink-0 button i,header>div.shrink-0 a i{font-size:15px!important;margin:0!important}
-    header>div.shrink-0 a span{display:none!important}
+    header>div:last-child{align-self:flex-start!important;height:2rem!important}
     .pa-wrap button:not(.pa-header button),.pa-wrap>a[href]:not(.pa-header a){width:34px!important;height:34px!important;padding:0!important;font-size:0!important;border-radius:8px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;flex-shrink:0!important}
     .pa-wrap button:not(.pa-header button) i,.pa-wrap>a[href]:not(.pa-header a) i{font-size:15px!important;margin:0!important}
     .pa-wrap>form:not(.pa-header form){width:34px!important;height:34px!important;flex-shrink:0!important}
