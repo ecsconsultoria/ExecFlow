@@ -24,7 +24,7 @@
 {% block page_title %}
 {% set locked = po and po.status in ('concluido', 'faturado', 'pago', 'cancelado', 'excluido') %}
 <div class="w-full">
-  <div class="flex flex-wrap items-center gap-2">
+  <div class="flex flex-wrap items-center gap-2 max-sm:grid max-sm:grid-cols-2 max-sm:gap-1.5">
     <a href="{{ url_for('purchase_orders.index') }}"
        class="text-slate-400 hover:text-violet-500 text-sm font-normal">
       <i class="fa-solid fa-arrow-left"></i>
@@ -39,7 +39,7 @@
     {# Salvar (visível quando não bloqueado) #}
     {% if not locked and has_perm('po.edit' if po else 'po.create') %}
     <button type="submit" form="main-form"
-            class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-blue-600 hover:bg-blue-700 text-white">
+            class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-blue-600 hover:bg-blue-700 text-white">
       <i class="fa-solid fa-floppy-disk text-[11px]"></i> {{ 'Salvar' if po else 'Criar PO' }}
     </button>
     {% endif %}
@@ -53,7 +53,7 @@
                 if (sel && sel.value) document.getElementById('open-supplier-id').value = sel.value;
                 document.getElementById('po-open-form').submit();
               "
-              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-blue-600 hover:bg-blue-700 text-white">
+              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-blue-600 hover:bg-blue-700 text-white">
         <i class="fa-solid fa-folder-open text-[11px]"></i> Abrir PO
       </button>
       {% endif %}
@@ -62,7 +62,7 @@
       {% if po.status == 'aprovado' and has_perm('po.edit') %}
       <button type="button"
               onclick="document.getElementById('po-start-form').submit()"
-              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-amber-600 hover:bg-amber-700 text-white">
+              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-amber-600 hover:bg-amber-700 text-white">
         <i class="fa-solid fa-play text-[11px]"></i> Iniciar
       </button>
       {% endif %}
@@ -71,7 +71,7 @@
       {% if po.status in ('aprovado', 'em_execucao') and has_perm('po.close') %}
       <button type="button"
               onclick="if(confirm('Concluir esta PO?'))document.getElementById('po-conclude-form').submit()"
-              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-emerald-600 hover:bg-emerald-700 text-white">
+              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-emerald-600 hover:bg-emerald-700 text-white">
         <i class="fa-solid fa-flag-checkered text-[11px]"></i> Concluir
       </button>
       {% endif %}
@@ -93,7 +93,7 @@
                 document.getElementById('faturar-supplier-id').value = sid.value;
                 document.getElementById('po-faturar-form').submit();
               "
-              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-emerald-600 hover:bg-emerald-700 text-white">
+              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-emerald-600 hover:bg-emerald-700 text-white">
         <i class="fa-solid fa-file-invoice text-[11px]"></i> Faturar
       </button>
       {% endif %}
@@ -103,7 +103,7 @@
 
       {# PDF unified dropdown #}
       <div class="relative" x-data="{open:false}" @click.outside="open=false">
-        <button type="button" @click="open=!open" class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-600 hover:bg-slate-700 text-white">
+        <button type="button" @click="open=!open" class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-slate-600 hover:bg-slate-700 text-white">
           <i class="fa-solid fa-file-pdf text-[11px]"></i> PDF
         </button>
         <div x-show="open" x-cloak
@@ -153,7 +153,7 @@
       {# Reabrir #}
       {% if po.status == 'faturado' and has_role('ADMIN') %}
       <button type="button" onclick="document.getElementById('po-reabrir-form').submit()"
-              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-amber-600 hover:bg-amber-700 text-white">
+              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-amber-600 hover:bg-amber-700 text-white">
         <i class="fa-solid fa-rotate-left text-[11px]"></i> Reabrir
       </button>
       {% endif %}
@@ -162,7 +162,7 @@
       {% if po.status not in ('concluido', 'faturado', 'pago', 'cancelado') and has_perm('po.cancel') %}
       <button type="button"
               onclick="window.dispatchEvent(new CustomEvent('open-po-cancel-modal'))"
-              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-red-500 hover:bg-red-600 text-white">
+              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-red-500 hover:bg-red-600 text-white">
         <i class="fa-solid fa-ban text-[11px]"></i> Cancelar
       </button>
       {% endif %}
@@ -171,7 +171,7 @@
       {% if has_perm('po.delete') %}
       <button type="button"
               onclick="window.dispatchEvent(new CustomEvent('open-po-delete-modal'))"
-              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-red-700 hover:bg-red-800 text-white">
+              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-red-700 hover:bg-red-800 text-white">
         <i class="fa-solid fa-trash text-[11px]"></i> Excluir
       </button>
       {% endif %}
@@ -185,15 +185,15 @@
     {% else %}
     {# Nova PO — botão voltar #}
     <a href="{{ url_for('orders.detail', oid=linked_order.id) if linked_order else url_for('purchase_orders.index') }}"
-       class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-600 hover:bg-slate-700 text-white">
+       class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-slate-600 hover:bg-slate-700 text-white">
       <i class="fa-solid fa-xmark text-[11px]"></i> Cancelar
     </a>
     {% endif %}
 
     {# ── Histórico dropdown ── #}
-    <div class="relative ml-auto" x-data="{ histOpen: false }">
+    <div class="relative ml-auto max-sm:ml-0 max-sm:col-span-2 max-sm:flex max-sm:justify-end" x-data="{ histOpen: false }">
       <button type="button" @click="histOpen = !histOpen"
-              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600">
+              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600">
         <i class="fa-solid fa-clock-rotate-left text-[11px]"></i>
         <span>Histórico</span>
         {% if po and audit_logs %}
@@ -934,12 +934,12 @@
     </div>
     <div class="flex gap-2 justify-end mt-4">
       <button type="button" @click="showNewSupplierModal=false"
-              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-400 hover:bg-slate-500 text-white">
+              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-slate-400 hover:bg-slate-500 text-white">
         <i class="fa-solid fa-xmark text-[11px]"></i> Cancelar
       </button>
       <button type="button" onclick="createSupplierInline()"
               id="ns-save-btn"
-              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-violet-600 hover:bg-violet-700 text-white">
+              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-violet-600 hover:bg-violet-700 text-white">
         <i class="fa-solid fa-floppy-disk text-[11px]"></i> Cadastrar
       </button>
     </div>
@@ -970,11 +970,11 @@
       {% endif %}
       <div class="flex gap-2 justify-end">
         <button type="button" @click="showObsModal=false"
-                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-400 hover:bg-slate-500 text-white">
+                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-slate-400 hover:bg-slate-500 text-white">
           <i class="fa-solid fa-xmark text-[11px]"></i> Fechar
         </button>
         <button type="submit"
-                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-amber-500 hover:bg-amber-600 text-white">
+                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-amber-500 hover:bg-amber-600 text-white">
           <i class="fa-solid fa-floppy-disk text-[11px]"></i> Salvar
         </button>
       </div>
@@ -1068,11 +1068,11 @@
       </div>
       <div class="flex gap-2 justify-end mt-4">
         <button type="button" @click="showAddItemModal=false"
-                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-400 hover:bg-slate-500 text-white">
+                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-slate-400 hover:bg-slate-500 text-white">
           <i class="fa-solid fa-xmark text-[11px]"></i> Fechar
         </button>
         <button type="submit"
-                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-violet-600 hover:bg-violet-700 text-white">
+                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-violet-600 hover:bg-violet-700 text-white">
           <i class="fa-solid fa-plus text-[11px]"></i> Adicionar
         </button>
       </div>
@@ -1119,11 +1119,11 @@
       </div>
       <div class="flex gap-2 justify-end mt-4">
         <button type="button" @click="showEditItemModal=false"
-                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-400 hover:bg-slate-500 text-white">
+                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-slate-400 hover:bg-slate-500 text-white">
           <i class="fa-solid fa-xmark text-[11px]"></i> Fechar
         </button>
         <button type="submit"
-                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-blue-600 hover:bg-blue-700 text-white">
+                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-blue-600 hover:bg-blue-700 text-white">
           <i class="fa-solid fa-floppy-disk text-[11px]"></i> Salvar
         </button>
       </div>
@@ -1249,11 +1249,11 @@
       </div>
       <div class="flex gap-2 justify-end">
         <button type="button" @click="showCancelModal=false"
-                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-400 hover:bg-slate-500 text-white">
+                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-slate-400 hover:bg-slate-500 text-white">
           <i class="fa-solid fa-xmark text-[11px]"></i> Fechar
         </button>
         <button type="submit"
-                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-red-600 hover:bg-red-700 text-white">
+                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-red-600 hover:bg-red-700 text-white">
           <i class="fa-solid fa-ban text-[11px]"></i> Cancelar PO
         </button>
       </div>
@@ -1281,11 +1281,11 @@
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="flex gap-2 justify-end">
         <button type="button" @click="showDeleteModal=false"
-                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-400 hover:bg-slate-500 text-white">
+                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-slate-400 hover:bg-slate-500 text-white">
           <i class="fa-solid fa-xmark text-[11px]"></i> Cancelar
         </button>
         <button type="submit"
-                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-red-900 hover:bg-red-950 text-white">
+                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-red-900 hover:bg-red-950 text-white">
           <i class="fa-solid fa-trash text-[11px]"></i> Excluir PO
         </button>
       </div>

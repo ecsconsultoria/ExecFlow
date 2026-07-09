@@ -24,12 +24,12 @@
 
 {% block page_title %}
 <div class="w-full">
-  <div class="flex flex-wrap items-center gap-2">
+  <div class="flex flex-wrap items-center gap-2 max-sm:grid max-sm:grid-cols-2 max-sm:gap-1.5">
     <a href="{{ url_for('quotes.index') }}"
-       class="text-slate-400 hover:text-blue-500 text-sm font-normal">
+       class="text-slate-400 hover:text-blue-500 text-sm font-normal max-sm:col-span-2">
       <i class="fa-solid fa-arrow-left"></i>
     </a>
-    <span class="whitespace-nowrap">RFQ <span class="font-mono font-bold">{{ quote.number }}</span></span>
+    <span class="whitespace-nowrap max-sm:col-span-2 max-sm:font-bold max-sm:text-base">RFQ <span class="font-mono font-bold">{{ quote.number }}</span></span>
 
     {# Status badge #}
     {% set status_variant = 'neutral' %}
@@ -44,12 +44,12 @@
     <form method="post" action="{{ url_for('quotes.approve', qid=quote.id) }}" class="inline-flex">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button type="submit"
-              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-emerald-600 hover:bg-emerald-700 text-white">
+              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-emerald-600 hover:bg-emerald-700 text-white">
         <i class="fa-solid fa-check text-[11px]"></i> Aprovar
       </button>
     </form>
     <button type="button" onclick="openRejectModal()"
-            class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-red-500 hover:bg-red-600 text-white">
+            class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-red-500 hover:bg-red-600 text-white">
       <i class="fa-solid fa-xmark text-[11px]"></i> Rejeitar
     </button>
     {% endif %}
@@ -59,7 +59,7 @@
     <form method="post" action="{{ url_for('orders.create', qid=quote.id) }}" class="inline-flex">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button type="submit"
-              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-blue-600 hover:bg-blue-700 text-white">
+              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-blue-600 hover:bg-blue-700 text-white">
         <i class="fa-solid fa-bag-shopping text-[11px]"></i> Criar SO
       </button>
     </form>
@@ -68,7 +68,7 @@
     {# Ver Pedido #}
     {% if quote_order %}
     <a href="{{ url_for('orders.detail', oid=quote_order.id) }}"
-       class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-600 hover:bg-slate-700 text-white">
+       class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-slate-600 hover:bg-slate-700 text-white">
       <i class="fa-solid fa-bag-shopping text-[11px]"></i> Ver Pedido
     </a>
     {% endif %}
@@ -78,7 +78,7 @@
     <form method="post" action="{{ url_for('quotes.reopen', qid=quote.id) }}" class="inline-flex">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button type="submit"
-              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-amber-500 hover:bg-amber-600 text-white">
+              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-amber-500 hover:bg-amber-600 text-white">
         <i class="fa-solid fa-rotate-left text-[11px]"></i> Reabrir
       </button>
     </form>
@@ -87,7 +87,7 @@
     {# Editar #}
     {% if quote.status not in ('reprovado', 'cancelado') and has_perm('quote.edit') %}
     <a href="{{ url_for('quotes.edit', qid=quote.id) }}"
-       class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-blue-600 hover:bg-blue-700 text-white">
+       class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-blue-600 hover:bg-blue-700 text-white">
       <i class="fa-solid fa-pen text-[11px]"></i> Editar
     </a>
     {% endif %}
@@ -98,7 +98,7 @@
     {# PDF unified dropdown #}
     <div class="relative" x-data="{open:false}" @click.outside="open=false">
       <button type="button" @click="open=!open"
-              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-600 hover:bg-slate-700 text-white">
+              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-slate-600 hover:bg-slate-700 text-white">
         <i class="fa-solid fa-file-pdf text-[11px]"></i> PDF
       </button>
       <div x-show="open" x-cloak
@@ -146,15 +146,15 @@
     {# Excluir #}
     {% if has_perm('quote.delete') %}
     <button type="button" onclick="window.dispatchEvent(new CustomEvent('open-delete-modal'))"
-            class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-red-700 hover:bg-red-800 text-white">
+            class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-red-700 hover:bg-red-800 text-white">
       <i class="fa-solid fa-trash text-[11px]"></i> Excluir
     </button>
     {% endif %}
 
     {# ── Histórico dropdown ── #}
-    <div class="relative ml-auto" x-data="{ histOpen: false }">
+    <div class="relative ml-auto max-sm:ml-0 max-sm:col-span-2 max-sm:flex max-sm:justify-end" x-data="{ histOpen: false }">
       <button type="button" @click="histOpen = !histOpen"
-              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600">
+              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600">
         <i class="fa-solid fa-clock-rotate-left text-[11px]"></i>
         <span>Histórico</span>
         {% if audit_logs %}
@@ -415,11 +415,11 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="flex gap-2 justify-end">
         <button type="button" @click="confirmDelete=false"
-                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-400 hover:bg-slate-500 text-white">
+                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-slate-400 hover:bg-slate-500 text-white">
           <i class="fa-solid fa-xmark text-[11px]"></i> Cancelar
         </button>
         <button type="submit"
-                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-red-900 hover:bg-red-950 text-white">
+                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-red-900 hover:bg-red-950 text-white">
           <i class="fa-solid fa-trash text-[11px]"></i> Excluir
         </button>
       </div>
@@ -450,11 +450,11 @@
       </div>
       <div class="flex gap-2 justify-end">
         <button type="button" onclick="closeRejectModal()"
-                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-400 hover:bg-slate-500 text-white">
+                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-slate-400 hover:bg-slate-500 text-white">
           <i class="fa-solid fa-xmark text-[11px]"></i> Cancelar
         </button>
         <button type="submit"
-                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-red-600 hover:bg-red-700 text-white">
+                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors max-sm:h-9 max-sm:w-full max-sm:justify-center bg-red-600 hover:bg-red-700 text-white">
           <i class="fa-solid fa-xmark text-[11px]"></i> Reprovar
         </button>
       </div>
