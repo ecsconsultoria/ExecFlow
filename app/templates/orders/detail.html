@@ -23,13 +23,21 @@
   .dark .card-divider{ border-color:#334155 }
 
   @media (max-width: 639px) {
-    .pa-wrap{gap:3px!important}
-    .pa-wrap button,.pa-wrap>a[href]{width:34px!important;height:34px!important;padding:0!important;justify-content:center!important;font-size:0!important;border-radius:8px!important;overflow:hidden;flex-shrink:0!important}
-    .pa-wrap button i,.pa-wrap>a[href] i{font-size:15px!important;margin:0!important}
-    .pa-wrap>form{width:34px!important;height:34px!important;flex-shrink:0!important}
-    .pa-wrap>form>button{width:34px!important;height:34px!important;padding:0!important;font-size:0!important;border-radius:8px!important}
-    .pa-wrap>form>button i{font-size:15px!important;margin:0!important}
+    .pa-wrap{gap:6px!important;align-items:center!important}
+    .pa-header{flex-shrink:0!important}
+    .pa-back{margin-left:-10px!important;justify-content:center!important}
+    header>button.lg\:hidden{align-self:flex-start!important}
+    header>div:last-child{align-self:flex-start!important;height:2rem!important}
+    .pa-wrap button:not(.pa-header button),.pa-wrap>a[href]:not(.pa-header a){width:34px!important;height:34px!important;padding:0!important;font-size:0!important;border-radius:8px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;flex-shrink:0!important}
+    .pa-wrap button:not(.pa-header button) i,.pa-wrap>a[href]:not(.pa-header a) i{font-size:15px!important;margin:0!important}
+    .pa-wrap>form:not(.pa-header form){width:34px!important;height:34px!important;flex-shrink:0!important}
+    .pa-wrap>form:not(.pa-header form)>button{width:34px!important;height:34px!important;padding:0!important;font-size:0!important;border-radius:8px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important}
+    .pa-wrap>form:not(.pa-header form)>button i{font-size:15px!important;margin:0!important}
     .pa-wrap>.ml-auto{margin-left:0!important}
+    .pa-wrap>.ml-auto button{width:34px!important;height:34px!important;padding:0!important;font-size:0!important;border-radius:8px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;flex-shrink:0!important}
+    .pa-wrap>.ml-auto button i{font-size:15px!important;margin:0!important}
+    .pa-wrap>.ml-auto button span{display:none!important}
+    .pa-wrap>.ml-auto button i.fa-chevron-down{display:none!important}
   }
 </style>
 {% endblock %}
@@ -37,12 +45,14 @@
 {% block page_title %}
 <div class="w-full">
   <div class="flex flex-wrap items-center gap-2 pa-wrap">
-    <a href="{{ url_for('orders.index') }}"
-       class="text-slate-400 hover:text-teal-500 text-sm font-normal">
-      <i class="fa-solid fa-arrow-left"></i>
-    </a>
-    <span class="whitespace-nowrap">Sales Order <span class="font-mono font-bold">{{ order.number }}</span></span>
-    <span class="whitespace-nowrap" style="{{ order.status|status_badge_style }}"><span style="width:7px;height:7px;border-radius:50%;background:{{ order.status|status_dot_color }};flex-shrink:0;display:inline-block"></span> {{ order.status_label }}</span>
+    <span class="inline-flex items-center gap-2 flex-shrink-0 pa-header">
+      <a href="{{ url_for('orders.index') }}"
+         class="w-8 h-8 flex items-center rounded-lg text-slate-400 hover:text-teal-500 hover:bg-slate-100 dark:hover:bg-slate-700 shrink-0 pa-back">
+        <i class="fa-solid fa-arrow-left text-base"></i>
+      </a>
+      <span class="whitespace-nowrap font-mono font-bold">{{ order.number }}</span>
+      <span class="whitespace-nowrap" style="{{ order.status|status_badge_style }}"><span style="width:7px;height:7px;border-radius:50%;background:{{ order.status|status_dot_color }};flex-shrink:0;display:inline-block"></span> {{ order.status_label }}</span>
+    </span>
 
     {% if order.status not in ('cancelado', 'concluido', 'faturado') and has_perm('so.edit') %}
     <button type="submit" form="main-form" name="action" value="save"
