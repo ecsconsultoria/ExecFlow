@@ -564,10 +564,8 @@ def baixa(pid):
         log_activity("po", po.id, po.company_id, f"Parcela {pmt.installment_no} baixada", current_user.id)
         db.session.commit()
 
-        # Se todas as parcelas foram pagas e PO está em status permitido, concluir
-        payments_list = list(po.payments)
-        all_paid = all(p.is_paid for p in payments_list) if payments_list else False
-        if all_paid and po.status in ('rascunho', 'aberto', 'faturado'):
+        # Se saldo total está zerado e PO está em status permitido, concluir
+        if po.total_pending() <= 0 and po.status in ('rascunho', 'aberto', 'faturado'):
             po.status = 'concluido'
             log_activity("po", po.id, po.company_id, "PO concluída automaticamente (todas as parcelas pagas)", current_user.id)
             db.session.commit()
