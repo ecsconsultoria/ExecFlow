@@ -360,6 +360,20 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
     # Append discount row if applicable
     _adj_style_cmds: list = []
     if disc_amt:
+        # Subtotal row (original total before discount)
+        r = len(items_rows)
+        items_rows.append([
+            Paragraph(f"<i>{_t('subtotal', lang)}:</i>", cell_body_r),
+            "", "", "",
+            Paragraph(_fmt_brl(subtotal), cell_body_r),
+        ])
+        _adj_style_cmds += [
+            ("SPAN",          (0, r), (3, r)),
+            ("ALIGN",         (0, r), (-1, r), "RIGHT"),
+            ("TOPPADDING",    (0, r), (-1, r), 5),
+            ("BOTTOMPADDING", (0, r), (-1, r), 2),
+        ]
+        # Discount row
         r = len(items_rows)
         items_rows.append([
             Paragraph(f"<i>{disc_row_lbl}:</i>", cell_body_r),
