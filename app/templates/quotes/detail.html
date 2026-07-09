@@ -171,7 +171,7 @@
            x-transition:leave="transition ease-in duration-150"
            x-transition:leave-start="opacity-100 translate-y-0"
            x-transition:leave-end="opacity-0 -translate-y-1"
-           class="absolute right-0 top-full mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 py-3 px-4 w-[calc(100vw-2rem)] max-w-[380px] max-h-[70vh] overflow-y-auto">
+           class="absolute right-0 top-full mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 py-3 px-4 min-w-[320px] max-h-[70vh] overflow-y-auto">
         {% if audit_logs %}
         <ol class="relative border-l border-slate-200 dark:border-slate-600 ml-2 space-y-3">
           {% for log in audit_logs %}
