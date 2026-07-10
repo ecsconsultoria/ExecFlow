@@ -192,7 +192,7 @@
     </button>
 
     {# ── Histórico dropdown ── #}
-    <div class="relative ml-auto" x-data="{ histOpen: false }">
+    <div class="relative pa-header" x-data="{ histOpen: false }">
       <button type="button" @click="histOpen = !histOpen"
               class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600">
         <i class="fa-solid fa-clock-rotate-left text-[11px]"></i>
@@ -210,7 +210,7 @@
            x-transition:leave="transition ease-in duration-150"
            x-transition:leave-start="opacity-100 translate-y-0"
            x-transition:leave-end="opacity-0 -translate-y-1"
-           class="absolute right-0 top-full mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 py-3 px-4 w-[calc(100vw-2rem)] max-w-[380px] max-h-[70vh] overflow-y-auto">
+           class="absolute right-0 top-full mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 py-3 px-4 w-[calc(100vw-2rem)] max-w-[500px] max-h-[70vh] overflow-y-auto">
         {% if audit_logs %}
         <ol class="relative border-l border-slate-200 dark:border-slate-600 ml-2 space-y-3">
           {% for log in audit_logs %}
