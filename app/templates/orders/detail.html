@@ -52,6 +52,11 @@
     .so-head>.card-divider{grid-column:1/-1;order:5;margin:0}
     .f-emissao{order:1}.f-entrega{order:2}.f-pedido{order:3}.f-status{order:4}
     .f-cliente{order:6}.f-celular{order:7}.f-email{order:8}.f-cnpj{order:9}.f-fat{order:10}
+    .so-ajustes{flex-wrap:nowrap!important;gap:4px!important}
+    .so-ajustes>.min-w-\[155px\]{min-width:0!important;flex:1!important}
+    .so-ajustes>.min-w-\[130px\]{min-width:0!important;flex:1!important}
+    .so-ajustes .text-2xl{font-size:14px!important}
+    .so-ajustes .lbl{font-size:9px!important}
   }
 </style>
 {% endblock %}
@@ -615,7 +620,7 @@
 
   {# ── Ajustes financeiros (campos dentro do main-form) ── #}
   <div class="px-4 py-3 border-t-2 border-slate-100 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-700/20">
-    <div class="flex flex-wrap items-end justify-end gap-4">
+    <div class="flex flex-wrap items-end justify-end gap-4 so-ajustes">
 
       <div class="min-w-[155px]">
         <label class="lbl">Desconto</label>

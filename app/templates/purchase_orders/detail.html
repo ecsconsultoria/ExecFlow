@@ -43,6 +43,11 @@
     header>button.lg\:hidden{align-self:flex-start!important}
     header>div:last-child{align-self:flex-start!important;height:2rem!important}
     .pa-wrap>.ml-auto{margin-left:0!important}
+    .po-head{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .po-head>.grid{display:contents}
+    .po-head>.card-divider{grid-column:1/-1}
+    .po-emissao{order:1}.po-entrega{order:2}.po-numero{order:3}.po-status{order:4}.po-criado{order:5}
+    .po-forn{order:6}.po-contato{order:7}.po-email{order:8}.po-tel{order:9}.po-cnpj{order:10}
   }
 </style>
 {% endblock %}
@@ -398,17 +403,17 @@
    Card 1 — Cabeçalho
 ──────────────────────────────── #}
 <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
-  <div class="px-4 pt-3 pb-3">
+  <div class="px-4 pt-3 pb-3 po-head">
 
     {# ── Linha 1: Nº PO | Status | Emissão | Data Entrega ── #}
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-3 gap-y-3 pb-3">
 
-      <div>
+      <div class="po-numero">
         <label class="lbl">Nº PO</label>
         <p class="fi-ro"><span class="truncate">{{ po.number if po else 'Automático' }}</span></p>
       </div>
 
-      <div>
+      <div class="po-status">
         <label class="lbl">Status</label>
         <div class="fi-ro">
           {% if po %}
@@ -421,7 +426,7 @@
         </div>
       </div>
 
-      <div>
+      <div class="po-emissao">
         <label class="lbl">Emissão</label>
         {% if locked %}
         <p class="fi-ro">{{ po.created_at.strftime('%d/%m/%Y') if po and po.created_at else '–' }}</p>
@@ -432,7 +437,7 @@
         {% endif %}
       </div>
 
-      <div>
+      <div class="po-entrega">
         <label class="lbl">Data Entrega</label>
         {% if locked %}
         <p class="fi-ro">{{ po.delivery_date.strftime('%d/%m/%Y') if po and po.delivery_date else '–' }}</p>
@@ -441,6 +446,11 @@
                value="{{ po.delivery_date.isoformat() if po and po.delivery_date else '' }}"
                class="fi">
         {% endif %}
+      </div>
+
+      <div class="po-criado">
+        <label class="lbl">Criado por</label>
+        <p class="fi-ro"><span class="truncate">{{ current_user.name if not po else (po.created_by_user.name if po.created_by_user is defined and po.created_by_user else current_user.name) }}</span></p>
       </div>
 
     </div>
