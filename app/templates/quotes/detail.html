@@ -44,10 +44,9 @@
     header>button.lg\:hidden{align-self:flex-start!important}
     header>div:last-child{align-self:flex-start!important;height:2rem!important}
     .pa-wrap>.ml-auto{margin-left:0!important}
-    .rfq-table td,.rfq-table th{padding-left:6px!important;padding-right:6px!important}
-    .rfq-table .whitespace-nowrap{white-space:normal!important;font-size:10px!important;word-break:break-all!important}
-    .rfq-table .w-16{width:auto!important;min-width:28px!important}
-    .rfq-table .w-24{width:auto!important;min-width:50px!important}
+    .rfq-table .whitespace-nowrap{font-size:11px!important}
+    .rfq-table .w-16{width:40px!important}
+    .rfq-table .w-24{width:70px!important}
   }
 </style>
 {% endblock %}
@@ -314,13 +313,6 @@
         {% endif %}
       </div>
 
-    </div>
-
-    <div class="card-divider"></div>
-
-    {# ── Linha 2: Faturamento Fiscal | Forma Pagamento | Prazo Pagamento ── #}
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-3 gap-y-3 pt-3">
-
       <div>
         <label class="lbl">Faturamento Fiscal</label>
         <p class="fi-ro">
@@ -328,10 +320,24 @@
         </p>
       </div>
 
+    </div>
+
+    <div class="card-divider"></div>
+
+    {# ── Linha 2: Forma Pagamento | Prazo Pagamento ── #}
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-3 gap-y-3 pt-3">
+
       <div>
         <label class="lbl">Forma de Pagamento</label>
         <p class="fi-ro">
           {{ (quote.payment_method or '–')|lower|title }}
+        </p>
+      </div>
+
+      <div>
+        <label class="lbl">Prazo de Pagamento</label>
+        <p class="fi-ro">
+          {{ (quote.payment_terms or '–')|lower|title }}
         </p>
       </div>
 
