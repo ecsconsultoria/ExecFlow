@@ -166,7 +166,7 @@
     {% endif %}
 
     {# Observações #}
-    <button type="button" @click="showObsModal=true"
+    <button type="button" onclick="window.dispatchEvent(new CustomEvent('open-obs-modal'))"
             class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-700"
             title="Observações do pedido">
       <i class="fa-solid fa-comment-dots text-[11px]"></i> Obs
@@ -331,6 +331,7 @@
     this.showOpItemModal = true;
   }
 }" x-cloak
+  @open-obs-modal.window="showObsModal = true"
   @open-cancel-modal.window="showCancelModal = true"
   @open-delete-modal.window="showDeleteModal = true">
 
