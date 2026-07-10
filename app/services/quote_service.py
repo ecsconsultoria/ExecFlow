@@ -128,11 +128,29 @@ class QuoteService:
         if isinstance(items_data, str):
             items_data = json.loads(items_data)
 
-        quote.client_id      = data.get("client_id") or quote.client_id
-        quote.client_name    = data.get("client_name",    quote.client_name)
-        quote.contact_name   = data.get("contact_name",   quote.contact_name)
-        quote.email          = data.get("email",          quote.email)
-        quote.phone          = data.get("phone",          quote.phone)
+        new_client_id = data.get("client_id") or quote.client_id
+        client_changed = str(new_client_id) != str(quote.client_id) if (new_client_id and quote.client_id) else bool(new_client_id)
+        quote.client_id = new_client_id
+
+        # Repopula dados de contato do cliente vinculado sempre que o cliente mudar
+        # ou se os campos não foram enviados explicitamente no data
+        if quote.client_id:
+            from ..models.client import Client
+            client_obj = Client.query.get(quote.client_id)
+            if client_obj:
+                if client_changed or "client_name" not in data:
+                    quote.client_name = client_obj.name or ""
+                if client_changed or "contact_name" not in data:
+                    quote.contact_name = client_obj.contact or ""
+                if client_changed or "email" not in data:
+                    quote.email = client_obj.email or ""
+                if client_changed or "phone" not in data:
+                    quote.phone = client_obj.phone or ""
+        else:
+            quote.client_name  = data.get("client_name",  quote.client_name or "")
+            quote.contact_name = data.get("contact_name", quote.contact_name or "")
+            quote.email        = data.get("email",        quote.email or "")
+            quote.phone        = data.get("phone",        quote.phone or "")
         quote.language       = data.get("language",       quote.language)
         quote.billing_type   = data.get("billing_type",   quote.billing_type)
         quote.payment_method = data.get("payment_method", quote.payment_method)
