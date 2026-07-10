@@ -44,6 +44,10 @@
     header>button.lg\:hidden{align-self:flex-start!important}
     header>div:last-child{align-self:flex-start!important;height:2rem!important}
     .pa-wrap>.ml-auto{margin-left:0!important}
+    .rfq-table td,.rfq-table th{padding-left:6px!important;padding-right:6px!important}
+    .rfq-table .whitespace-nowrap{white-space:normal!important;font-size:10px!important;word-break:break-all!important}
+    .rfq-table .w-16{width:auto!important;min-width:28px!important}
+    .rfq-table .w-24{width:auto!important;min-width:50px!important}
   }
 </style>
 {% endblock %}
@@ -351,7 +355,7 @@
 
   {# Tabela de serviços — sempre visível, scroll horizontal em telas pequenas #}
   <div class="overflow-x-auto">
-  <table class="w-full text-xs">
+  <table class="w-full text-xs rfq-table">
     <thead class="bg-slate-50 dark:bg-slate-700/70">
       <tr>
         <th class="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wide">Serviço</th>
