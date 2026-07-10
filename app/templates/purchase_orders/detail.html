@@ -50,7 +50,6 @@
       </a>
       {% if po %}
       <span class="whitespace-nowrap font-mono font-bold">{{ po.number }}</span>
-      <span class="whitespace-nowrap" style="{{ po.status|status_badge_style }}"><span style="width:7px;height:7px;border-radius:50%;background:{{ po.status|status_dot_color }};flex-shrink:0;display:inline-block"></span> {{ po.status_label }}</span>
       {% else %}
       <span class="whitespace-nowrap"><i class="fa-solid fa-cart-flatbed mr-2 text-violet-500"></i>Nova Purchase Order</span>
       {% endif %}
@@ -406,19 +405,6 @@
         {% endif %}
       </div>
 
-      <div>
-        <label class="lbl">Status</label>
-        <p class="pt-1">
-          {% if po %}
-          <span class="px-1.5 py-0.5 rounded-full text-xs bg-{{ po.status_color }}-100 text-{{ po.status_color }}-700 dark:bg-{{ po.status_color }}-900 dark:text-{{ po.status_color }}-300">
-            {{ po.status_label }}
-          </span>
-          {% else %}
-          <span class="text-slate-400 text-xs italic">Rascunho</span>
-          {% endif %}
-        </p>
-      </div>
-
       <div class="flex items-start gap-2">
         <div class="flex-1 min-w-0">
           <label class="lbl">Nº PO</label>
@@ -437,6 +423,19 @@
           {% endif %}
         </button>
         {% endif %}
+      </div>
+
+      <div>
+        <label class="lbl">Status</label>
+        <p class="pt-1">
+          {% if po %}
+          <span class="px-1.5 py-0.5 rounded-full text-xs bg-{{ po.status_color }}-100 text-{{ po.status_color }}-700 dark:bg-{{ po.status_color }}-900 dark:text-{{ po.status_color }}-300">
+            {{ po.status_label }}
+          </span>
+          {% else %}
+          <span class="text-slate-400 text-xs italic">Rascunho</span>
+          {% endif %}
+        </p>
       </div>
 
     </div>

@@ -49,12 +49,6 @@
         <i class="fa-solid fa-arrow-left text-base"></i>
       </a>
       <span class="whitespace-nowrap font-mono font-bold">{{ quote.number }}</span>
-      {% set status_variant = 'neutral' %}
-      {% if quote.status in ('aprovado','pago','reserva_confirmada') %}{% set status_variant = 'success' %}
-      {% elif quote.status == 'pendente' %}{% set status_variant = 'warning' %}
-      {% elif quote.status == 'reprovado' %}{% set status_variant = 'danger' %}
-      {% endif %}
-      {{ badge(quote.status, variant=status_variant) }}
     </span>
 
     {# Aprovar + Rejeitar #}
@@ -287,6 +281,16 @@
       <div>
         <label class="lbl">Nº Cotação</label>
         <p class="text-sm font-mono font-bold text-slate-700 dark:text-slate-100 pt-1 truncate">{{ quote.number }}</p>
+      </div>
+
+      <div>
+        <label class="lbl">Status</label>
+        {% set status_variant = 'neutral' %}
+        {% if quote.status in ('aprovado','pago','reserva_confirmada') %}{% set status_variant = 'success' %}
+        {% elif quote.status == 'pendente' %}{% set status_variant = 'warning' %}
+        {% elif quote.status == 'reprovado' %}{% set status_variant = 'danger' %}
+        {% endif %}
+        <p class="pt-1">{{ badge(quote.status, variant=status_variant) }}</p>
       </div>
 
       {% if quote.obs %}
