@@ -22,22 +22,22 @@
   .card-divider{ border-top:1px solid #e2e8f0; }
   .dark .card-divider{ border-color:#334155 }
 
+  .pa-wrap button:not(.pa-header button),.pa-wrap>a[href]:not(.pa-header a){width:34px!important;height:34px!important;padding:0!important;font-size:0!important;border-radius:8px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;flex-shrink:0!important}
+  .pa-wrap button:not(.pa-header button) i,.pa-wrap>a[href]:not(.pa-header a) i{font-size:15px!important;margin:0!important}
+  .pa-wrap>form:not(.pa-header form){width:34px!important;height:34px!important;flex-shrink:0!important}
+  .pa-wrap>form:not(.pa-header form)>button{width:34px!important;height:34px!important;padding:0!important;font-size:0!important;border-radius:8px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important}
+  .pa-wrap>form:not(.pa-header form)>button i{font-size:15px!important;margin:0!important}
+  .pa-wrap>.ml-auto button{width:34px!important;height:34px!important;padding:0!important;font-size:0!important;border-radius:8px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;flex-shrink:0!important}
+  .pa-wrap>.ml-auto button i{font-size:15px!important;margin:0!important}
+  .pa-wrap>.ml-auto button span{display:none!important}
+  .pa-wrap>.ml-auto button i.fa-chevron-down{display:none!important}
   @media (max-width: 639px) {
     .pa-wrap{gap:6px!important;align-items:center!important}
     .pa-header{flex-shrink:0!important}
     .pa-back{margin-left:-10px!important;justify-content:center!important}
     header>button.lg\:hidden{align-self:flex-start!important}
     header>div:last-child{align-self:flex-start!important;height:2rem!important}
-    .pa-wrap button:not(.pa-header button),.pa-wrap>a[href]:not(.pa-header a){width:34px!important;height:34px!important;padding:0!important;font-size:0!important;border-radius:8px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;flex-shrink:0!important}
-    .pa-wrap button:not(.pa-header button) i,.pa-wrap>a[href]:not(.pa-header a) i{font-size:15px!important;margin:0!important}
-    .pa-wrap>form:not(.pa-header form){width:34px!important;height:34px!important;flex-shrink:0!important}
-    .pa-wrap>form:not(.pa-header form)>button{width:34px!important;height:34px!important;padding:0!important;font-size:0!important;border-radius:8px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important}
-    .pa-wrap>form:not(.pa-header form)>button i{font-size:15px!important;margin:0!important}
     .pa-wrap>.ml-auto{margin-left:0!important}
-    .pa-wrap>.ml-auto button{width:34px!important;height:34px!important;padding:0!important;font-size:0!important;border-radius:8px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;flex-shrink:0!important}
-    .pa-wrap>.ml-auto button i{font-size:15px!important;margin:0!important}
-    .pa-wrap>.ml-auto button span{display:none!important}
-    .pa-wrap>.ml-auto button i.fa-chevron-down{display:none!important}
   }
 </style>
 {% endblock %}
@@ -164,6 +164,13 @@
       <i class="fa-solid fa-rotate-left text-[11px]"></i> Reabrir
     </button>
     {% endif %}
+
+    {# Observações #}
+    <button type="button" @click="showObsModal=true"
+            class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-700"
+            title="Observações do pedido">
+      <i class="fa-solid fa-comment-dots text-[11px]"></i> Obs
+    </button>
 
     {# ── Histórico dropdown ── #}
     <div class="relative ml-auto" x-data="{ histOpen: false }">
@@ -454,17 +461,6 @@
         </p>
       </div>
 
-      <div class="flex items-start gap-2">
-        <div class="flex-1 min-w-0"></div>
-        <button type="button" @click="showObsModal=true"
-                class="relative flex-shrink-0 text-slate-400 hover:text-amber-500 transition-colors"
-                title="Observações do pedido">
-          <i class="fa-solid fa-comment-dots text-xl leading-none"></i>
-          {% if order.obs %}
-          <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 rounded-full ring-2 ring-white dark:ring-slate-800"></span>
-          {% endif %}
-        </button>
-      </div>
 
     </div>
 
