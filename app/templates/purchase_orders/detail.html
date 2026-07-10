@@ -438,7 +438,7 @@
         <label class="lbl">Status</label>
         <p class="pt-1">
           {% if po %}
-          <span class="px-1.5 py-0.5 rounded-full text-xs bg-{{ po.status_color }}-100 text-{{ po.status_color }}-700 dark:bg-{{ po.status_color }}-900 dark:text-{{ po.status_color }}-300">
+          <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-{{ po.status_color }}-50 text-{{ po.status_color }}-600 dark:bg-{{ po.status_color }}-900/20 dark:text-{{ po.status_color }}-400">
             {{ po.status_label }}
           </span>
           {% else %}
