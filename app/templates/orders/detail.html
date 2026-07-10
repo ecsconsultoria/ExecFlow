@@ -402,7 +402,7 @@
       <div>
         <label class="lbl">Status</label>
         <p class="pt-1">
-          <span class="whitespace-nowrap" style="{{ order.status|status_badge_style }}"><span style="width:7px;height:7px;border-radius:50%;background:{{ order.status|status_dot_color }};flex-shrink:0;display:inline-block"></span> {{ order.status_label }}</span>
+          <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-{{ order.status_color }}-100 text-{{ order.status_color }}-700 dark:bg-{{ order.status_color }}-900/30 dark:text-{{ order.status_color }}-300">{{ order.status_label }}</span>
         </p>
       </div>
 

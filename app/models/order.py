@@ -158,7 +158,7 @@ class Order(db.Model, TimestampMixin, SoftDeleteMixin):
     @property
     def status_color(self) -> str:
         colors = {
-            "novo":      "sky",
+            "novo":      "slate",
             "aberto":    "blue",
             "faturado":  "amber",
             "concluido": "emerald",
