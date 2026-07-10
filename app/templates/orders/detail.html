@@ -619,6 +619,9 @@
 
       <div class="min-w-[155px]">
         <label class="lbl">Desconto</label>
+        {% if locked %}
+        <p class="fi-ro">{% if order.discount_value %}{% if order.discount_type == '%' %}{{ order.discount_value }} %{% else %}R$ {{ order.discount_value }}{% endif %}{% else %}–{% endif %}</p>
+        {% else %}
         <div class="flex items-center gap-1">
           <div class="flex rounded-md overflow-hidden border border-slate-200 dark:border-slate-600 shrink-0 text-xs">
             <button type="button" @click="discType='R$'"
@@ -632,13 +635,18 @@
           <input type="text" name="discount_value" placeholder="0,00"
                  value="{{ order.discount_value or '' }}" class="fi w-20 font-mono">
         </div>
+        {% endif %}
       </div>
 
       <div class="min-w-[130px]">
         <label class="lbl">Cotação USD (R$)</label>
+        {% if locked %}
+        <p class="fi-ro">{{ order.usd_rate or '–' }}</p>
+        {% else %}
         <input type="text" name="usd_rate" placeholder="Ex: 5,40"
                value="{{ order.usd_rate or '' }}" class="fi w-24 font-mono"
                title="Exibe o total em USD no PDF em inglês">
+        {% endif %}
       </div>
 
       <div class="text-right">

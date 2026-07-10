@@ -7,11 +7,19 @@
 
   .fi{
     border:1px solid #e2e8f0; border-radius:6px; padding:5px 9px;
-    font-size:12px; background:#fff; width:100%;
+    font-size:12px; background:#fff; width:100%; min-height:30px;
   }
   .dark .fi{ background:#334155; border-color:#475569; color:#e2e8f0 }
   .fi:focus{ outline:none; border-color:#7c3aed; box-shadow:0 0 0 2px rgba(124,58,237,.2) }
   .fi:disabled{ opacity:.4; pointer-events:none }
+
+  /* Valor somente-leitura com o mesmo visual do .fi */
+  .fi-ro{
+    display:flex; align-items:center; min-height:30px; width:100%;
+    border:1px solid #e2e8f0; border-radius:6px; padding:0 9px;
+    font-size:12px; background:#fff; color:#334155; min-width:0;
+  }
+  .dark .fi-ro{ background:#334155; border-color:#475569; color:#e2e8f0 }
 
   .lbl{ display:block; font-size:10px; font-weight:600; color:#94a3b8;
         text-transform:uppercase; letter-spacing:.05em; margin-bottom:3px }
@@ -392,21 +400,17 @@
 <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
   <div class="px-4 pt-3 pb-3">
 
-    {# ── Linha 1: Nº PO | Status | Criado por | Emissão | Data Entrega ── #}
+    {# ── Linha 1: Nº PO | Status ── #}
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-3 gap-y-3 pb-3">
 
-      <div class="flex items-start gap-2">
-        <div class="flex-1 min-w-0">
-          <label class="lbl">Nº PO</label>
-          <p class="text-sm font-mono font-bold text-slate-700 dark:text-slate-100 pt-1 truncate">
-            {{ po.number if po else 'Automático' }}
-          </p>
-        </div>
+      <div>
+        <label class="lbl">Nº PO</label>
+        <p class="fi-ro"><span class="truncate">{{ po.number if po else 'Automático' }}</span></p>
       </div>
 
       <div>
         <label class="lbl">Status</label>
-        <p class="pt-1">
+        <div class="fi-ro">
           {% if po %}
           <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-{{ po.status_color }}-50 text-{{ po.status_color }}-600 dark:bg-{{ po.status_color }}-900/20 dark:text-{{ po.status_color }}-400">
             {{ po.status_label }}
@@ -414,7 +418,7 @@
           {% else %}
           <span class="text-slate-400 text-xs italic">Rascunho</span>
           {% endif %}
-        </p>
+        </div>
       </div>
 
     </div>
@@ -426,8 +430,12 @@
 
       <div>
         <label class="lbl">Fornecedor *</label>
+        {% if locked %}
+        <p class="fi-ro"><span class="truncate">
+          {{ po.supplier.name if po and po.supplier else '–' }}
+        </span></p>
+        {% else %}
         <select name="supplier_id" id="supplier-select" class="fi"
-                {% if locked %}disabled{% endif %}
                 onchange="selectSupplier(this.value)">
           <option value="">– Selecione –</option>
           {% for s in suppliers %}
@@ -436,7 +444,6 @@
           </option>
           {% endfor %}
         </select>
-        {% if not locked %}
         <button type="button" @click="showNewSupplierModal=true"
                 class="mt-1 text-xs text-violet-600 hover:text-violet-800 dark:text-violet-400 dark:hover:text-violet-200 flex items-center gap-1 transition-colors">
           <i class="fa-solid fa-plus text-[10px]"></i> Novo Fornecedor
@@ -446,28 +453,40 @@
 
       <div>
         <label class="lbl">Contato</label>
+        {% if locked %}
+        <p class="fi-ro"><span class="truncate">{{ po.supplier.contact if po and po.supplier and po.supplier.contact else '–' }}</span></p>
+        {% else %}
         <input type="text" id="supp-contact"
                value="{{ po.supplier.contact if po and po.supplier and po.supplier.contact else '' }}"
-               class="fi" placeholder="–" {% if locked %}disabled{% endif %} readonly>
+               class="fi" placeholder="–" readonly>
+        {% endif %}
       </div>
 
       <div>
         <label class="lbl">Email</label>
+        {% if locked %}
+        <p class="fi-ro"><span class="truncate">{{ po.supplier.email if po and po.supplier and po.supplier.email else '–' }}</span></p>
+        {% else %}
         <input type="text" id="supp-email"
                value="{{ po.supplier.email if po and po.supplier and po.supplier.email else '' }}"
-               class="fi" placeholder="–" {% if locked %}disabled{% endif %} readonly>
+               class="fi" placeholder="–" readonly>
+        {% endif %}
       </div>
 
       <div>
         <label class="lbl">Telefone</label>
+        {% if locked %}
+        <p class="fi-ro">{{ po.supplier.phone if po and po.supplier and po.supplier.phone else '–' }}</p>
+        {% else %}
         <input type="text" id="supp-phone"
                value="{{ po.supplier.phone if po and po.supplier and po.supplier.phone else '' }}"
-               class="fi" placeholder="–" {% if locked %}disabled{% endif %} readonly>
+               class="fi" placeholder="–" readonly>
+        {% endif %}
       </div>
 
       <div>
         <label class="lbl">CNPJ / CPF</label>
-        <p class="text-sm text-slate-600 dark:text-slate-300 pt-1 font-mono text-xs leading-tight" id="supp-document">
+        <p class="fi-ro" id="supp-document">
           {{ po.supplier.document if po and po.supplier and po.supplier.document else '–' }}
         </p>
       </div>
@@ -610,6 +629,9 @@
 
         <div class="min-w-[155px]">
           <label class="lbl">Desconto</label>
+          {% if locked %}
+          <p class="fi-ro">{% if po.discount_value %}{% if po.discount_type == '%' %}{{ ('%.2f' % po.discount_value).replace('.', ',') }} %{% else %}R$ {{ ('%.2f' % po.discount_value).replace('.', ',') }}{% endif %}{% else %}–{% endif %}</p>
+          {% else %}
           <div class="flex items-center gap-1">
             <div class="flex rounded-md overflow-hidden border border-slate-200 dark:border-slate-600 shrink-0 text-xs">
               <button type="button" @click="discType='R$'"
@@ -623,6 +645,7 @@
             <input type="text" name="discount_value" placeholder="0,00"
                    value="{% if po.discount_value %}{{ ('%.2f' % po.discount_value).replace('.', ',') }}{% endif %}" class="fi w-20 font-mono">
           </div>
+          {% endif %}
         </div>
 
         <div class="text-right">
