@@ -288,6 +288,16 @@ def _apply_data(po: PurchaseOrder, data: dict):
         elif not val:
             safe["payment_due_date"] = None
 
+    if "delivery_date" in safe:
+        val = safe["delivery_date"]
+        if val and isinstance(val, str):
+            try:
+                safe["delivery_date"] = datetime.strptime(val, "%Y-%m-%d").date()
+            except ValueError:
+                safe["delivery_date"] = None
+        elif not val:
+            safe["delivery_date"] = None
+
     # Campos nullable FK: converter string vazia para None
     for fk_field in ("supplier_id", "service_id", "service_order_id", "order_id",
                      "quote_id", "vehicle_category_id"):

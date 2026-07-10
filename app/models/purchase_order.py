@@ -42,6 +42,9 @@ class PurchaseOrder(db.Model, TimestampMixin, SoftDeleteMixin):
     supplier_id = db.Column(db.Integer, db.ForeignKey("suppliers.id"), nullable=True)
     service_id  = db.Column(db.Integer, db.ForeignKey("services.id"),  nullable=True)
 
+    # ── Datas ─────────────────────────────────────────────────────────────────
+    delivery_date = db.Column(db.Date)
+
     # ── Dados do passageiro (condicional: requires_passenger) ─────────────────
     passenger_name  = db.Column(db.String(200))
     passenger_phone = db.Column(db.String(50))

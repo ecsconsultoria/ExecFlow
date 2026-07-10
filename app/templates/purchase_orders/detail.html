@@ -400,7 +400,7 @@
 <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
   <div class="px-4 pt-3 pb-3">
 
-    {# ── Linha 1: Nº PO | Status ── #}
+    {# ── Linha 1: Nº PO | Status | Emissão | Data Entrega ── #}
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-3 gap-y-3 pb-3">
 
       <div>
@@ -419,6 +419,28 @@
           <span class="text-slate-400 text-xs italic">Rascunho</span>
           {% endif %}
         </div>
+      </div>
+
+      <div>
+        <label class="lbl">Emissão</label>
+        {% if locked %}
+        <p class="fi-ro">{{ po.created_at.strftime('%d/%m/%Y') if po and po.created_at else '–' }}</p>
+        {% else %}
+        <input type="date" name="emission_date"
+               value="{{ po.created_at.strftime('%Y-%m-%d') if po and po.created_at else '' }}"
+               class="fi">
+        {% endif %}
+      </div>
+
+      <div>
+        <label class="lbl">Data Entrega</label>
+        {% if locked %}
+        <p class="fi-ro">{{ po.delivery_date.strftime('%d/%m/%Y') if po and po.delivery_date else '–' }}</p>
+        {% else %}
+        <input type="date" name="delivery_date"
+               value="{{ po.delivery_date.isoformat() if po and po.delivery_date else '' }}"
+               class="fi">
+        {% endif %}
       </div>
 
     </div>

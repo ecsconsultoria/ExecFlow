@@ -275,6 +275,7 @@ def _ensure_schema_columns():
             _po_new_cols = [
                 ('reopened_at', 'TIMESTAMP'),
                 ('reopened_by', 'INTEGER'),
+                ('delivery_date', 'DATE'),
             ]
             with db.engine.begin() as conn:
                 for col_name, col_type in _po_new_cols:
