@@ -292,6 +292,13 @@
       </div>
 
       <div>
+        <label class="lbl">Celular</label>
+        <p class="fi-ro">
+          {{ (quote.client.whatsapp if quote.client and quote.client.whatsapp else quote.phone) or '–' }}
+        </p>
+      </div>
+
+      <div>
         <label class="lbl">Email</label>
         {% set _em = (quote.client.email if quote.client and quote.client.email else quote.email) %}
         {% if _em %}
@@ -301,13 +308,6 @@
         {% else %}
         <p class="fi-ro">–</p>
         {% endif %}
-      </div>
-
-      <div>
-        <label class="lbl">Celular</label>
-        <p class="fi-ro">
-          {{ (quote.client.whatsapp if quote.client and quote.client.whatsapp else quote.phone) or '–' }}
-        </p>
       </div>
 
     </div>
@@ -328,13 +328,6 @@
         <label class="lbl">Forma de Pagamento</label>
         <p class="fi-ro">
           {{ (quote.payment_method or '–')|lower|title }}
-        </p>
-      </div>
-
-      <div>
-        <label class="lbl">Prazo de Pagamento</label>
-        <p class="fi-ro">
-          {{ (quote.payment_terms or '–')|lower|title }}
         </p>
       </div>
 
