@@ -163,11 +163,13 @@ def detail(qid):
 def edit(qid):
     from ...models.order import Order
     quote = Quote.query.filter_by(id=qid, company_id=current_user.company_id, deleted_at=None).first_or_404()
-    # Lock: cannot edit a quote that already has an open order
-    linked_order = Order.query.filter_by(quote_id=quote.id, deleted_at=None).first()
-    if linked_order:
+    # Lock: cannot edit a quote that has an active (non-cancelled, non-excluded) order
+    active_order = Order.query.filter_by(quote_id=quote.id, deleted_at=None).filter(
+        Order.status.notin_(['cancelado', 'excluido'])
+    ).first()
+    if active_order:
         flash(
-            f"Orçamento bloqueado para edição — já existe o Pedido #{linked_order.number} "
+            f"Orçamento bloqueado para edição — já existe o Pedido #{active_order.number} "
             f"gerado a partir dele. Edite o pedido diretamente.",
             "danger",
         )
