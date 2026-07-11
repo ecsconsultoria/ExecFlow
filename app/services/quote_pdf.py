@@ -392,7 +392,12 @@ def _translate_service(name: str, lang: str, vehicle: str = "") -> str:
     if lang == "pt" or not name:
         return name
     is_freelance = "free lance" in vehicle.lower() if vehicle else False
-    v = re.sub(r"\bTransfer(?:\s+Airport)?\b", "Airport Transfer", name)
+    # Se o nome já contém "Airport", substitui apenas "Transfer Airport" → "Airport Transfer"
+    # Senão, adiciona "Airport" antes de "Transfer" (ex: "Transfer CGH" → "Airport Transfer CGH")
+    if re.search(r"\bAirport\b", name, re.IGNORECASE):
+        v = re.sub(r"\bTransfer\s+Airport\b", "Airport Transfer", name, flags=re.IGNORECASE)
+    else:
+        v = re.sub(r"\bTransfer\b", "Airport Transfer", name)
     if not is_freelance:
         v = re.sub(
             r"Di[aá]ria\s+0?5h\b(?:\s*\+\s*(\d+)\s*[Kk][Mm]\s*Franquia)?",
