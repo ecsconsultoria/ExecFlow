@@ -124,8 +124,8 @@
     {% set _ph = (quote.client.whatsapp if quote.client and quote.client.whatsapp else quote.phone) %}
 
     {# PDF unified dropdown #}
-    <div class="relative" x-data="{open:false}" @click.outside="open=false">
-      <button type="button" @click="open=!open"
+    <div class="relative pa-header" x-data="{open:false}" @click.outside="open=false">
+      <button type="button" @click="open=!open" title="Baixar ou enviar PDF"
               class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-600 hover:bg-slate-700 text-white">
         <i class="fa-solid fa-file-pdf text-[11px]"></i> PDF
       </button>
@@ -133,11 +133,11 @@
            class="absolute left-0 top-full mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 py-1 overflow-hidden"
            style="min-width:200px">
         <div style="display:grid;grid-template-columns:1fr 1fr">
-          <a href="{{ url_for('quotes.pdf', qid=quote.id, lang='pt') }}" @click="open=false"
+          <a href="{{ url_for('quotes.pdf', qid=quote.id, lang='pt') }}" @click="open=false" title="Baixar PDF em Português"
              class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
             <i class="fa-solid fa-download text-rose-500"></i> PDF PT
           </a>
-          <a href="{{ url_for('quotes.pdf', qid=quote.id, lang='en') }}" @click="open=false"
+          <a href="{{ url_for('quotes.pdf', qid=quote.id, lang='en') }}" @click="open=false" title="Download PDF in English"
              class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
             <i class="fa-solid fa-download text-rose-700"></i> PDF EN
           </a>
@@ -145,27 +145,27 @@
         {% if _em %}
         <hr class="my-1 border-slate-100 dark:border-slate-700">
         <div style="display:grid;grid-template-columns:1fr 1fr">
-          <button type="button" onclick="sendEmail('pt')" @click="open=false"
-                  class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
+          <a href="#" @click.prevent="open=false; sendEmail('pt')" title="Enviar PDF por email (PT)"
+             class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
             <i class="fa-solid fa-envelope text-blue-500"></i> Email PT
-          </button>
-          <button type="button" onclick="sendEmail('en')" @click="open=false"
-                  class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
+          </a>
+          <a href="#" @click.prevent="open=false; sendEmail('en')" title="Send PDF via email (EN)"
+             class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
             <i class="fa-solid fa-envelope text-blue-700"></i> Email EN
-          </button>
+          </a>
         </div>
         {% endif %}
         {% if _ph %}
         <hr class="my-1 border-slate-100 dark:border-slate-700">
         <div style="display:grid;grid-template-columns:1fr 1fr">
-          <button type="button" onclick="openWhatsApp('pt')" @click="open=false"
-                  class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
+          <a href="#" @click.prevent="open=false; openWhatsApp('pt')" title="Enviar por WhatsApp (PT)"
+             class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
             <i class="fa-brands fa-whatsapp text-green-500"></i> WA PT
-          </button>
-          <button type="button" onclick="openWhatsApp('en')" @click="open=false"
-                  class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
+          </a>
+          <a href="#" @click.prevent="open=false; openWhatsApp('en')" title="Send via WhatsApp (EN)"
+             class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
             <i class="fa-brands fa-whatsapp text-green-600"></i> WA EN
-          </button>
+          </a>
         </div>
         {% endif %}
       </div>
