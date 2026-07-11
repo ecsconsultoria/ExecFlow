@@ -300,11 +300,71 @@ def _get_vehicle_model(cat_name: str, lang: str) -> str:
     return d.get(k) or d.get(_swap_gender(k), "")
 
 
+# ── Tradução automática de categorias novas (fallback word-by-word) ──
+_VEHICLE_WORD_EN: dict[str, str] = {
+    "executivo":   "Executive",   "executiva":   "Executive",
+    "premium":     "Premium",
+    "blindado":    "Bulletproof", "blindada":    "Bulletproof",
+    "sedan":       "Sedan",       "sedã":        "Sedan",
+    "suv":         "SUV",
+    "van":         "Van",
+    "minivan":     "Minivan",
+    "ônibus":      "Bus",         "onibus":      "Bus",
+    "microônibus": "Mini-Bus",    "microonibus": "Mini-Bus",
+    "motorista":   "Driver",
+    "free":        "Freelance",   "lance":       "",
+    "luxo":        "Luxury",
+}
+
+
+def _translate_vehicle_auto(name: str) -> str:
+    """Traduz nome de categoria palavra por palavra (fallback para novas categorias).
+
+    Inverte a ordem das palavras para seguir o padrão inglês:
+      "SUV Executivo Premium" → "Executive Premium SUV"
+    """
+    k = name.strip().lower()
+    # Tenta dicionário completo primeiro
+    if k in _VEHICLE_EN:
+        return _VEHICLE_EN[k]
+    swapped = _swap_gender(k)
+    if swapped in _VEHICLE_EN:
+        return _VEHICLE_EN[swapped]
+
+    # Fallback: tradução palavra por palavra
+    words = k.split()
+    translated = []
+    for w in words:
+        tw = _VEHICLE_WORD_EN.get(w, w.capitalize())
+        if tw:  # palavras mapeadas para string vazia são descartadas
+            translated.append(tw)
+    # Inverte para ordem inglesa (adj + subst)
+    if len(translated) >= 2:
+        translated.reverse()
+    return " ".join(translated) if translated else name
+
+
+def _translate_vehicle_desc(desc: str, lang: str) -> str:
+    """Traduz o modelo do veículo (description) para inglês."""
+    if lang == "pt" or not desc:
+        return desc
+    # Padrões comuns: "ou Similar" → "or Similar"
+    import re
+    d = desc
+    d = re.sub(r'\bou\s+[Ss]imilar\b', 'or Similar', d)
+    d = re.sub(r'\bou\s+[Ss]uperior\b', 'or Superior', d)
+    d = re.sub(r'\bou\s+[Ee]quivalente\b', 'or Equivalent', d)
+    return d
+
+
 def _translate_vehicle(name: str, lang: str) -> str:
     if lang == "pt" or not name:
         return name
     k = name.strip().lower()
-    return _VEHICLE_EN.get(k) or _VEHICLE_EN.get(_swap_gender(k), name)
+    result = _VEHICLE_EN.get(k) or _VEHICLE_EN.get(_swap_gender(k), "")
+    if not result:
+        result = _translate_vehicle_auto(name)
+    return result
 
 
 def _title_case(s: str) -> str:
@@ -539,8 +599,9 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
             sub_parts.append(driver_disp)
         sub_label = " – ".join(sub_parts)
 
-        # Line 3: vehicle model from mapping, fallback to vehicle_desc
-        vehicle_model = vehicle_desc or _get_vehicle_model(cat_name_raw, lang)
+        # Line 3: vehicle model from DB description, fallback to hardcoded dict
+        vehicle_model_raw = vehicle_desc or _get_vehicle_model(cat_name_raw, lang)
+        vehicle_model = _translate_vehicle_desc(vehicle_model_raw, lang)
 
         svc_lines = [f'<b>{main_label}</b>']
         if sub_label:
