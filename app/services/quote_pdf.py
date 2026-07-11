@@ -141,9 +141,19 @@ def _fmt_brl(value: float) -> str:
     return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
+def _fmt_brl_raw(value: float) -> str:
+    """Valor numérico em BRL sem prefixo (ex: 1.500,00)."""
+    return f"{value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
 def _fmt_usd(value: float) -> str:
     # Formato americano: USD 1,234.56
     return f"USD {value:,.2f}"
+
+
+def _fmt_usd_raw(value: float) -> str:
+    """Valor numérico em USD sem prefixo (ex: 1,234.56)."""
+    return f"{value:,.2f}"
 
 
 def _total_cell_text(brl_total: float, lang: str, usd_rate):
@@ -156,8 +166,8 @@ def _total_cell_text(brl_total: float, lang: str, usd_rate):
     if usd_rate and usd_rate > 0:
         usd_val = brl_total / usd_rate
         inner = Table([
-            [Paragraph("R$",  label_style), Paragraph(_fmt_brl(brl_total), val_style)],
-            [Paragraph("USD", label_style), Paragraph(_fmt_usd(usd_val),   val_style)],
+            [Paragraph("R$",  label_style), Paragraph(_fmt_brl_raw(brl_total), val_style)],
+            [Paragraph("USD", label_style), Paragraph(_fmt_usd_raw(usd_val),   val_style)],
         ], colWidths=[22, 70])
         inner.setStyle(TableStyle([
             ("TOPPADDING",    (0, 0), (-1, -1), 1),
