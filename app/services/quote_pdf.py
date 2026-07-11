@@ -157,36 +157,37 @@ def _fmt_usd_raw(value: float) -> str:
 
 
 def _total_cell_text(brl_total: float, lang: str, usd_rate) -> str:
-    """Total em R$; no PDF em inglês com cotação informada, acrescenta o valor
-    em USD (menor) na mesma célula.  (Compatível com SO/PO.)"""
+    """Total em R$; com cotação USD informada, mostra as duas linhas.
+    Formato string — compatível com SO/PO (usam Paragraph wrapper)."""
     base = _fmt_brl(brl_total)
-    if lang == "en" and usd_rate and usd_rate > 0:
+    if usd_rate and usd_rate > 0:
         usd_val = brl_total / usd_rate
         return f'{base}<br/><font size="7" color="#888888">USD {_fmt_usd_raw(usd_val)}</font>'
     return base
 
 
 def _total_cell_aligned(brl_total: float, usd_rate):
-    """Retorna Table com labels (R$/USD) e valores alinhados em colunas."""
-    label_style = ParagraphStyle("tlbl", fontSize=7, fontName="Helvetica",
-                                  textColor=colors.HexColor("#888888"), alignment=TA_LEFT)
-    val_style   = ParagraphStyle("tval", fontSize=9, fontName="Helvetica-Bold",
-                                  textColor=BRAND_DARK, alignment=TA_RIGHT)
+    """Retorna Flowable para célula de total no RFQ — 2 linhas alinhadas à direita."""
+    style_brl = ParagraphStyle("tbrl", fontSize=9, fontName="Helvetica-Bold",
+                                textColor=BRAND_DARK, alignment=TA_RIGHT)
+    style_usd = ParagraphStyle("tusd", fontSize=7, fontName="Helvetica",
+                                textColor=colors.HexColor("#888888"), alignment=TA_RIGHT)
     if usd_rate and usd_rate > 0:
         usd_val = brl_total / usd_rate
         inner = Table([
-            [Paragraph("R$",  label_style), Paragraph(_fmt_brl_raw(brl_total), val_style)],
-            [Paragraph("USD", label_style), Paragraph(_fmt_usd_raw(usd_val),   val_style)],
-        ], colWidths=[18, 72])
+            [Paragraph(_fmt_brl(brl_total),          style_brl)],
+            [Paragraph(_fmt_usd_raw(usd_val), style_usd)],
+        ], colWidths=[90])
         inner.setStyle(TableStyle([
-            ("TOPPADDING",    (0, 0), (-1, -1), 0),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ("TOPPADDING",    (0, 0), (-1, -1), 1),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
             ("LEFTPADDING",   (0, 0), (-1, -1), 2),
             ("RIGHTPADDING",  (0, 0), (-1, -1), 2),
             ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+            ("ALIGN",         (0, 0), (-1, -1), "RIGHT"),
         ]))
         return inner
-    return Paragraph(_fmt_brl(brl_total), val_style)
+    return Paragraph(_fmt_brl(brl_total), style_brl)
 
 
 # ---------------------------------------------------------------------------
