@@ -540,7 +540,7 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
         sub_label = " – ".join(sub_parts)
 
         # Line 3: vehicle model from mapping, fallback to vehicle_desc
-        vehicle_model = _get_vehicle_model(cat_name_raw, lang) or vehicle_desc
+        vehicle_model = vehicle_desc or _get_vehicle_model(cat_name_raw, lang)
 
         svc_lines = [f'<b>{main_label}</b>']
         if sub_label:

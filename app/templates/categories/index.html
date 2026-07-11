@@ -1,30 +1,105 @@
 {% extends "base.html" %}
-{% block title %}Categorias{% endblock %}
+{% block title %}Categorias de Veículos{% endblock %}
 {% block page_title %}<i class="fa-solid fa-tags mr-2 text-amber-500"></i>Categorias de Veículos{% endblock %}
 
 {% block content %}
-<div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
-  <table class="w-full text-sm">
-    <thead class="bg-slate-50 dark:bg-slate-700">
-      <tr>
-        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">#</th>
-        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Categoria</th>
-        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Código</th>
-        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Serviços</th>
-      </tr>
-    </thead>
-    <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+<div x-data="{ editModal: false, editCat: null }">
+
+  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 dark:bg-slate-700">
+        <tr>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">#</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Categoria</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Modelo do Veículo</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Serviços</th>
+          <th class="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase w-16">Ações</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+        {% for cat in categories %}
+        <tr class="hover:bg-slate-50 dark:hover:bg-slate-700">
+          <td class="px-4 py-3 text-slate-400 text-xs">{{ loop.index }}</td>
+          <td class="px-4 py-3 font-medium text-slate-700 dark:text-slate-200">
+            {{ cat.name }}
+            {% if not cat.is_active %}
+            <span class="ml-2 text-[10px] bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 px-1.5 py-0.5 rounded-full">Inativo</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3 text-xs text-slate-500 max-w-[260px]">
+            <span class="truncate block">{{ cat.description or '–' }}</span>
+          </td>
+          <td class="px-4 py-3 text-slate-500 text-xs">{{ cat.service_pricing|list|length if cat.service_pricing else 0 }}</td>
+          <td class="px-4 py-3 text-center">
+            {% if has_perm('catalog.manage') %}
+            <button type="button"
+                    @click="editCat = {{ cat.id }}; editModal = true"
+                    class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                    title="Editar categoria">
+              <i class="fa-solid fa-pen text-xs"></i>
+            </button>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="px-4 py-10 text-center text-slate-400">Nenhuma categoria.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {# ── Modal de Edição ── #}
+  {% if has_perm('catalog.manage') %}
+  <div x-show="editModal" x-cloak
+       class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+       @keydown.escape.window="editModal = false">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md p-6"
+         @click.stop>
+      <h3 class="font-bold text-slate-800 dark:text-slate-100 mb-4">
+        <i class="fa-solid fa-pen text-blue-500 mr-2"></i>Editar Categoria
+      </h3>
+
       {% for cat in categories %}
-      <tr class="hover:bg-slate-50 dark:hover:bg-slate-700">
-        <td class="px-4 py-3 text-slate-400 text-xs">{{ loop.index }}</td>
-        <td class="px-4 py-3 font-medium text-slate-700 dark:text-slate-200">{{ cat.name }}</td>
-        <td class="px-4 py-3 font-mono text-xs text-slate-500">{{ cat.code or '–' }}</td>
-        <td class="px-4 py-3 text-slate-500">{{ cat.services|length }}</td>
-      </tr>
-      {% else %}
-      <tr><td colspan="4" class="px-4 py-10 text-center text-slate-400">Nenhuma categoria.</td></tr>
+      <form x-show="editCat === {{ cat.id }}"
+            method="post" action="{{ url_for('categories.index') }}"
+            class="space-y-4">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="category_id" value="{{ cat.id }}">
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Nome da Categoria</label>
+          <input type="text" name="name" value="{{ cat.name }}"
+                 class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
+            Modelo do Veículo
+            <span class="text-slate-400 font-normal normal-case">(ex: "Toyota Corolla ou Similar")</span>
+          </label>
+          <textarea name="description" rows="2"
+                    class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                    placeholder="Ex: Jeep Commander ou Similar">{{ cat.description or '' }}</textarea>
+          <p class="text-[11px] text-slate-400 mt-1">
+            Este texto aparece na 3ª linha do serviço no PDF do orçamento.
+          </p>
+        </div>
+
+        <div class="flex gap-2 justify-end pt-2">
+          <button type="button" @click="editModal = false"
+                  class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-400 hover:bg-slate-500 text-white">
+            Cancelar
+          </button>
+          <button type="submit"
+                  class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-blue-600 hover:bg-blue-700 text-white">
+            <i class="fa-solid fa-check text-[11px]"></i> Salvar
+          </button>
+        </div>
+      </form>
       {% endfor %}
-    </tbody>
-  </table>
+    </div>
+  </div>
+  {% endif %}
+
 </div>
 {% endblock %}
