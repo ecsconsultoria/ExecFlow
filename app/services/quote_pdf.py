@@ -156,28 +156,36 @@ def _fmt_usd_raw(value: float) -> str:
     return f"{value:,.2f}"
 
 
-def _total_cell_text(brl_total: float, lang: str, usd_rate):
-    """Retorna Paragraph ou Table alinhada: R$/USD com labels à esquerda e valores à direita."""
+def _total_cell_text(brl_total: float, lang: str, usd_rate) -> str:
+    """Total em R$; no PDF em inglês com cotação informada, acrescenta o valor
+    em USD (menor) na mesma célula.  (Compatível com SO/PO.)"""
+    base = _fmt_brl(brl_total)
+    if lang == "en" and usd_rate and usd_rate > 0:
+        usd_val = brl_total / usd_rate
+        return f'{base}<br/><font size="7" color="#888888">USD {_fmt_usd_raw(usd_val)}</font>'
+    return base
+
+
+def _total_cell_aligned(brl_total: float, usd_rate):
+    """Retorna Table com labels (R$/USD) e valores alinhados em colunas."""
     label_style = ParagraphStyle("tlbl", fontSize=7, fontName="Helvetica",
                                   textColor=colors.HexColor("#888888"), alignment=TA_LEFT)
     val_style   = ParagraphStyle("tval", fontSize=9, fontName="Helvetica-Bold",
                                   textColor=BRAND_DARK, alignment=TA_RIGHT)
-
     if usd_rate and usd_rate > 0:
         usd_val = brl_total / usd_rate
         inner = Table([
             [Paragraph("R$",  label_style), Paragraph(_fmt_brl_raw(brl_total), val_style)],
             [Paragraph("USD", label_style), Paragraph(_fmt_usd_raw(usd_val),   val_style)],
-        ], colWidths=[22, 70])
+        ], colWidths=[18, 72])
         inner.setStyle(TableStyle([
-            ("TOPPADDING",    (0, 0), (-1, -1), 1),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
-            ("LEFTPADDING",   (0, 0), (-1, -1), 1),
+            ("TOPPADDING",    (0, 0), (-1, -1), 0),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ("LEFTPADDING",   (0, 0), (-1, -1), 2),
             ("RIGHTPADDING",  (0, 0), (-1, -1), 2),
             ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
         ]))
         return inner
-
     return Paragraph(_fmt_brl(brl_total), val_style)
 
 
@@ -697,7 +705,7 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
             [Paragraph(_title_case(payment_cell_text), cell_body_c),
              Paragraph(_title_case(fiscal_cell_text),   cell_body_c),
              Paragraph(_title_case(prazo_cell_text),    cell_body_c),
-             _total_cell_text(grand_total, lang, getattr(quote, "usd_rate", None))],
+             _total_cell_aligned(grand_total, getattr(quote, "usd_rate", None))],
         ],
         colWidths=[W * 0.27, W * 0.27, W * 0.24, W * 0.22],
     )
