@@ -176,7 +176,7 @@ def _total_cell_aligned(brl_total: float, usd_rate):
         usd_val = brl_total / usd_rate
         inner = Table([
             [Paragraph(_fmt_brl(brl_total),          style_brl)],
-            [Paragraph(_fmt_usd_raw(usd_val), style_usd)],
+            [Paragraph("USD " + _fmt_usd_raw(usd_val), style_usd)],
         ], colWidths=[90])
         inner.setStyle(TableStyle([
             ("TOPPADDING",    (0, 0), (-1, -1), 1),
