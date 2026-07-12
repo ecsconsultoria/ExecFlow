@@ -482,9 +482,8 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         for pmt in sorted_pmts:
             is_paid      = pmt.is_paid
             status_label = _t("status_paid", lang) if is_paid else _t("status_open", lang)
-            st_fg        = colors.white
-            st_p = ParagraphStyle("sp", fontSize=8, fontName="Helvetica-Bold",
-                                   textColor=st_fg, alignment=TA_CENTER, leading=10)
+            st_p = ParagraphStyle("sp", fontSize=9, fontName="Helvetica-Bold",
+                                   textColor=BRAND_DARK, alignment=TA_CENTER, leading=11)
             inst_rows.append([
                 Paragraph(f"{pmt.installment_no}/{total_pmts}", cell_body_c),
                 Paragraph(_fmt_date(pmt.due_date, lang),        cell_body_c),
