@@ -488,7 +488,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
             inst_rows.append([
                 Paragraph(f"{pmt.installment_no}/{total_pmts}", cell_body_c),
                 Paragraph(_fmt_date(pmt.due_date, lang),        cell_body_c),
-                Paragraph(_total_cell_text(pmt.amount or 0, lang, getattr(order, "usd_rate", None)), cell_body_r),
+                Paragraph(_fmt_brl(pmt.amount or 0), cell_body_r),
                 Paragraph(status_label, st_p),
             ])
 
