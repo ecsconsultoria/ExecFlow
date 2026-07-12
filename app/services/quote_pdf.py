@@ -157,12 +157,13 @@ def _fmt_usd_raw(value: float) -> str:
 
 
 def _total_cell_text(brl_total: float, lang: str, usd_rate) -> str:
-    """Total em R$; com cotação USD informada, mostra as duas linhas.
-    Formato string — compatível com SO/PO (usam Paragraph wrapper)."""
+    """Total em R$; com cotação USD, acrescenta valor inline.
+    Formato string — compatível com SO/PO (usam Paragraph wrapper).
+    Sem <br/> para não quebrar tabelas de parcelas no ReportLab."""
     base = _fmt_brl(brl_total)
     if usd_rate and usd_rate > 0:
         usd_val = brl_total / usd_rate
-        return f'{base}<br/><font size="7" color="#888888">USD {_fmt_usd_raw(usd_val)}</font>'
+        return f'{base}  /  USD {_fmt_usd_raw(usd_val)}'
     return base
 
 
