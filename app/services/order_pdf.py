@@ -26,7 +26,6 @@ from .quote_pdf import (
     _T as _QT,
     _billing_label,
     _fmt_brl,
-    _total_cell_text,
     _PAYMENT_TERMS_EN,
     _translate_payment_terms,
     _translate_service,
@@ -450,7 +449,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
             [Paragraph(pay_method_lbl or "–", cell_body_c),
              Paragraph(billing_lbl,            cell_body_c),
              Paragraph(pay_terms_lbl,          cell_body_c),
-             Paragraph(f"<b>{_total_cell_text(computed, lang, getattr(order, 'usd_rate', None))}</b>", cell_total_gold)],
+             Paragraph(f"<b>{_fmt_brl(computed)}</b>", cell_total_gold)],
         ],
         colWidths=[W * 0.28, W * 0.26, W * 0.22, W * 0.24],
     )
