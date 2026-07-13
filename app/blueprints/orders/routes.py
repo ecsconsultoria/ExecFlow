@@ -627,6 +627,11 @@ def pdf(oid, lang):
              .first_or_404())
     lang  = lang if lang in ("pt", "en") else "pt"
     # selectinload já garante dados frescos; refresh() quebraria o eager load
+    import logging
+    logger = logging.getLogger("execflow")
+    logger.warning(f"PDF {lang}: order={order.id}, items={len(order.items)}, payments={len(order.payments)}")
+    for p in order.payments:
+        logger.warning(f"  payment {p.installment_no}: amount={p.amount}, paid={p.paid_amount}, is_paid={p.is_paid}")
     buf   = generate_order_pdf(order, lang=lang)
     gc.collect()
     filename = f"{order.number}.pdf"
