@@ -626,8 +626,7 @@ def pdf(oid, lang):
              .filter_by(id=oid, company_id=current_user.company_id, deleted_at=None)
              .first_or_404())
     lang  = lang if lang in ("pt", "en") else "pt"
-    # Força refresh dos dados do banco (evita cache de sessão)
-    db.session.refresh(order)
+    # selectinload já garante dados frescos; refresh() quebraria o eager load
     buf   = generate_order_pdf(order, lang=lang)
     gc.collect()
     filename = f"{order.number}.pdf"
