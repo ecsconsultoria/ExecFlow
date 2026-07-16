@@ -564,6 +564,7 @@ def add_item(order: Order, data: dict) -> OrderItem:
         description         = desc,
         ref_note            = data.get("ref_note", "") or "",
         vehicle_description = data.get("vehicle_description", "") or "",
+        driver_name         = data.get("driver_type", "") or "",
         quantity            = qty,
         unit_price          = price,
         total_price         = round(price * qty, 2),

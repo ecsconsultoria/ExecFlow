@@ -80,6 +80,7 @@ def create_from_order(order, user_id: int) -> PurchaseOrder:
             unit_cost   = cost_price,
             total_cost  = round(cost_price * qty, 2),
             sort_order  = idx,
+            op_driver_name = item.driver_name or "",
         )
         db.session.add(poi)
     return po
@@ -600,6 +601,7 @@ def add_item(po: PurchaseOrder, data: dict) -> POItem:
         unit_cost   = unit_cost,
         total_cost  = total_cost,
         sort_order  = sort_order,
+        op_driver_name = driver_type,
     )
     db.session.add(item)
     db.session.flush()

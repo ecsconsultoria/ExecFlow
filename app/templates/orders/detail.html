@@ -1222,69 +1222,73 @@
 <div x-show="showAddItemModal" x-cloak
      class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
      @keydown.escape.window="showAddItemModal=false">
-  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg" @click.stop>
-    <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 dark:border-slate-700">
+  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-xs" @click.stop>
+    <div class="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 dark:border-slate-700">
       <h3 class="font-semibold text-slate-700 dark:text-slate-200 text-sm">
-        <i class="fa-solid fa-plus-circle mr-2 text-teal-500"></i>Adicionar Item ao Pedido
+        <i class="fa-solid fa-plus-circle mr-2 text-teal-500"></i>Adicionar Item
       </h3>
       <button type="button" @click="showAddItemModal=false"
               class="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
     </div>
     <form method="post" action="{{ url_for('orders.add_item', oid=order.id) }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <div class="px-5 py-4 grid grid-cols-2 gap-3">
-
-        <div class="col-span-2">
-          <label class="lbl">Serviço (catálogo) *</label>
-          <select name="service_id" id="so-ai-service" onchange="soFetchItemPricing()" class="fi text-sm">
-            <option value="">– Selecione do catálogo –</option>
+      <div class="px-4 py-3 space-y-2.5">
+        <div>
+          <label class="lbl">Serviço</label>
+          <select name="service_id" id="so-ai-service" onchange="soFetchItemPricing()" class="fi">
+            <option value="">– Selecione –</option>
             {% for svc in services %}
             <option value="{{ svc.id }}">{{ svc.name }}</option>
             {% endfor %}
           </select>
         </div>
-
-        <div class="col-span-2">
-          <label class="lbl">Descrição / Observação</label>
-          <input type="text" name="description" id="so-ai-description" placeholder="Detalhe adicional ou descrição livre"
-                 class="fi text-sm">
-        </div>
-
-        <div>
-          <label class="lbl">Veículo</label>
-          <input type="text" name="vehicle_description" placeholder="Ex: Sedan Executivo"
-                 class="fi text-sm">
-        </div>
-
         <div>
           <label class="lbl">Categoria</label>
-          <select name="category_id" id="so-ai-category" onchange="soFetchItemPricing()" class="fi text-sm">
-            <option value="">– Selecione –</option>
-            {% for cat in categories %}
-            <option value="{{ cat.id }}">{{ cat.name }}</option>
-            {% endfor %}
+          <select name="category_id" id="so-ai-category" onchange="soFetchItemPricing()" class="fi">
+            <option value="">– Categoria –</option>
+            {% set transport_cats = categories|selectattr('category_type', 'ne', 'expense')|selectattr('category_type', 'ne', 'financial_expense')|list %}
+            {% set expense_cats   = categories|selectattr('category_type', 'in', ['expense', 'financial_expense'])|list %}
+            {% if transport_cats %}
+            <optgroup label="🚗 Transporte / Serviço">
+              {% for cat in transport_cats %}
+              <option value="{{ cat.id }}">{{ cat.name }}</option>
+              {% endfor %}
+            </optgroup>
+            {% endif %}
+            {% if expense_cats %}
+            <optgroup label="💰 Despesas">
+              {% for cat in expense_cats %}
+              <option value="{{ cat.id }}">{{ cat.name }}</option>
+              {% endfor %}
+            </optgroup>
+            {% endif %}
           </select>
         </div>
-
+        <div>
+          <label class="lbl">Motorista</label>
+          <select name="driver_type" id="so-ai-driver" onchange="soFetchItemPricing()" class="fi">
+            <option value="">– Indiferente –</option>
+            <option value="Monolíngue">Monolíngue</option>
+            <option value="Bilíngue">Bilíngue</option>
+          </select>
+        </div>
         <div>
           <label class="lbl">Quantidade</label>
-          <input type="number" name="quantity" value="1" min="1" class="fi text-sm">
+          <input type="number" name="quantity" value="1" min="1" class="fi text-right font-mono">
         </div>
-
         <div>
-          <label class="lbl">Valor Unitário (R$) <span id="so-ai-price-hint" class="text-slate-400 font-normal"></span></label>
-          <input type="text" name="unit_price" id="so-ai-price" placeholder="0,00" class="fi text-sm font-mono">
+          <label class="lbl">Valor Unitário R$ <span id="so-ai-price-hint" class="text-slate-400 font-normal"></span></label>
+          <input type="text" name="unit_price" id="so-ai-price" placeholder="0,00" class="fi text-right font-mono">
         </div>
-
       </div>
-      <div class="px-5 py-3 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-2">
+      <div class="px-4 py-3 border-t border-slate-100 dark:border-slate-700 flex justify-center gap-2">
         <button type="button" @click="showAddItemModal=false"
-                class="text-slate-500 text-sm px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-600">
+                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-400 hover:bg-slate-500 text-white">
           Cancelar
         </button>
         <button type="submit"
-                class="bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold px-5 py-2 rounded-lg">
-          <i class="fa-solid fa-plus mr-1"></i> Adicionar
+                class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-teal-600 hover:bg-teal-700 text-white">
+          <i class="fa-solid fa-plus text-[11px]"></i> Adicionar
         </button>
       </div>
     </form>
