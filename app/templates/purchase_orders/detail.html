@@ -136,8 +136,8 @@
       {# PDF unified dropdown #}
       <div class="relative pa-header" x-data="{open:false}" @click.outside="open=false">
         <button type="button" @click="open=!open" title="Baixar ou enviar PDF"
-                class="h-8 w-8 rounded-lg inline-flex items-center justify-center transition-colors bg-slate-600 hover:bg-slate-700 text-white">
-          <i class="fa-solid fa-file-pdf text-sm"></i>
+                class="h-8 w-8 rounded-lg inline-flex items-center justify-center transition-colors bg-white hover:bg-slate-100 border border-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 dark:border-slate-500">
+          <span class="text-[11px] font-extrabold text-red-600 dark:text-red-500 leading-none">PDF</span>
         </button>
         <div x-show="open" x-cloak
              class="absolute left-0 top-full mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 py-1 overflow-hidden"
