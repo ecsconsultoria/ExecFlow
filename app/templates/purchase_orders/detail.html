@@ -71,7 +71,7 @@
     {# Salvar (visível quando não bloqueado) #}
     {% if not locked and has_perm('po.edit' if po else 'po.create') %}
     <button type="submit" form="main-form"
-            class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-blue-600 hover:bg-blue-700 text-white">
+            class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-blue-600 hover:bg-blue-700 text-white" title="{{ 'Salvar alterações' if po else 'Criar Purchase Order' }}">
       <i class="fa-solid fa-floppy-disk text-[11px]"></i> {{ 'Salvar' if po else 'Criar PO' }}
     </button>
     {% endif %}
@@ -84,7 +84,7 @@
                 const sel = document.getElementById('supplier-select');
                 if (sel && sel.value) document.getElementById('open-supplier-id').value = sel.value;
                 document.getElementById('po-open-form').submit();
-              "
+              " title="Abrir PO"
               class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-blue-600 hover:bg-blue-700 text-white">
         <i class="fa-solid fa-folder-open text-[11px]"></i> Abrir PO
       </button>
@@ -92,7 +92,7 @@
 
       {# Iniciar execução #}
       {% if po.status == 'aprovado' and has_perm('po.edit') %}
-      <button type="button"
+      <button type="button" title="Iniciar execução"
               onclick="document.getElementById('po-start-form').submit()"
               class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-amber-600 hover:bg-amber-700 text-white">
         <i class="fa-solid fa-play text-[11px]"></i> Iniciar
@@ -101,7 +101,7 @@
 
       {# Concluir #}
       {% if po.status in ('aprovado', 'em_execucao') and has_perm('po.close') %}
-      <button type="button"
+      <button type="button" title="Concluir PO"
               onclick="if(confirm('Concluir esta PO?'))document.getElementById('po-conclude-form').submit()"
               class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-emerald-600 hover:bg-emerald-700 text-white">
         <i class="fa-solid fa-flag-checkered text-[11px]"></i> Concluir
@@ -124,7 +124,7 @@
                 }
                 document.getElementById('faturar-supplier-id').value = sid.value;
                 document.getElementById('po-faturar-form').submit();
-              "
+              " title="Faturar PO"
               class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-emerald-600 hover:bg-emerald-700 text-white">
         <i class="fa-solid fa-file-invoice text-[11px]"></i> Faturar
       </button>
@@ -185,7 +185,7 @@
 
       {# Reabrir #}
       {% if po.status == 'faturado' and has_role('ADMIN') %}
-      <button type="button" onclick="document.getElementById('po-reabrir-form').submit()"
+      <button type="button" onclick="document.getElementById('po-reabrir-form').submit()" title="Reabrir PO"
               class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-amber-600 hover:bg-amber-700 text-white">
         <i class="fa-solid fa-rotate-left text-[11px]"></i> Reabrir
       </button>
@@ -194,7 +194,7 @@
       {# Cancelar #}
       {% if po.status not in ('concluido', 'faturado', 'pago', 'cancelado') and has_perm('po.cancel') %}
       <button type="button"
-              onclick="window.dispatchEvent(new CustomEvent('open-po-cancel-modal'))"
+              onclick="window.dispatchEvent(new CustomEvent('open-po-cancel-modal'))" title="Cancelar PO"
               class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-red-500 hover:bg-red-600 text-white">
         <i class="fa-solid fa-ban text-[11px]"></i> Cancelar
       </button>
@@ -203,7 +203,7 @@
       {# Excluir #}
       {% if has_perm('po.delete') %}
       <button type="button"
-              onclick="window.dispatchEvent(new CustomEvent('open-po-delete-modal'))"
+              onclick="window.dispatchEvent(new CustomEvent('open-po-delete-modal'))" title="Excluir PO"
               class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-red-700 hover:bg-red-800 text-white">
         <i class="fa-solid fa-trash text-[11px]"></i> Excluir
       </button>
@@ -234,7 +234,7 @@
 
     {# ── Histórico dropdown ── #}
     <div class="relative pa-header" x-data="{ histOpen: false }">
-      <button type="button" @click="histOpen = !histOpen"
+      <button type="button" @click="histOpen = !histOpen" title="Histórico de alterações"
               class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600">
         <i class="fa-solid fa-clock-rotate-left text-[11px]"></i>
         <span>Histórico</span>
