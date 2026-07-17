@@ -187,21 +187,16 @@
 
     {# Observações #}
     <button type="button" onclick="window.dispatchEvent(new CustomEvent('open-obs-modal'))"
-            class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-700"
+            class="h-8 w-8 rounded-lg inline-flex items-center justify-center transition-colors bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-700"
             title="Observações do pedido">
-      <i class="fa-solid fa-comment-dots text-[11px]"></i> Obs
+      <i class="fa-solid fa-comment-dots text-sm"></i>
     </button>
 
     {# ── Histórico dropdown ── #}
     <div class="relative pa-header" x-data="{ histOpen: false }">
       <button type="button" @click="histOpen = !histOpen" title="Histórico de alterações"
-              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600">
-        <i class="fa-solid fa-clock-rotate-left text-[11px]"></i>
-        <span>Histórico</span>
-        {% if audit_logs %}
-        <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-300 dark:bg-slate-500 text-slate-600 dark:text-slate-200">{{ audit_logs|length }}</span>
-        {% endif %}
-        <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-200" :class="histOpen ? 'rotate-180' : ''"></i>
+              class="h-8 w-8 rounded-lg inline-flex items-center justify-center transition-colors bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600">
+        <i class="fa-solid fa-clock-rotate-left text-sm"></i>
       </button>
       <div x-show="histOpen"
            @click.outside="histOpen = false"
