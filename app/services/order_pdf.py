@@ -27,6 +27,7 @@ from .quote_pdf import (
     _billing_label,
     _fmt_brl,
     _total_cell_text,
+    _total_cell_aligned,
     _PAYMENT_TERMS_EN,
     _translate_payment_terms,
     _translate_service,
@@ -450,7 +451,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
             [Paragraph(pay_method_lbl or "–", cell_body_c),
              Paragraph(billing_lbl,            cell_body_c),
              Paragraph(pay_terms_lbl,          cell_body_c),
-             Paragraph(f"<b>{_total_cell_text(computed, lang, getattr(order, 'usd_rate', None))}</b>", cell_total_gold)],
+             _total_cell_aligned(computed, getattr(order, 'usd_rate', None))],
         ],
         colWidths=[W * 0.28, W * 0.26, W * 0.22, W * 0.24],
     )
@@ -487,11 +488,11 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
             inst_rows.append([
                 Paragraph(f"{pmt.installment_no}/{total_pmts}", cell_body_c),
                 Paragraph(_fmt_date(pmt.due_date, lang),        cell_body_c),
-                Paragraph(_fmt_brl(pmt.amount or 0), cell_body_r),
+                Paragraph(_total_cell_text(pmt.amount or 0, lang, getattr(order, 'usd_rate', None)), cell_body_r),
                 Paragraph(status_label, st_p),
             ])
 
-        inst_col_w = [W * 0.14, W * 0.27, W * 0.31, W * 0.28]
+        inst_col_w = [W * 0.14, W * 0.24, W * 0.36, W * 0.26]
         inst_tbl   = Table(inst_rows, colWidths=inst_col_w, repeatRows=1)
         inst_style = TableStyle([
             ("BACKGROUND",    (0, 0), (-1, 0), BRAND_DARK),
@@ -503,6 +504,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
             ("RIGHTPADDING",  (0, 0), (-1, -1), 4),
             ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
             ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
+            ("ALIGN",         (2, 0), (2, -1), "RIGHT"),
         ])
         for row_idx, pmt in enumerate(sorted_pmts, 1):
             row_bg = BRAND_LIGHT if row_idx % 2 == 1 else colors.white
