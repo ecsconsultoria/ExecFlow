@@ -240,6 +240,8 @@ def _ensure_schema_columns():
                 ('op_flight_number', 'VARCHAR(50)'),
                 ('op_pax_count', 'INTEGER'),
                 ('op_notes', 'VARCHAR(500)'),
+                ('placa_receptivo', 'BOOLEAN DEFAULT FALSE'),
+                ('placa_receptivo_texto', 'TEXT'),
             ]
             with db.engine.begin() as conn:
                 for col_name, col_type in new_po_item_cols:

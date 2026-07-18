@@ -677,6 +677,8 @@ def update_item_operational(item: POItem, data: dict, apply_to_all: bool = False
         "op_flight_number": data.get("op_flight_number", "") or "",
         "op_pax_count": pax_count,
         "op_notes": data.get("op_notes", "") or "",
+        "placa_receptivo": data.get("placa_receptivo") == "1",
+        "placa_receptivo_texto": data.get("placa_receptivo_texto", "") or "",
     }
 
     targets = item.purchase_order.items if apply_to_all else [item]

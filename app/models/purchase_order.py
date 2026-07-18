@@ -226,6 +226,9 @@ class POItem(db.Model, TimestampMixin):
     op_flight_number    = db.Column(db.String(50))
     op_pax_count        = db.Column(db.Integer)
     op_notes            = db.Column(db.String(500))
+    # Placa de receptivo
+    placa_receptivo        = db.Column(db.Boolean, default=False)
+    placa_receptivo_texto  = db.Column(db.Text)
     # Campos legados (não utilizados na UI atual do PO, mantidos por compatibilidade)
     op_driver_name      = db.Column(db.String(200))
     op_driver_phone     = db.Column(db.String(50))

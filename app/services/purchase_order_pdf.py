@@ -12,12 +12,17 @@ from reportlab.lib.units import mm
 from reportlab.platypus import (
     HRFlowable,
     Image as RLImage,
+    NextPageTemplate,
+    PageBreak,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
     Table,
     TableStyle,
 )
+from reportlab.platypus.doctemplate import PageTemplate, BaseDocTemplate
+from reportlab.platypus.frames import Frame
+from reportlab.lib.pagesizes import landscape as _landscape
 
 # Re-use brand constants + helpers from quote_pdf
 from .quote_pdf import BRAND_DARK, BRAND_GOLD, BRAND_LIGHT, _fmt_brl, _fmt_phone_link
@@ -106,17 +111,27 @@ def _t(key: str, lang: str) -> str:
 def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
     """Return a BytesIO containing the PO PDF (same visual style as SO PDF)."""
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(
+    W = A4[0] - 30 * mm
+
+    # Placas de receptivo (páginas landscape extras)
+    _placa_texts = []
+    for it in (po.items or []):
+        if getattr(it, 'placa_receptivo', None) and getattr(it, 'placa_receptivo_texto', '').strip():
+            _placa_texts.append(getattr(it, 'placa_receptivo_texto', '').strip())
+
+    portrait_frame = Frame(15 * mm, 20 * mm, W, A4[1] - 35 * mm, id='portrait')
+    templates = [PageTemplate(id='Portrait', frames=[portrait_frame], pagesize=A4)]
+    if _placa_texts:
+        ls_page = _landscape(A4)
+        ls_W = ls_page[0] - 40 * mm
+        ls_frame = Frame(20 * mm, 20 * mm, ls_W, ls_page[1] - 40 * mm, id='landscape')
+        templates.append(PageTemplate(id='Landscape', frames=[ls_frame], pagesize=ls_page))
+
+    doc = BaseDocTemplate(
         buffer,
-        pagesize=A4,
-        leftMargin=15 * mm,
-        rightMargin=15 * mm,
-        topMargin=15 * mm,
-        bottomMargin=20 * mm,
+        pageTemplates=templates,
         title=f"{_t('doc_title', lang)} {po.number}",
     )
-
-    W = A4[0] - 30 * mm
 
     # ── Styles ────────────────────────────────────────────────────────────────
     title_st        = ParagraphStyle("ts",  fontSize=13, fontName="Helvetica-Bold",
@@ -664,6 +679,23 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
     if op_groups:
         story.append(Spacer(1, 3 * mm))
 
+    # ── Placas de Receptivo (páginas landscape) ──────────────────────────────
+    for _ptext in _placa_texts:
+        story.append(NextPageTemplate('Landscape'))
+        story.append(PageBreak())
+        name_len = len(_ptext)
+        if name_len <= 10:   fs = 96
+        elif name_len <= 20: fs = 80
+        else:                fs = 64
+        sign_st = ParagraphStyle("placa_st", fontSize=fs, fontName="Helvetica-Bold",
+                                  textColor=BRAND_DARK, alignment=TA_CENTER, leading=fs * 1.15)
+        ls_W_val = _landscape(A4)[0] - 40 * mm
+        story.append(Spacer(1, 50 * mm))
+        story.append(Paragraph(_ptext, sign_st))
+        story.append(Spacer(1, 15 * mm))
+        story.append(HRFlowable(width=ls_W_val * 0.5, thickness=2, color=BRAND_GOLD,
+                                 spaceAfter=10 * mm, hAlign="CENTER"))
+
     # ── Footer callback ───────────────────────────────────────────────────────
     from datetime import datetime as _dt  # noqa: PLC0415
     cnpj_lbl_footer = "CNPJ" if lang == "pt" else "TAX ID"
@@ -683,6 +715,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
         canvas.drawCentredString(_pw / 2, 9 * mm, _footer_line)
         canvas.restoreState()
 
-    doc.build(story, onFirstPage=_draw_footer, onLaterPages=_draw_footer)
+    templates[0].onPage = _draw_footer
+    doc.build(story)
     buffer.seek(0)
     return buffer
