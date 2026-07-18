@@ -269,6 +269,19 @@ def save_all(po_id):
                 pass
 
         pos._apply_data(po, data)
+        # Placa de receptivo → armazena em internal_notes
+        _sign_on   = request.form.get("sign_placa") == "1"
+        _sign_name = (request.form.get("sign_placa_name") or "").strip()
+        if _sign_on and _sign_name:
+            po.internal_notes = f"SIGN:1:{_sign_name}"
+        elif _sign_on:
+            po.internal_notes = "SIGN:1:"  # usa passenger_name no PDF
+        else:
+            # Remove dados de placa mas preserva outras notas internas
+            cur = (po.internal_notes or "")
+            if cur.startswith("SIGN:"):
+                po.internal_notes = ""
+
         # Ao salvar um rascunho, promove para "aberto" (visível na listagem)
         if po.status == "rascunho":
             po.status = "aberto"

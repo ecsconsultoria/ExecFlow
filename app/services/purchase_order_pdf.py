@@ -12,12 +12,17 @@ from reportlab.lib.units import mm
 from reportlab.platypus import (
     HRFlowable,
     Image as RLImage,
+    NextPageTemplate,
+    PageBreak,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
     Table,
     TableStyle,
 )
+from reportlab.platypus.doctemplate import PageTemplate, BaseDocTemplate
+from reportlab.platypus.frames import Frame
+from reportlab.lib.pagesizes import landscape as _landscape
 
 # Re-use brand constants + helpers from quote_pdf
 from .quote_pdf import BRAND_DARK, BRAND_GOLD, BRAND_LIGHT, _fmt_brl, _fmt_phone_link
@@ -106,17 +111,30 @@ def _t(key: str, lang: str) -> str:
 def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
     """Return a BytesIO containing the PO PDF (same visual style as SO PDF)."""
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(
+    W = A4[0] - 30 * mm
+
+    # ── Placa de receptivo? ──────────────────────────────────────────────────
+    _int_notes = (getattr(po, 'internal_notes', None) or '')
+    _has_sign  = _int_notes.startswith('SIGN:1:')
+    _sign_name = _int_notes[7:] if _has_sign else ''
+    # Se nao tem nome especifico, usa passenger_name
+    if _has_sign and not _sign_name:
+        _sign_name = (getattr(po, 'passenger_name', '') or '').strip()
+
+    # Page frames
+    portrait_frame = Frame(15 * mm, 20 * mm, W, A4[1] - 35 * mm, id='portrait')
+    templates = [PageTemplate(id='Portrait', frames=[portrait_frame], pagesize=A4)]
+    if _has_sign:
+        ls_page = _landscape(A4)
+        ls_W = ls_page[0] - 40 * mm
+        ls_frame = Frame(20 * mm, 20 * mm, ls_W, ls_page[1] - 40 * mm, id='landscape')
+        templates.append(PageTemplate(id='Landscape', frames=[ls_frame], pagesize=ls_page))
+
+    doc = BaseDocTemplate(
         buffer,
-        pagesize=A4,
-        leftMargin=15 * mm,
-        rightMargin=15 * mm,
-        topMargin=15 * mm,
-        bottomMargin=20 * mm,
+        pageTemplates=templates,
         title=f"{_t('doc_title', lang)} {po.number}",
     )
-
-    W = A4[0] - 30 * mm
 
     # ── Styles ────────────────────────────────────────────────────────────────
     title_st        = ParagraphStyle("ts",  fontSize=13, fontName="Helvetica-Bold",
@@ -664,6 +682,41 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
     if op_groups:
         story.append(Spacer(1, 3 * mm))
 
+    # ── Placa de Receptivo (pagina landscape) ─────────────────────────────────
+    if _has_sign:
+        _sign_name = _sign_name or (getattr(po, 'passenger_name', '') or '').strip() or 'Convidado'
+        story.append(NextPageTemplate('Landscape'))
+        story.append(PageBreak())
+        sign_st = ParagraphStyle("sign_nm", fontSize=48, fontName="Helvetica-Bold",
+                                  textColor=BRAND_DARK, alignment=TA_CENTER, leading=54)
+        ls_W_val = _landscape(A4)[0] - 40 * mm
+        story.append(Spacer(1, 80 * mm))
+        story.append(Paragraph(_sign_name, sign_st))
+        story.append(Spacer(1, 15 * mm))
+        story.append(HRFlowable(width=ls_W_val * 0.3, thickness=1.5, color=BRAND_GOLD,
+                                 spaceAfter=15 * mm, hAlign="CENTER"))
+        # Logo
+        company = getattr(po, "company", None)
+        logo_url = (company.logo_url if company else None) if company else None
+        if logo_url:
+            try:
+                from flask import current_app
+                logo_path = logo_url
+                if logo_url.startswith("/uploads/"):
+                    logo_path = os.path.join(current_app.config["UPLOAD_FOLDER"],
+                                             logo_url[len("/uploads/"):].lstrip("/"))
+                elif logo_url.startswith("/static/"):
+                    logo_path = os.path.join(current_app.root_path, "static",
+                                             logo_url[len("/static/"):].lstrip("/"))
+                if os.path.isfile(logo_path):
+                    logo_img_sign = RLImage(logo_path, width=80 * mm, height=20 * mm, kind="proportional")
+                    story.append(Spacer(1, 60 * mm))
+                    logo_tbl = Table([[logo_img_sign]], colWidths=[ls_W_val])
+                    logo_tbl.setStyle(TableStyle([("ALIGN", (0, 0), (-1, -1), "CENTER")]))
+                    story.append(logo_tbl)
+            except Exception:
+                pass
+
     # ── Footer callback ───────────────────────────────────────────────────────
     from datetime import datetime as _dt  # noqa: PLC0415
     cnpj_lbl_footer = "CNPJ" if lang == "pt" else "TAX ID"
@@ -683,6 +736,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
         canvas.drawCentredString(_pw / 2, 9 * mm, _footer_line)
         canvas.restoreState()
 
-    doc.build(story, onFirstPage=_draw_footer, onLaterPages=_draw_footer)
+    templates[0].onPage = _draw_footer
+    doc.build(story)
     buffer.seek(0)
     return buffer
