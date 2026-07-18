@@ -690,12 +690,12 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
         sign_st = ParagraphStyle("sign_nm", fontSize=48, fontName="Helvetica-Bold",
                                   textColor=BRAND_DARK, alignment=TA_CENTER, leading=54)
         ls_W_val = _landscape(A4)[0] - 40 * mm
-        story.append(Spacer(1, 80 * mm))
+        story.append(Spacer(1, 40 * mm))
         story.append(Paragraph(_sign_name, sign_st))
-        story.append(Spacer(1, 15 * mm))
+        story.append(Spacer(1, 10 * mm))
         story.append(HRFlowable(width=ls_W_val * 0.3, thickness=1.5, color=BRAND_GOLD,
-                                 spaceAfter=15 * mm, hAlign="CENTER"))
-        # Logo
+                                 spaceAfter=8 * mm, hAlign="CENTER"))
+        # Logo no rodapé da mesma página
         company = getattr(po, "company", None)
         logo_url = (company.logo_url if company else None) if company else None
         if logo_url:
@@ -709,8 +709,8 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
                     logo_path = os.path.join(current_app.root_path, "static",
                                              logo_url[len("/static/"):].lstrip("/"))
                 if os.path.isfile(logo_path):
-                    logo_img_sign = RLImage(logo_path, width=80 * mm, height=20 * mm, kind="proportional")
-                    story.append(Spacer(1, 60 * mm))
+                    logo_img_sign = RLImage(logo_path, width=70 * mm, height=15 * mm, kind="proportional")
+                    story.append(Spacer(1, 30 * mm))
                     logo_tbl = Table([[logo_img_sign]], colWidths=[ls_W_val])
                     logo_tbl.setStyle(TableStyle([("ALIGN", (0, 0), (-1, -1), "CENTER")]))
                     story.append(logo_tbl)
