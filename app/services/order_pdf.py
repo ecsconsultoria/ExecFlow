@@ -147,7 +147,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
 
     story = []
 
-    # ── Company header: Logo (smaller) + company info ─────────────────────
+    # ── Header: logo left + title/number right ──────────────────────────────
     company      = getattr(order, "company", None)
     company_name = (company.name if company else None) or "Executive Car SP"
     company_doc  = (company.document if company else None) or ""
@@ -162,6 +162,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         except Exception:
             pass
 
+    # Load company logo
     logo_url = (company.logo_url if company else None)
     logo_img = None
     if logo_url:
@@ -179,38 +180,28 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
                     current_app.root_path, "static",
                     logo_url[len("/static/"):].lstrip("/")
                 )
-            # Smaller logo: max 30 mm height, proportional
             if os.path.isfile(logo_path):
-                logo_img = RLImage(logo_path, width=60 * mm, height=30 * mm, kind="proportional")
+                logo_img = RLImage(logo_path, width=80 * mm, height=15 * mm, kind="proportional")
         except Exception:
             logo_img = None
 
-    # ── Logo centralizado (mesmo estilo do PDF de orçamento) ───────────────
-    if logo_img:
-        hdr_tbl = Table([[logo_img]], colWidths=[W])
-        hdr_tbl.setStyle(TableStyle([
-            ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
-            ("TOPPADDING",    (0, 0), (-1, -1), 0),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-        ]))
-    else:
-        hdr_tbl = Table([[Paragraph(
-            f"<b>{company_name.upper()}</b>",
-            ParagraphStyle("hc", fontSize=18, fontName="Helvetica-Bold",
-                           textColor=BRAND_DARK, alignment=TA_CENTER),
-        )]], colWidths=[W])
-        hdr_tbl.setStyle(TableStyle([
-            ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
-            ("TOPPADDING",    (0, 0), (-1, -1), 6),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-        ]))
+    left_cell  = logo_img if logo_img else Paragraph(f"<b>{company_name.upper()}</b>",
+                ParagraphStyle("hc", fontSize=12, fontName="Helvetica-Bold",
+                               textColor=BRAND_DARK, alignment=TA_LEFT))
+    right_cell = Paragraph(
+        f"<b>{_t('order_title', lang)}</b><br/><font color='#b88b2d' size='9'><b>No. {order.number}</b></font>",
+        ParagraphStyle("hr", fontSize=13, fontName="Helvetica-Bold",
+                       textColor=BRAND_DARK, alignment=TA_RIGHT, leading=18))
 
+    hdr_tbl = Table([[left_cell, right_cell]], colWidths=[W * 0.55, W * 0.45])
+    hdr_tbl.setStyle(TableStyle([
+        ("VALIGN",        (0, 0), (-1, -1), "TOP"),
+        ("TOPPADDING",    (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 0),
+    ]))
     story.append(hdr_tbl)
-    story.append(Spacer(1, 4 * mm))
-
-    # ── Title + Order Number (same style as quote PDF) ────────────────────
-    story.append(Paragraph(_t("order_title", lang), title_st))
-    story.append(Paragraph(f"No. {order.number}", sub_st))
     story.append(Spacer(1, 4 * mm))
 
     # ── Order data table (dark header + gold borders) ─────────────────────

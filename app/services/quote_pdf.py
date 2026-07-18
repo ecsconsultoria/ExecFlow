@@ -493,12 +493,18 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
 
     story = []
 
-    # ── Company header: logo centered (V2 style — no dark bar) ──────────────
+    # ── Header: logo left + title/number right ──────────────────────────────
     company      = getattr(quote, "company", None)
     company_name = (company.name if company else None) or "Executive Car SP"
     company_doc  = (company.document if company else None) or ""
 
-    # Try to load company logo
+    # Title styles (right-aligned)
+    title_rt = ParagraphStyle("trt", fontSize=13, fontName="Helvetica-Bold",
+                               textColor=BRAND_DARK, alignment=TA_RIGHT, spaceAfter=1)
+    sub_rt   = ParagraphStyle("srt", fontSize=9, fontName="Helvetica-Bold",
+                               textColor=BRAND_GOLD, alignment=TA_RIGHT, spaceAfter=2)
+
+    # Load company logo
     logo_url  = (company.logo_url if company else None) if company else None
     logo_img  = None
     if logo_url:
@@ -517,35 +523,28 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
                     logo_url[len("/static/"):].lstrip("/")
                 )
             if os.path.isfile(logo_path):
-                logo_img = RLImage(logo_path, width=9 * mm * 10, height=4.5 * mm * 10,
+                logo_img = RLImage(logo_path, width=80 * mm, height=15 * mm,
                                    kind="proportional")
         except Exception:
             logo_img = None
 
-    if logo_img:
-        hdr_tbl = Table([[logo_img]], colWidths=[W])
-        hdr_tbl.setStyle(TableStyle([
-            ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
-            ("TOPPADDING",    (0, 0), (-1, -1), 0),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-        ]))
-    else:
-        hdr_tbl = Table([[Paragraph(
-            f"<b>{company_name.upper()}</b>",
-            ParagraphStyle("hc", fontSize=18, fontName="Helvetica-Bold",
-                           textColor=BRAND_DARK, alignment=TA_CENTER),
-        )]], colWidths=[W])
-        hdr_tbl.setStyle(TableStyle([
-            ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
-            ("TOPPADDING",    (0, 0), (-1, -1), 6),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-        ]))
-    story.append(hdr_tbl)
-    story.append(Spacer(1, 4 * mm))
+    left_cell  = logo_img if logo_img else Paragraph(f"<b>{company_name.upper()}</b>",
+                ParagraphStyle("hc", fontSize=12, fontName="Helvetica-Bold",
+                               textColor=BRAND_DARK, alignment=TA_LEFT))
+    right_cell = Paragraph(
+        f"<b>{_t('title', lang)}</b><br/><font color='#b88b2d' size='9'><b>No. {quote.number}</b></font>",
+        ParagraphStyle("hr", fontSize=13, fontName="Helvetica-Bold",
+                       textColor=BRAND_DARK, alignment=TA_RIGHT, leading=18))
 
-    # ── Title + number ────────────────────────────────────────────────────
-    story.append(Paragraph(_t("title", lang), title_st))
-    story.append(Paragraph(f"No. {quote.number}", sub_st))
+    hdr_tbl = Table([[left_cell, right_cell]], colWidths=[W * 0.55, W * 0.45])
+    hdr_tbl.setStyle(TableStyle([
+        ("VALIGN",        (0, 0), (-1, -1), "TOP"),
+        ("TOPPADDING",    (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 0),
+    ]))
+    story.append(hdr_tbl)
     story.append(Spacer(1, 4 * mm))
 
     # ── Client table ──────────────────────────────────────────────────────

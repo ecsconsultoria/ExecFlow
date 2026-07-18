@@ -135,7 +135,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
 
     story = []
 
-    # ── Company header: Logo + company info ──────────────────────────────────
+    # ── Header: logo left + title/number right ──────────────────────────────
     company      = getattr(po, "company", None)
     company_name = (company.name if company else None) or "Executive Car SP"
     company_doc  = (company.document if company else None) or ""
@@ -149,6 +149,17 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
         except Exception:
             pass
 
+    info_st = ParagraphStyle("inf", fontSize=8.5, textColor=BRAND_DARK,
+                             alignment=TA_RIGHT, leading=13)
+    def _clean(v):
+        if v is None:
+            return None
+        s = str(v).strip()
+        if not s or s.lower() == "none":
+            return None
+        return s
+
+    # Load company logo
     logo_url  = getattr(company, "logo_url", None) if company else None
     logo_img  = None
     if logo_url:
@@ -166,48 +177,27 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
                     logo_url[len("/static/"):].lstrip("/"),
                 )
             if os.path.isfile(logo_path):
-                logo_img = RLImage(logo_path, width=60 * mm, height=30 * mm, kind="proportional")
+                logo_img = RLImage(logo_path, width=80 * mm, height=15 * mm, kind="proportional")
         except Exception:
             logo_img = None
 
-    info_st = ParagraphStyle("inf", fontSize=8.5, textColor=BRAND_DARK,
-                             alignment=TA_RIGHT, leading=13)
-    def _clean(v):
-        # Filtra None real e a string literal "None" (que vem salva no DB
-        # quando o form converte None -> str). Tambem trata strings vazias.
-        if v is None:
-            return None
-        s = str(v).strip()
-        if not s or s.lower() == "none":
-            return None
-        return s
+    left_cell  = logo_img if logo_img else Paragraph(f"<b>{company_name.upper()}</b>",
+                ParagraphStyle("hc", fontSize=12, fontName="Helvetica-Bold",
+                               textColor=BRAND_DARK, alignment=TA_LEFT))
+    right_cell = Paragraph(
+        f"<b>{_t('doc_title', lang)}</b><br/><font color='#b88b2d' size='9'><b>No. {po.number}</b></font>",
+        ParagraphStyle("hr", fontSize=13, fontName="Helvetica-Bold",
+                       textColor=BRAND_DARK, alignment=TA_RIGHT, leading=18))
 
-    # ── Logo centralizado (mesmo estilo do PDF de orçamento) ───────────────
-    if logo_img:
-        hdr_tbl = Table([[logo_img]], colWidths=[W])
-        hdr_tbl.setStyle(TableStyle([
-            ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
-            ("TOPPADDING",    (0, 0), (-1, -1), 0),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-        ]))
-    else:
-        hdr_tbl = Table([[Paragraph(
-            f"<b>{company_name.upper()}</b>",
-            ParagraphStyle("hc", fontSize=18, fontName="Helvetica-Bold",
-                           textColor=BRAND_DARK, alignment=TA_CENTER),
-        )]], colWidths=[W])
-        hdr_tbl.setStyle(TableStyle([
-            ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
-            ("TOPPADDING",    (0, 0), (-1, -1), 6),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-        ]))
-
+    hdr_tbl = Table([[left_cell, right_cell]], colWidths=[W * 0.55, W * 0.45])
+    hdr_tbl.setStyle(TableStyle([
+        ("VALIGN",        (0, 0), (-1, -1), "TOP"),
+        ("TOPPADDING",    (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 0),
+    ]))
     story.append(hdr_tbl)
-    story.append(Spacer(1, 4 * mm))
-
-    # ── Title + PO Number ────────────────────────────────────────────────────
-    story.append(Paragraph(_t("doc_title", lang), title_st))
-    story.append(Paragraph(f"No. {po.number}", sub_st))
     story.append(Spacer(1, 4 * mm))
 
     # ── PO meta table ────────────────────────────────────────────────────────
