@@ -196,7 +196,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
                     logo_url[len("/static/"):].lstrip("/"),
                 )
             if os.path.isfile(logo_path):
-                logo_img = RLImage(logo_path, width=80 * mm, height=15 * mm, kind="proportional")
+                logo_img = RLImage(logo_path, width=100 * mm, height=20 * mm, kind="proportional")
         except Exception:
             logo_img = None
 
@@ -699,7 +699,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
                 if os.path.isfile(img_path):
                     if _ppos == 'centro' and not _ptext:
                         # Cenário 3: só imagem, centro grande
-                        _pimg_flowable = RLImage(img_path, width=ls_W_val * 0.7, height=100 * mm, kind="proportional")
+                        _pimg_flowable = RLImage(img_path, width=ls_W_val * 0.9, height=140 * mm, kind="proportional")
                     else:
                         # Cenário 2: imagem abaixo do texto, tamanho médio
                         _pimg_flowable = RLImage(img_path, width=ls_W_val * 0.4, height=40 * mm, kind="proportional")

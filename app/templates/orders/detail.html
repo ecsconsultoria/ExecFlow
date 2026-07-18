@@ -1369,6 +1369,14 @@
 
         <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
           <div>
+            <label class="lbl">Data Pickup</label>
+            <input type="date" name="op_pickup_date" class="fi text-sm" x-model="opPickupDate">
+          </div>
+          <div>
+            <label class="lbl">Hora Pickup</label>
+            <input type="time" name="op_pickup_time" class="fi text-sm" x-model="opPickupTime">
+          </div>
+          <div>
             <label class="lbl">Motorista</label>
             <input type="text" name="op_driver_name" class="fi text-sm" x-model="opDriverName">
           </div>
@@ -1376,6 +1384,9 @@
             <label class="lbl">Fone Motorista</label>
             <input type="text" name="op_driver_phone" class="fi text-sm" x-model="opDriverPhone">
           </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
           <div>
             <label class="lbl">Modelo Veículo</label>
             <input type="text" name="op_vehicle_model" class="fi text-sm" x-model="opVehicleModel">
@@ -1383,17 +1394,6 @@
           <div>
             <label class="lbl">Placa</label>
             <input type="text" name="op_vehicle_plate" class="fi text-sm" x-model="opVehiclePlate">
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
-          <div>
-            <label class="lbl">Data Pickup</label>
-            <input type="date" name="op_pickup_date" class="fi text-sm" x-model="opPickupDate">
-          </div>
-          <div>
-            <label class="lbl">Hora Pickup</label>
-            <input type="time" name="op_pickup_time" class="fi text-sm" x-model="opPickupTime">
           </div>
           <div>
             <label class="lbl">Local Embarque</label>

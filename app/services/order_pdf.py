@@ -182,7 +182,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
                     logo_url[len("/static/"):].lstrip("/")
                 )
             if os.path.isfile(logo_path):
-                logo_img = RLImage(logo_path, width=80 * mm, height=15 * mm, kind="proportional")
+                logo_img = RLImage(logo_path, width=100 * mm, height=20 * mm, kind="proportional")
         except Exception:
             logo_img = None
 
