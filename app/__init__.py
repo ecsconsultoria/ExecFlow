@@ -152,7 +152,6 @@ def create_app(config_name: str | None = None) -> Flask:
         _ensure_schema_columns()
         _seed_initial_data(app)
         _seed_rbac(app)
-        _migrate_data(app)
 
     return app
 
@@ -379,23 +378,6 @@ def _do_seed():
         _db.session.add(admin)
 
     _db.session.commit()
-
-
-def _migrate_data(app: Flask):
-    """Migrações de dados pontuais — idempotente, roda a cada boot."""
-    import re
-
-    with app.app_context():
-        from .models.service import Service
-        from .extensions import db as _db
-
-        # 2026-07 — Renomeia "Transfer Airport XXX" → "Transfer XXX Airport"
-        services = Service.query.filter(Service.name.like('Transfer Airport %')).all()
-        for s in services:
-            old = s.name
-            s.name = re.sub(r'^Transfer Airport (.+)$', r'Transfer \1 Airport', old)
-        if services:
-            _db.session.commit()
 
 
 def _seed_rbac(app: Flask):
