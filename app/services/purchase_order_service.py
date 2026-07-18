@@ -41,6 +41,11 @@ def create_from_order(order, user_id: int) -> PurchaseOrder:
         order_id=order.id, status="rascunho",
     ).filter(PurchaseOrder.deleted_at.is_(None)).first()
     if existing:
+        # Recria itens do rascunho com base no SO atual
+        for old in list(existing.items):
+            db.session.delete(old)
+        db.session.flush()
+        _add_items_from_so(existing, order)
         return existing
     po = PurchaseOrder(
         number             = numbering_service.next_po(order.company_id),
@@ -57,7 +62,12 @@ def create_from_order(order, user_id: int) -> PurchaseOrder:
     db.session.add(po)
     db.session.flush()
 
-    # Resolve preço de custo da tabela ServicePricing
+    _add_items_from_so(po, order)
+    return po
+
+
+def _add_items_from_so(po, order):
+    """Adiciona itens ao PO copiados do SO (com dados operacionais)."""
     from ..models.service import ServicePricing
     for idx, item in enumerate(order.items):
         cost_price = item.unit_price or 0
@@ -80,10 +90,20 @@ def create_from_order(order, user_id: int) -> PurchaseOrder:
             unit_cost   = cost_price,
             total_cost  = round(cost_price * qty, 2),
             sort_order  = idx,
-            op_driver_name = item.driver_name or "",
+            op_driver_name      = item.driver_name or "",
+            op_driver_phone     = item.op_driver_phone or "",
+            op_vehicle_model    = item.op_vehicle_model or "",
+            op_vehicle_plate    = item.op_vehicle_plate or "",
+            op_pickup_datetime  = item.op_pickup_datetime,
+            op_pickup_location  = item.op_pickup_location or "",
+            op_dropoff_location = item.op_dropoff_location or "",
+            op_passenger_name   = item.op_passenger_name or "",
+            op_passenger_phone  = item.op_passenger_phone or "",
+            op_flight_number    = item.op_flight_number or "",
+            op_pax_count        = getattr(item, 'op_pax_count', None),
+            op_notes            = item.op_notes or "",
         )
         db.session.add(poi)
-    return po
 
 
 def create_from_service_order(service_order, user_id: int) -> PurchaseOrder:
