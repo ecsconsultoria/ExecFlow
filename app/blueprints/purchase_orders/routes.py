@@ -196,18 +196,6 @@ def detail(po_id):
            )
            .filter_by(id=po_id, company_id=current_user.company_id)
            .first_or_404())
-    # Garante colunas sign_name / sign_include_logo (migração pontual)
-    try:
-        from sqlalchemy import inspect, text
-        insp = inspect(db.engine)
-        existing = {c['name'] for c in insp.get_columns('purchase_orders')}
-        for col, col_type in [('sign_name', 'VARCHAR(200)'), ('sign_include_logo', 'BOOLEAN DEFAULT TRUE')]:
-            if col not in existing:
-                with db.engine.begin() as conn:
-                    conn.execute(text(f'ALTER TABLE purchase_orders ADD COLUMN {col} {col_type}'))
-    except Exception:
-        pass
-
     cid = current_user.company_id
     suppliers, services, categories, suppliers_json, services_json = _build_context(cid)
     audit_logs = AuditLog.query.filter_by(entity="po", entity_id=po.id).order_by(AuditLog.created_at.asc()).all()
@@ -266,9 +254,6 @@ def save_all(po_id):
                 data["pax_count"] = 1
 
         data["discount_type"] = (data.get("discount_type") or "R$")
-
-        # Checkbox → não enviado quando desmarcado
-        data["sign_include_logo"] = request.form.get("sign_include_logo") == "1"
 
         # Emissão editável → atualiza created_at
         emission_raw = data.pop("emission_date", "")
@@ -701,21 +686,6 @@ def update_item_operational(item_id):
         return jsonify({"ok": True})
     flash("Dados operacionais salvos.", "success")
     return redirect(url_for("purchase_orders.detail", po_id=po.id))
-
-
-@purchase_orders_bp.route("/<int:po_id>/sign-pdf")
-@login_required
-@require_permission("po.view")
-def sign_pdf(po_id):
-    po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
-    from ...services.sign_pdf import generate_sign_pdf
-    name = (po.sign_name or po.passenger_name or "").strip()
-    buf = generate_sign_pdf(po, name, po.sign_include_logo if po.sign_include_logo is not None else True)
-    filename = f"placa_{po.number}.pdf"
-    resp = make_response(send_file(buf, mimetype="application/pdf",
-                           as_attachment=True, download_name=filename))
-    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    return resp
 
 
 @purchase_orders_bp.route("/items/<int:item_id>/delete", methods=["POST"])

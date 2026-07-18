@@ -56,10 +56,6 @@ class PurchaseOrder(db.Model, TimestampMixin, SoftDeleteMixin):
     dropoff_location = db.Column(db.Text)
     flight_number    = db.Column(db.String(50))
 
-    # ── Placa de receptivo ────────────────────────────────────────────────────
-    sign_name         = db.Column(db.String(200))
-    sign_include_logo = db.Column(db.Boolean, default=True)
-
     # ── Dados de veículo (condicional: requires_vehicle) ─────────────────────
     vehicle_category_id = db.Column(db.Integer, db.ForeignKey("vehicle_categories.id"), nullable=True)
     vehicle_model       = db.Column(db.String(200))
