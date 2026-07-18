@@ -687,13 +687,13 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
         _sign_name = _sign_name or (getattr(po, 'passenger_name', '') or '').strip() or 'Convidado'
         story.append(NextPageTemplate('Landscape'))
         story.append(PageBreak())
-        sign_st = ParagraphStyle("sign_nm", fontSize=48, fontName="Helvetica-Bold",
-                                  textColor=BRAND_DARK, alignment=TA_CENTER, leading=54)
+        sign_st = ParagraphStyle("sign_nm", fontSize=64, fontName="Helvetica-Bold",
+                                  textColor=BRAND_DARK, alignment=TA_CENTER, leading=72)
         ls_W_val = _landscape(A4)[0] - 40 * mm
-        story.append(Spacer(1, 40 * mm))
+        story.append(Spacer(1, 35 * mm))
         story.append(Paragraph(_sign_name, sign_st))
-        story.append(Spacer(1, 10 * mm))
-        story.append(HRFlowable(width=ls_W_val * 0.3, thickness=1.5, color=BRAND_GOLD,
+        story.append(Spacer(1, 8 * mm))
+        story.append(HRFlowable(width=ls_W_val * 0.5, thickness=2, color=BRAND_GOLD,
                                  spaceAfter=8 * mm, hAlign="CENTER"))
         # Logo no rodapé da mesma página
         company = getattr(po, "company", None)
