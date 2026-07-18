@@ -688,6 +688,19 @@ def update_item_operational(item_id):
         return jsonify({"ok": False, "error": "Não autorizado"}), 403
     apply_all = request.form.get("apply_to_all") in ("1", "true", "on")
     pos.update_item_operational(item, request.form.to_dict(), apply_to_all=apply_all)
+
+    # Placa de receptivo (PO-level via internal_notes)
+    _sign_on   = request.form.get("sign_placa") == "1"
+    _sign_name = (request.form.get("sign_placa_name") or "").strip()
+    if _sign_on and _sign_name:
+        po.internal_notes = f"SIGN:1:{_sign_name}"
+    elif _sign_on:
+        po.internal_notes = "SIGN:1:"
+    else:
+        cur = (po.internal_notes or "")
+        if cur.startswith("SIGN:"):
+            po.internal_notes = ""
+
     log_activity(
         "po", po.id, po.company_id,
         "Dados operacionais do item atualizados (todos)" if apply_all
