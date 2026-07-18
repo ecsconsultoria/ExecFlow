@@ -356,8 +356,6 @@
   opFlightNumber:    '',
   opPaxCount:        '',
   opNotes:           '',
-  signPlacaOn:       false,
-  signPlacaName:     '',
   openOpItem(el) {
     const d = el.dataset;
     this.opItemUrl         = d.opUrl || '';
@@ -1250,19 +1248,6 @@
         <div>
           <label class="lbl">Observações</label>
           <input type="text" name="op_notes" class="fi text-sm" x-model="opNotes" placeholder="Observações adicionais…">
-        </div>
-
-        {# Placa de Receptivo #}
-        <div class="pt-1 border-t border-slate-100 dark:border-slate-700">
-          <label class="inline-flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 cursor-pointer">
-            <input type="checkbox" name="sign_placa" value="1" x-model="signPlacaOn"
-                   class="rounded border-slate-300 text-violet-600 focus:ring-violet-500">
-            <i class="fa-solid fa-sign-hanging text-violet-500"></i> Placa de Receptivo
-          </label>
-          <div x-show="signPlacaOn" class="mt-2">
-            <input type="text" name="sign_placa_name" class="fi text-sm" x-model="signPlacaName"
-                   placeholder="Nome para a placa...">
-          </div>
         </div>
 
         <div class="pt-1">
