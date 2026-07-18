@@ -155,8 +155,10 @@
       {% if has_perm('catalog.view') %}
       <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('services.index') }}" class="{{ s2_active if request.blueprint == 'services' else s2 }}">
         <i class="fa-solid fa-list-check w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Serviços</span></a>
-      <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('categories.index') }}" class="{{ s2_active if request.blueprint == 'categories' else s2 }}">
-        <i class="fa-solid fa-tags w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Categorias</span></a>{% endif %}
+      <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('categories.index') }}" class="{{ s2_active if request.blueprint == 'categories' and request.endpoint != 'categories.sign' else s2 }}">
+        <i class="fa-solid fa-tags w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Categorias</span></a>
+      <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('categories.sign') }}" class="{{ s2_active if request.endpoint == 'categories.sign' else s2 }}">
+        <i class="fa-solid fa-sign-hanging w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Placas de Receptivo</span></a>{% endif %}
       {% if has_perm('vehicles.view') %}
       <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('vehicles.index') }}" class="{{ s2_active if request.blueprint == 'vehicles' else s2 }}">
         <i class="fa-solid fa-car-side w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Veículos</span></a>{% endif %}
@@ -331,7 +333,8 @@
           <i class="fa-solid fa-arrow-left text-[10px]"></i> Voltar
         </button>
         {% if has_perm('catalog.view') %}<a href="{{ url_for('services.index') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'services' else dm }}">Serviços</a>
-        <a href="{{ url_for('categories.index') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'categories' else dm }}">Categorias</a>{% endif %}
+        <a href="{{ url_for('categories.index') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'categories' and request.endpoint != 'categories.sign' else dm }}">Categorias</a>
+        <a href="{{ url_for('categories.sign') }}" @click="closeMobileMenu()" class="{{ dm_active if request.endpoint == 'categories.sign' else dm }}">Placas de Receptivo</a>{% endif %}
         {% if has_perm('vehicles.view') %}<a href="{{ url_for('vehicles.index') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'vehicles' else dm }}">Veículos</a>{% endif %}
         {% if has_perm('clients.view') %}<a href="{{ url_for('clients.index') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'clients' else dm }}">Clientes</a>{% endif %}
         {% if has_perm('suppliers.view') %}<a href="{{ url_for('suppliers.index') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'suppliers' else dm }}">Fornecedores</a>{% endif %}

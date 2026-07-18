@@ -106,6 +106,65 @@ def _t(key: str, lang: str) -> str:
     return entry.get(lang) or entry.get("pt") or key
 
 
+# ─── Standalone Sign PDF ──────────────────────────────────────────────────────
+
+def generate_sign_pdf(text: str = "", img_path: str = "", img_pos: str = "abaixo") -> io.BytesIO:
+    """Gera PDF standalone com uma página landscape para placa de receptivo."""
+    buffer = io.BytesIO()
+    ls_page = _landscape(A4)
+    ls_W = ls_page[0] - 40 * mm
+    ls_frame = Frame(20 * mm, 20 * mm, ls_W, ls_page[1] - 40 * mm, id='main')
+    templates = [PageTemplate(id='Main', frames=[ls_frame], pagesize=ls_page)]
+    doc = BaseDocTemplate(buffer, pageTemplates=templates)
+
+    story = []
+    _render_sign_page(story, text, img_path, img_pos)
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
+
+
+def _render_sign_page(story: list, text: str, img_path: str, img_pos: str):
+    """Adiciona conteúdo da placa de receptivo a uma story (reutilizável)."""
+    ls_W_val = _landscape(A4)[0] - 40 * mm
+
+    img_flowable = None
+    if img_path:
+        try:
+            from flask import current_app
+            full = os.path.join(current_app.config["UPLOAD_FOLDER"],
+                               img_path.replace('/uploads/', '').lstrip('/'))
+            if os.path.isfile(full):
+                if img_pos == 'centro' and not text:
+                    img_flowable = RLImage(full, width=ls_W_val * 0.9, height=140 * mm, kind="proportional")
+                else:
+                    img_flowable = RLImage(full, width=ls_W_val * 0.4, height=40 * mm, kind="proportional")
+        except Exception:
+            pass
+
+    if text:
+        name_len = len(text)
+        if name_len <= 10:   fs = 96
+        elif name_len <= 20: fs = 80
+        else:                fs = 64
+        sign_st = ParagraphStyle("placa_st", fontSize=fs, fontName="Helvetica-Bold",
+                                  textColor=BRAND_DARK, alignment=TA_CENTER, leading=fs * 1.15)
+        story.append(Spacer(1, 30 * mm if (img_flowable and img_pos != 'centro') else 50 * mm))
+        story.append(Paragraph(text, sign_st))
+        story.append(Spacer(1, 15 * mm))
+        story.append(HRFlowable(width=ls_W_val * 0.5, thickness=2, color=BRAND_GOLD,
+                                 spaceAfter=15 * mm, hAlign="CENTER"))
+        if img_flowable:
+            img_tbl = Table([[img_flowable]], colWidths=[ls_W_val])
+            img_tbl.setStyle(TableStyle([("ALIGN", (0, 0), (-1, -1), "CENTER")]))
+            story.append(img_tbl)
+    elif img_flowable:
+        story.append(Spacer(1, 30 * mm))
+        img_tbl = Table([[img_flowable]], colWidths=[ls_W_val])
+        img_tbl.setStyle(TableStyle([("ALIGN", (0, 0), (-1, -1), "CENTER")]))
+        story.append(img_tbl)
+
+
 # ─── Generator ───────────────────────────────────────────────────────────────
 
 def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
@@ -687,51 +746,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
     for _ptext, _pimg, _ppos in _placas:
         story.append(NextPageTemplate('Landscape'))
         story.append(PageBreak())
-        ls_W_val = _landscape(A4)[0] - 40 * mm
-
-        # Resolve imagem se existir
-        _pimg_flowable = None
-        if _pimg:
-            try:
-                from flask import current_app
-                img_path = os.path.join(current_app.config["UPLOAD_FOLDER"],
-                                       _pimg.replace('/uploads/', '').lstrip('/'))
-                if os.path.isfile(img_path):
-                    if _ppos == 'centro' and not _ptext:
-                        # Cenário 3: só imagem, centro grande
-                        _pimg_flowable = RLImage(img_path, width=ls_W_val * 0.9, height=140 * mm, kind="proportional")
-                    else:
-                        # Cenário 2: imagem abaixo do texto, tamanho médio
-                        _pimg_flowable = RLImage(img_path, width=ls_W_val * 0.4, height=40 * mm, kind="proportional")
-            except Exception:
-                pass
-
-        if _ptext:
-            # Cenário 1 ou 2: texto presente
-            name_len = len(_ptext)
-            if name_len <= 10:   fs = 96
-            elif name_len <= 20: fs = 80
-            else:                fs = 64
-            sign_st = ParagraphStyle("placa_st", fontSize=fs, fontName="Helvetica-Bold",
-                                      textColor=BRAND_DARK, alignment=TA_CENTER, leading=fs * 1.15)
-            if _pimg_flowable and _ppos != 'centro':
-                story.append(Spacer(1, 30 * mm))
-            else:
-                story.append(Spacer(1, 50 * mm))
-            story.append(Paragraph(_ptext, sign_st))
-            story.append(Spacer(1, 15 * mm))
-            story.append(HRFlowable(width=ls_W_val * 0.5, thickness=2, color=BRAND_GOLD,
-                                     spaceAfter=15 * mm, hAlign="CENTER"))
-            if _pimg_flowable:
-                img_tbl = Table([[_pimg_flowable]], colWidths=[ls_W_val])
-                img_tbl.setStyle(TableStyle([("ALIGN", (0, 0), (-1, -1), "CENTER")]))
-                story.append(img_tbl)
-        elif _pimg_flowable:
-            # Cenário 3: só imagem, centralizada
-            story.append(Spacer(1, 30 * mm))
-            img_tbl = Table([[_pimg_flowable]], colWidths=[ls_W_val])
-            img_tbl.setStyle(TableStyle([("ALIGN", (0, 0), (-1, -1), "CENTER")]))
-            story.append(img_tbl)
+        _render_sign_page(story, _ptext, _pimg, _ppos)
 
     # ── Footer callback ───────────────────────────────────────────────────────
     from datetime import datetime as _dt  # noqa: PLC0415
