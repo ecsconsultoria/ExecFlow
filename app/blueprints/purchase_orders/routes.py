@@ -196,20 +196,6 @@ def detail(po_id):
            )
            .filter_by(id=po_id, company_id=current_user.company_id)
            .first_or_404())
-    # Garante colunas sign_name / sign_include_logo (schema patch)
-    from sqlalchemy import inspect, text as _sql_text
-    try:
-        insp = inspect(db.engine)
-        if 'purchase_orders' in insp.get_table_names():
-            existing = {c['name'] for c in insp.get_columns('purchase_orders')}
-            with db.engine.begin() as conn:
-                if 'sign_name' not in existing:
-                    conn.execute(_sql_text('ALTER TABLE purchase_orders ADD COLUMN sign_name VARCHAR(200)'))
-                if 'sign_include_logo' not in existing:
-                    conn.execute(_sql_text('ALTER TABLE purchase_orders ADD COLUMN sign_include_logo BOOLEAN DEFAULT TRUE'))
-    except Exception:
-        pass
-
     cid = current_user.company_id
     suppliers, services, categories, suppliers_json, services_json = _build_context(cid)
     audit_logs = AuditLog.query.filter_by(entity="po", entity_id=po.id).order_by(AuditLog.created_at.asc()).all()
@@ -268,9 +254,6 @@ def save_all(po_id):
                 data["pax_count"] = 1
 
         data["discount_type"] = (data.get("discount_type") or "R$")
-
-        # Checkbox Placa — não enviado quando desmarcado
-        data["sign_include_logo"] = request.form.get("sign_include_logo") == "1"
 
         # Emissão editável → atualiza created_at
         emission_raw = data.pop("emission_date", "")
