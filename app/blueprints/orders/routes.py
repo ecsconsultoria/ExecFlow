@@ -705,7 +705,7 @@ def update_item_operational(iid):
     item  = OrderItem.query.get_or_404(iid)
     order = item.order
     _check_company(order)
-    if order.status in ("concluido", "faturado", "cancelado"):
+    if order.status in ("cancelado", "excluido"):
         flash("Não é possível editar itens neste status.", "warning")
         return redirect(url_for("orders.detail", oid=order.id))
 
