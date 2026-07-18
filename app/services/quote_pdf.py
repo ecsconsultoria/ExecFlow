@@ -156,6 +156,17 @@ def _fmt_usd_raw(value: float) -> str:
     return f"{value:,.2f}"
 
 
+def _fmt_phone_link(phone: str) -> str:
+    """Retorna link WhatsApp clicável se o telefone tiver dígitos."""
+    digits = ''.join(c for c in (phone or '') if c.isdigit())
+    if not digits:
+        return phone or '–'
+    # Adiciona código do Brasil se não informado
+    if len(digits) <= 11 and not digits.startswith('55'):
+        digits = '55' + digits
+    return f'<a href="https://wa.me/{digits}" color="#0d9488">{phone}</a>'
+
+
 def _total_cell_text(brl_total: float, lang: str, usd_rate) -> str:
     """Total em R$; com cotação USD, acrescenta valor inline.
     Formato string — compatível com SO/PO (usam Paragraph wrapper).

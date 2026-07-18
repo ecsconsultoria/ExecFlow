@@ -26,6 +26,7 @@ from .quote_pdf import (
     _T as _QT,
     _billing_label,
     _fmt_brl,
+    _fmt_phone_link,
     _total_cell_text,
     _total_cell_aligned,
     _PAYMENT_TERMS_EN,
@@ -635,7 +636,10 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         cells = []
         for lk, v in filled:
             label = _t(lk, lang)
-            safe = (v or "").replace('\xa0', ' ').replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            if lk in ("op_driver_phone", "op_pax_phone") and v and any(c.isdigit() for c in v):
+                safe = _fmt_phone_link(v)
+            else:
+                safe = (v or "").replace('\xa0', ' ').replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
             cells.append(Paragraph(f"<b>{label}:</b> {safe}", op_value_st))
 
         # Preenche para múltiplo de COLS

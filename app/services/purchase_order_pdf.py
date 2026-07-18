@@ -20,7 +20,7 @@ from reportlab.platypus import (
 )
 
 # Re-use brand constants + helpers from quote_pdf
-from .quote_pdf import BRAND_DARK, BRAND_GOLD, BRAND_LIGHT, _fmt_brl
+from .quote_pdf import BRAND_DARK, BRAND_GOLD, BRAND_LIGHT, _fmt_brl, _fmt_phone_link
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -616,7 +616,10 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
         cells = []
         for lk, v in filled_main:
             label = _t(lk, lang)
-            safe = (v or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            if lk in ("op_driver_phone", "op_pax_phone") and v and any(c.isdigit() for c in v):
+                safe = _fmt_phone_link(v)
+            else:
+                safe = (v or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
             cells.append(Paragraph(f"<b>{label}:</b> {safe}", op_value_st))
 
         if cells:
