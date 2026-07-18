@@ -279,16 +279,6 @@
       </div>
 
       <div>
-        <label class="lbl">Status</label>
-        {% set status_variant = 'neutral' %}
-        {% if quote.status in ('aprovado','pago','reserva_confirmada') %}{% set status_variant = 'success' %}
-        {% elif quote.status == 'pendente' %}{% set status_variant = 'warning' %}
-        {% elif quote.status == 'reprovado' %}{% set status_variant = 'danger' %}
-        {% endif %}
-        <div class="fi-ro">{{ badge(quote.status, variant=status_variant) }}</div>
-      </div>
-
-      <div>
         <label class="lbl">Cliente</label>
         <p class="fi-ro"><span class="truncate">
           {{ quote.client.name if quote.client else '–' }}
@@ -312,6 +302,16 @@
         {% else %}
         <p class="fi-ro">–</p>
         {% endif %}
+      </div>
+
+      <div>
+        <label class="lbl">Status</label>
+        {% set status_variant = 'neutral' %}
+        {% if quote.status in ('aprovado','pago','reserva_confirmada') %}{% set status_variant = 'success' %}
+        {% elif quote.status == 'pendente' %}{% set status_variant = 'warning' %}
+        {% elif quote.status == 'reprovado' %}{% set status_variant = 'danger' %}
+        {% endif %}
+        <div class="fi-ro">{{ badge(quote.status, variant=status_variant) }}</div>
       </div>
 
       <div>

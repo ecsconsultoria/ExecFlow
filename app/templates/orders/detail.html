@@ -370,19 +370,12 @@
 
   <div class="px-4 pt-3 pb-3 so-head">
 
-    {# ── Linha 1: Nº Pedido | Status | Emissão | Data Entrega | Faturamento ── #}
+    {# ── Linha 1: Nº Pedido | Emissão | Data Entrega | Faturamento | Status ── #}
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-3 gap-y-3 pb-3">
 
       <div class="f-pedido">
         <label class="lbl">Nº Pedido</label>
         <p class="fi-ro"><span class="truncate">{{ order.number }}</span></p>
-      </div>
-
-      <div class="f-status">
-        <label class="lbl">Status</label>
-        <div class="fi-ro">
-          <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-{{ order.status_color }}-50 text-{{ order.status_color }}-600 dark:bg-{{ order.status_color }}-900/20 dark:text-{{ order.status_color }}-400">{{ order.status_label }}</span>
-        </div>
       </div>
 
       <div class="f-emissao">
@@ -421,6 +414,13 @@
           {% endfor %}
         </select>
         {% endif %}
+      </div>
+
+      <div class="f-status">
+        <label class="lbl">Status</label>
+        <div class="fi-ro">
+          <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-{{ order.status_color }}-50 text-{{ order.status_color }}-600 dark:bg-{{ order.status_color }}-900/20 dark:text-{{ order.status_color }}-400">{{ order.status_label }}</span>
+        </div>
       </div>
 
     </div>
