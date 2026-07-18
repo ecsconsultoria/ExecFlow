@@ -242,6 +242,8 @@ def _ensure_schema_columns():
                 ('op_notes', 'VARCHAR(500)'),
                 ('placa_receptivo', 'BOOLEAN DEFAULT FALSE'),
                 ('placa_receptivo_texto', 'TEXT'),
+                ('placa_imagem', 'VARCHAR(500)'),
+                ('placa_imagem_pos', 'VARCHAR(20) DEFAULT \'abaixo\''),
             ]
             with db.engine.begin() as conn:
                 for col_name, col_type in new_po_item_cols:

@@ -358,6 +358,8 @@
   opNotes:           '',
   placaReceptivo:       false,
   placaReceptivoTexto:  '',
+  placaImagem:          '',
+  placaImagemPos:       'abaixo',
   openOpItem(el) {
     const d = el.dataset;
     this.opItemUrl         = d.opUrl || '';
@@ -374,6 +376,8 @@
     this.opNotes           = d.opNotes || '';
     this.placaReceptivo    = d.placaReceptivo === '1';
     this.placaReceptivoTexto = d.placaReceptivoTexto || '';
+    this.placaImagem       = d.placaImagem || '';
+    this.placaImagemPos    = d.placaImagemPos || 'abaixo';
     this.showOpItemModal = true;
   },
 }" x-cloak
@@ -597,6 +601,8 @@
                     data-op-notes="{{ (item.op_notes or '')|e }}"
                     data-placa-receptivo="{{ '1' if item.placa_receptivo else '0' }}"
                     data-placa-receptivo-texto="{{ (item.placa_receptivo_texto or '')|e }}"
+                    data-placa-imagem="{{ (item.placa_imagem or '')|e }}"
+                    data-placa-imagem-pos="{{ (item.placa_imagem_pos or 'abaixo')|e }}"
                     @click="openOpItem($el)"
                     x-show="!isExpensePO"
                     class="p-1.5 rounded text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/20 relative"
@@ -1200,7 +1206,7 @@
               class="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
     </div>
 
-    <form method="post" :action="opItemUrl">
+    <form method="post" :action="opItemUrl" enctype="multipart/form-data">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="px-5 py-4 space-y-3">
         <div>
@@ -1261,12 +1267,26 @@
           <div class="flex items-center gap-3">
             <label class="inline-flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 cursor-pointer whitespace-nowrap">
               <input type="checkbox" name="placa_receptivo" value="1" x-model="placaReceptivo"
-                     @change="if(!placaReceptivo) placaReceptivoTexto = ''"
+                     @change="if(!placaReceptivo) { placaReceptivoTexto = ''; placaImagem = ''; }"
                      class="rounded border-slate-300 text-violet-600 focus:ring-violet-500">
               <i class="fa-solid fa-sign-hanging text-violet-500"></i> Placa Receptivo
             </label>
             <input type="text" name="placa_receptivo_texto" class="fi text-sm flex-1" x-model="placaReceptivoTexto"
                    x-show="placaReceptivo" placeholder="Texto da placa...">
+          </div>
+          <div x-show="placaReceptivo" class="mt-2 flex items-center gap-3">
+            <span class="text-xs text-slate-500 whitespace-nowrap">Imagem</span>
+            <input type="file" name="placa_imagem_file" accept="image/png,image/jpeg"
+                   class="fi text-sm flex-1">
+            <span class="text-xs text-slate-500 whitespace-nowrap">Posição:</span>
+            <label class="inline-flex items-center gap-1 text-xs text-slate-600 dark:text-slate-300 cursor-pointer">
+              <input type="radio" name="placa_imagem_pos" value="abaixo" x-model="placaImagemPos"
+                     class="text-violet-600 focus:ring-violet-500"> Abaixo
+            </label>
+            <label class="inline-flex items-center gap-1 text-xs text-slate-600 dark:text-slate-300 cursor-pointer">
+              <input type="radio" name="placa_imagem_pos" value="centro" x-model="placaImagemPos"
+                     class="text-violet-600 focus:ring-violet-500"> Centro
+            </label>
           </div>
         </div>
 

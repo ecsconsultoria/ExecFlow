@@ -229,6 +229,8 @@ class POItem(db.Model, TimestampMixin):
     # Placa de receptivo
     placa_receptivo        = db.Column(db.Boolean, default=False)
     placa_receptivo_texto  = db.Column(db.Text)
+    placa_imagem           = db.Column(db.String(500))   # caminho do arquivo
+    placa_imagem_pos       = db.Column(db.String(20), default='abaixo')  # 'abaixo' ou 'centro'
     # Campos legados (não utilizados na UI atual do PO, mantidos por compatibilidade)
     op_driver_name      = db.Column(db.String(200))
     op_driver_phone     = db.Column(db.String(50))

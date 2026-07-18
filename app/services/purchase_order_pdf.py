@@ -114,14 +114,18 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
     W = A4[0] - 30 * mm
 
     # Placas de receptivo (páginas landscape extras)
-    _placa_texts = []
+    _placas = []  # [(text, img_path, img_pos), ...]
     for it in (po.items or []):
-        if getattr(it, 'placa_receptivo', None) and getattr(it, 'placa_receptivo_texto', '').strip():
-            _placa_texts.append(getattr(it, 'placa_receptivo_texto', '').strip())
+        if getattr(it, 'placa_receptivo', None):
+            txt = (getattr(it, 'placa_receptivo_texto', '') or '').strip()
+            img = (getattr(it, 'placa_imagem', '') or '').strip()
+            pos = (getattr(it, 'placa_imagem_pos', '') or 'abaixo').strip()
+            if txt or img:
+                _placas.append((txt, img, pos))
 
     portrait_frame = Frame(15 * mm, 20 * mm, W, A4[1] - 35 * mm, id='portrait')
     templates = [PageTemplate(id='Portrait', frames=[portrait_frame], pagesize=A4)]
-    if _placa_texts:
+    if _placas:
         ls_page = _landscape(A4)
         ls_W = ls_page[0] - 40 * mm
         ls_frame = Frame(20 * mm, 20 * mm, ls_W, ls_page[1] - 40 * mm, id='landscape')
@@ -680,21 +684,54 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
         story.append(Spacer(1, 3 * mm))
 
     # ── Placas de Receptivo (páginas landscape) ──────────────────────────────
-    for _ptext in _placa_texts:
+    for _ptext, _pimg, _ppos in _placas:
         story.append(NextPageTemplate('Landscape'))
         story.append(PageBreak())
-        name_len = len(_ptext)
-        if name_len <= 10:   fs = 96
-        elif name_len <= 20: fs = 80
-        else:                fs = 64
-        sign_st = ParagraphStyle("placa_st", fontSize=fs, fontName="Helvetica-Bold",
-                                  textColor=BRAND_DARK, alignment=TA_CENTER, leading=fs * 1.15)
         ls_W_val = _landscape(A4)[0] - 40 * mm
-        story.append(Spacer(1, 50 * mm))
-        story.append(Paragraph(_ptext, sign_st))
-        story.append(Spacer(1, 15 * mm))
-        story.append(HRFlowable(width=ls_W_val * 0.5, thickness=2, color=BRAND_GOLD,
-                                 spaceAfter=10 * mm, hAlign="CENTER"))
+
+        # Resolve imagem se existir
+        _pimg_flowable = None
+        if _pimg:
+            try:
+                from flask import current_app
+                img_path = os.path.join(current_app.config["UPLOAD_FOLDER"],
+                                       _pimg.replace('/uploads/', '').lstrip('/'))
+                if os.path.isfile(img_path):
+                    if _ppos == 'centro' and not _ptext:
+                        # Cenário 3: só imagem, centro grande
+                        _pimg_flowable = RLImage(img_path, width=ls_W_val * 0.7, height=100 * mm, kind="proportional")
+                    else:
+                        # Cenário 2: imagem abaixo do texto, tamanho médio
+                        _pimg_flowable = RLImage(img_path, width=ls_W_val * 0.4, height=40 * mm, kind="proportional")
+            except Exception:
+                pass
+
+        if _ptext:
+            # Cenário 1 ou 2: texto presente
+            name_len = len(_ptext)
+            if name_len <= 10:   fs = 96
+            elif name_len <= 20: fs = 80
+            else:                fs = 64
+            sign_st = ParagraphStyle("placa_st", fontSize=fs, fontName="Helvetica-Bold",
+                                      textColor=BRAND_DARK, alignment=TA_CENTER, leading=fs * 1.15)
+            if _pimg_flowable and _ppos != 'centro':
+                story.append(Spacer(1, 30 * mm))
+            else:
+                story.append(Spacer(1, 50 * mm))
+            story.append(Paragraph(_ptext, sign_st))
+            story.append(Spacer(1, 15 * mm))
+            story.append(HRFlowable(width=ls_W_val * 0.5, thickness=2, color=BRAND_GOLD,
+                                     spaceAfter=15 * mm, hAlign="CENTER"))
+            if _pimg_flowable:
+                img_tbl = Table([[_pimg_flowable]], colWidths=[ls_W_val])
+                img_tbl.setStyle(TableStyle([("ALIGN", (0, 0), (-1, -1), "CENTER")]))
+                story.append(img_tbl)
+        elif _pimg_flowable:
+            # Cenário 3: só imagem, centralizada
+            story.append(Spacer(1, 30 * mm))
+            img_tbl = Table([[_pimg_flowable]], colWidths=[ls_W_val])
+            img_tbl.setStyle(TableStyle([("ALIGN", (0, 0), (-1, -1), "CENTER")]))
+            story.append(img_tbl)
 
     # ── Footer callback ───────────────────────────────────────────────────────
     from datetime import datetime as _dt  # noqa: PLC0415

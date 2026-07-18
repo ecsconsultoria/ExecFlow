@@ -674,7 +674,23 @@ def update_item_operational(item_id):
     if po.company_id != current_user.company_id:
         return jsonify({"ok": False, "error": "Não autorizado"}), 403
     apply_all = request.form.get("apply_to_all") in ("1", "true", "on")
-    pos.update_item_operational(item, request.form.to_dict(), apply_to_all=apply_all)
+    data = request.form.to_dict()
+
+    # Upload da imagem da placa
+    _img_file = request.files.get("placa_imagem_file")
+    if _img_file and _img_file.filename:
+        import uuid, os as _os
+        from flask import current_app
+        ext = _os.path.splitext(_img_file.filename)[1].lower()
+        if ext in ('.png', '.jpg', '.jpeg'):
+            fname = f"placa_{uuid.uuid4().hex[:8]}{ext}"
+            up_dir = current_app.config["UPLOAD_FOLDER"]
+            _os.makedirs(up_dir, exist_ok=True)
+            dest = _os.path.join(up_dir, fname)
+            _img_file.save(dest)
+            data["placa_imagem"] = f"/uploads/{fname}"
+
+    pos.update_item_operational(item, data, apply_to_all=apply_all)
     log_activity(
         "po", po.id, po.company_id,
         "Dados operacionais do item atualizados (todos)" if apply_all

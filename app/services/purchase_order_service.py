@@ -679,6 +679,8 @@ def update_item_operational(item: POItem, data: dict, apply_to_all: bool = False
         "op_notes": data.get("op_notes", "") or "",
         "placa_receptivo": data.get("placa_receptivo") == "1",
         "placa_receptivo_texto": data.get("placa_receptivo_texto", "") or "",
+        "placa_imagem": data.get("placa_imagem", "") or "",
+        "placa_imagem_pos": data.get("placa_imagem_pos", "abaixo") or "abaixo",
     }
 
     targets = item.purchase_order.items if apply_to_all else [item]
