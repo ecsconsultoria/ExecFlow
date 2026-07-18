@@ -156,15 +156,15 @@ def _fmt_usd_raw(value: float) -> str:
     return f"{value:,.2f}"
 
 
-def _fmt_phone_link(phone: str) -> str:
+def _fmt_phone_link(phone: str, add_country: bool = True) -> str:
     """Retorna link WhatsApp clicável se o telefone tiver dígitos."""
     digits = ''.join(c for c in (phone or '') if c.isdigit())
     if not digits:
         return phone or '–'
-    # Adiciona código do Brasil se não informado
-    if len(digits) <= 11 and not digits.startswith('55'):
+    # Adiciona código do Brasil se não informado (apenas para motorista)
+    if add_country and len(digits) <= 11 and not digits.startswith('55'):
         digits = '55' + digits
-    return f'<a href="https://wa.me/{digits}" color="#0d9488">{phone}</a>'
+    return f'<a href="https://wa.me/{digits}" color="#2563eb">{phone}</a>'
 
 
 def _total_cell_text(brl_total: float, lang: str, usd_rate) -> str:

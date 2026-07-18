@@ -637,7 +637,8 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         for lk, v in filled:
             label = _t(lk, lang)
             if lk in ("op_driver_phone", "op_pax_phone") and v and any(c.isdigit() for c in v):
-                safe = _fmt_phone_link(v)
+                add_55 = (lk == "op_driver_phone")
+                safe = _fmt_phone_link(v, add_country=add_55)
             else:
                 safe = (v or "").replace('\xa0', ' ').replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
             cells.append(Paragraph(f"<b>{label}:</b> {safe}", op_value_st))
