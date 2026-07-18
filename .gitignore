@@ -42,3 +42,5 @@ htmlcov/
 
 # Tailwind CLI binary (40 MB)
 tools/tailwindcss.exe
+teste_placa*.pdf
+Logo.png
