@@ -191,10 +191,7 @@
         <i class="fa-solid fa-arrow-trend-down w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Despesas</span></a>
       <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('financial.index') }}" class="{{ s2_active if request.blueprint == 'financial' and not request.args.get('type') else s2 }}">
         <i class="fa-solid fa-list-ul w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Lançamentos</span></a>{% endif %}
-      {% if has_perm('reports.view') %}
-      <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('reports.index') }}" class="{{ s2_active if request.blueprint == 'reports' else s2 }}">
-        <i class="fa-solid fa-chart-pie w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Relatórios</span></a>{% endif %}
-    </div>
+          </div>
 
     <!-- CONFIGURAÇÕES sub-items -->
     <div x-show="activeModule === 'config'">
@@ -358,7 +355,6 @@
         <a href="{{ url_for('financial.index', type='revenue') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'financial' and request.args.get('type') == 'revenue' else dm }}">Receitas</a>
         <a href="{{ url_for('financial.index', type='cost') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'financial' and request.args.get('type') == 'cost' else dm }}">Despesas</a>
         <a href="{{ url_for('financial.index') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'financial' and not request.args.get('type') else dm }}">Lançamentos</a>{% endif %}
-        {% if has_perm('reports.view') %}<a href="{{ url_for('reports.index') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'reports' else dm }}">Relatórios</a>{% endif %}
       </div>
 
       <div x-show="mobileSubmenu === 'config'">
