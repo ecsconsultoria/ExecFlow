@@ -554,8 +554,8 @@
         <td class="px-3 py-2 text-right font-bold text-slate-700 dark:text-slate-100 font-mono whitespace-nowrap">{{ item.total_price|currency }}</td>
         <td class="px-3 py-2">
           <div class="flex items-center justify-end gap-1">
-            {% if not locked %}
-            {# Dados operacionais por item #}
+            {# Dados operacionais — permitido mesmo faturado/concluido #}
+            {% if order.status not in ('cancelado', 'excluido') %}
             <button type="button"
                     data-op-url="{{ url_for('orders.update_item_operational', iid=item.id) }}"
                     data-op-no="{{ loop.index }}"
@@ -580,6 +580,8 @@
               <span class="absolute top-0.5 right-0.5 block w-1.5 h-1.5 rounded-full bg-violet-500"></span>
               {% endif %}
             </button>
+            {% endif %}
+            {% if not locked %}
             {# Editar #}
             <button type="button"
                     @click="openEditItem(
