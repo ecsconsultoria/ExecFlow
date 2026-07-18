@@ -106,17 +106,30 @@ def _t(key: str, lang: str) -> str:
 def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
     """Return a BytesIO containing the PO PDF (same visual style as SO PDF)."""
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=A4,
-        leftMargin=15 * mm,
-        rightMargin=15 * mm,
-        topMargin=15 * mm,
-        bottomMargin=20 * mm,
-        title=f"{_t('doc_title', lang)} {po.number}",
-    )
+    from reportlab.platypus.doctemplate import PageTemplate, BaseDocTemplate
+    from reportlab.platypus.frames import Frame
+    from reportlab.lib.pagesizes import landscape as _landscape
 
     W = A4[0] - 30 * mm
+    _sign_name = (getattr(po, 'sign_name', None) or '').strip()
+    _sign_include = getattr(po, 'sign_include_logo', None)
+    _has_sign = bool(_sign_name) and (_sign_include is None or _sign_include)
+
+    # Frame definitions
+    portrait_frame = Frame(15 * mm, 20 * mm, A4[0] - 30 * mm, A4[1] - 35 * mm, id='portrait')
+    landscape_page = _landscape(A4)
+    lW = landscape_page[0]
+    landscape_frame = Frame(20 * mm, 20 * mm, lW - 40 * mm, landscape_page[1] - 40 * mm, id='landscape')
+
+    templates = [PageTemplate(id='Portrait', frames=[portrait_frame], pagesize=A4)]
+    if _has_sign:
+        templates.append(PageTemplate(id='Landscape', frames=[landscape_frame], pagesize=landscape_page))
+
+    doc = BaseDocTemplate(
+        buffer,
+        pageTemplates=templates,
+        title=f"{_t('doc_title', lang)} {po.number}",
+    )
 
     # ── Styles ────────────────────────────────────────────────────────────────
     title_st        = ParagraphStyle("ts",  fontSize=13, fontName="Helvetica-Bold",
@@ -663,6 +676,43 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
 
     if op_groups:
         story.append(Spacer(1, 3 * mm))
+
+    # ── Placa de Receptivo (landscape page) ───────────────────────────────────
+    if _has_sign:
+        from reportlab.platypus import NextPageTemplate, PageBreak
+        from reportlab.platypus import Image as RLImage2
+        story.append(NextPageTemplate('Landscape'))
+        story.append(PageBreak())
+
+        sign_name_st = ParagraphStyle("sign_nm", fontSize=52, fontName="Helvetica-Bold",
+                                       textColor=BRAND_DARK, alignment=TA_CENTER, leading=60)
+        story.append(Spacer(1, 80 * mm))
+        story.append(Paragraph(_sign_name, sign_name_st))
+        story.append(Spacer(1, 15 * mm))
+        story.append(HRFlowable(width=lW * 0.3, thickness=1.5, color=BRAND_GOLD,
+                                 spaceAfter=15 * mm, hAlign="CENTER"))
+
+        # Logo no bottom
+        company = getattr(po, "company", None)
+        logo_url = (company.logo_url if company else None) if company else None
+        if logo_url:
+            try:
+                from flask import current_app
+                logo_path = logo_url
+                if logo_url.startswith("/uploads/"):
+                    logo_path = os.path.join(current_app.config["UPLOAD_FOLDER"],
+                                             logo_url[len("/uploads/"):].lstrip("/"))
+                elif logo_url.startswith("/static/"):
+                    logo_path = os.path.join(current_app.root_path, "static",
+                                             logo_url[len("/static/"):].lstrip("/"))
+                if os.path.isfile(logo_path):
+                    logo_img = RLImage2(logo_path, width=80 * mm, height=20 * mm, kind="proportional")
+                    story.append(Spacer(1, 60 * mm))
+                    logo_tbl = Table([[logo_img]], colWidths=[lW - 40 * mm])
+                    logo_tbl.setStyle(TableStyle([("ALIGN", (0, 0), (-1, -1), "CENTER")]))
+                    story.append(logo_tbl)
+            except Exception:
+                pass
 
     # ── Footer callback ───────────────────────────────────────────────────────
     from datetime import datetime as _dt  # noqa: PLC0415
