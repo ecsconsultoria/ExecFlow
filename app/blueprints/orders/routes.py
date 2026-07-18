@@ -727,7 +727,7 @@ def update_item_operational(iid):
 def update_obs(oid):
     order = _get_order(oid)
     _check_company(order)
-    if order.status in ("concluido", "faturado", "cancelado"):
+    if order.status in ("cancelado", "excluido"):
         flash("Pedido não pode ser editado no status atual.", "warning")
         return redirect(url_for("orders.detail", oid=oid))
     order.obs = request.form.get("obs", "") or ""
