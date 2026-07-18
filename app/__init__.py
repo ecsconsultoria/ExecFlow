@@ -251,18 +251,21 @@ def _ensure_schema_columns():
 
         # ── purchase_orders: sign columns (placa de receptivo) ──────────────────
         if 'purchase_orders' in table_names:
-            existing_po = {c['name'] for c in insp.get_columns('purchase_orders')}
-            new_po_cols = [
-                ('sign_name', 'VARCHAR(200)'),
-                ('sign_include_logo', 'BOOLEAN DEFAULT TRUE'),
-            ]
-            with db.engine.begin() as conn:
-                for col_name, col_type in new_po_cols:
-                    if col_name not in existing_po:
-                        conn.execute(_text(
-                            f'ALTER TABLE purchase_orders ADD COLUMN {col_name} {col_type}'
-                        ))
-                        log.info('Schema patch applied: purchase_orders.%s', col_name)
+            try:
+                existing_po = {c['name'] for c in insp.get_columns('purchase_orders')}
+                new_po_cols = [
+                    ('sign_name', 'VARCHAR(200)'),
+                    ('sign_include_logo', 'BOOLEAN DEFAULT TRUE'),
+                ]
+                with db.engine.begin() as conn:
+                    for col_name, col_type in new_po_cols:
+                        if col_name not in existing_po:
+                            conn.execute(_text(
+                                f'ALTER TABLE purchase_orders ADD COLUMN {col_name} {col_type}'
+                            ))
+                            log.info('Schema patch applied: purchase_orders.%s', col_name)
+            except Exception as exc:
+                log.error('Schema patch purchase_orders sign failed: %s', exc)
 
         # ── users: must_change_password flag (force password change on first login) ─
         if 'users' in table_names:

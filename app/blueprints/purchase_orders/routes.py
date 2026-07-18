@@ -196,6 +196,18 @@ def detail(po_id):
            )
            .filter_by(id=po_id, company_id=current_user.company_id)
            .first_or_404())
+    # Garante colunas sign_name / sign_include_logo (migração pontual)
+    try:
+        from sqlalchemy import inspect, text
+        insp = inspect(db.engine)
+        existing = {c['name'] for c in insp.get_columns('purchase_orders')}
+        for col, col_type in [('sign_name', 'VARCHAR(200)'), ('sign_include_logo', 'BOOLEAN DEFAULT TRUE')]:
+            if col not in existing:
+                with db.engine.begin() as conn:
+                    conn.execute(text(f'ALTER TABLE purchase_orders ADD COLUMN {col} {col_type}'))
+    except Exception:
+        pass
+
     cid = current_user.company_id
     suppliers, services, categories, suppliers_json, services_json = _build_context(cid)
     audit_logs = AuditLog.query.filter_by(entity="po", entity_id=po.id).order_by(AuditLog.created_at.asc()).all()
