@@ -2,7 +2,7 @@ import json
 import os
 from flask import make_response, render_template, request, redirect, url_for, flash, jsonify, current_app, abort, send_file
 from flask_login import login_required, current_user
-from sqlalchemy.orm import lazyload
+from sqlalchemy.orm import lazyload, joinedload
 from . import quotes_bp
 from ...models.quote   import Quote, QuoteItem, QuoteInclusion, BILLING_TYPES, QUOTE_STATUSES, DEFAULT_INCLUSIONS
 from ...models.client  import Client
@@ -14,6 +14,7 @@ from ...extensions import db
 from ...utils.decorators import require_permission
 from ...services.quote_service   import QuoteService
 from ...utils import now_br, make_client_token
+from ...utils.export import csv_response
 from ...utils.audit import log_activity
 from ...models.service_order import ServiceOrder
 from ...services             import service_order_service as sos
@@ -77,7 +78,7 @@ def index():
     # Quote declares creator/approver/rejecter as lazy="joined". Template only
     # uses scalar columns, so neutralize default joineds for speed.
     query  = (Quote.query
-              .options(lazyload('*'))
+              .options(lazyload('*'), joinedload(Quote.client))
               .filter_by(company_id=current_user.company_id, deleted_at=None))
     if status:
         query = query.filter_by(status=status)
@@ -88,6 +89,45 @@ def index():
     quotes = query.order_by(Quote.created_at.desc()).all()
     return render_template("quotes/index.html", quotes=quotes, status=status, q=q,
                            QUOTE_STATUSES=QUOTE_STATUSES)
+
+
+@quotes_bp.route("/export")
+@login_required
+@require_permission("quote.view")
+def export_csv():
+    """Exporta lista de RFQs como CSV (Excel)."""
+    status = request.args.get("status", "")
+    q      = request.args.get("q", "")
+    query  = (Quote.query
+              .options(lazyload('*'), joinedload(Quote.client))
+              .filter_by(company_id=current_user.company_id, deleted_at=None))
+    if status:
+        query = query.filter_by(status=status)
+    else:
+        query = query.filter(Quote.status != "excluido")
+    if q:
+        query = query.filter(Quote.client_name.ilike(f"%{q}%") | Quote.number.ilike(f"%{q}%"))
+    quotes = query.order_by(Quote.created_at.desc()).all()
+
+    from datetime import date as _date
+    headers = ["Nº RFQ", "Nº SO", "Cliente", "Data", "Total", "Status"]
+    rows = []
+    for qt in quotes:
+        so_number = "–"
+        if qt.orders:
+            active = [o for o in qt.orders if o.status not in ("cancelado", "excluido") and o.deleted_at is None]
+            if active:
+                so_number = active[0].number
+        rows.append([
+            qt.number,
+            so_number,
+            qt.client.name if qt.client else (qt.client_name or "–"),
+            qt.created_at.strftime("%d/%m/%Y") if qt.created_at else "–",
+            f"R$ {qt.total_amount:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") if qt.total_amount else "R$ 0,00",
+            qt.status_label,
+        ])
+    filename = f"rfqs_{_date.today().isoformat()}.csv"
+    return csv_response(filename, headers, rows)
 
 
 @quotes_bp.route("/new", methods=["GET", "POST"])

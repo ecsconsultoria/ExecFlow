@@ -10,12 +10,19 @@
     <h2 class="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">Orçamentos</h2>
     <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Gerencie e acompanhe todos os orçamentos de clientes</p>
   </div>
+  <div class="flex items-center gap-2">
+  <a href="{{ url_for('quotes.export_csv', status=status, q=q) }}"
+     class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all whitespace-nowrap"
+     title="Exportar para Excel (CSV)">
+    <i class="fa-solid fa-file-excel"></i> Exportar
+  </a>
   {% if has_perm('quote.create') %}
   <a href="{{ url_for('quotes.new') }}"
      class="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all whitespace-nowrap">
     <i class="fa-solid fa-plus"></i> Novo Orçamento
   </a>
   {% endif %}
+  </div>
 </div>
 
 {# ── Filtros ── #}
@@ -88,7 +95,7 @@
           </a>
           {% else %}–{% endif %}
         </td>
-        <td class="px-5 py-3.5 font-medium text-slate-700 dark:text-slate-200">{{ q.client_name or '–' }}</td>
+        <td class="px-5 py-3.5 font-medium text-slate-700 dark:text-slate-200">{{ q.client.name if q.client else (q.client_name or '–') }}</td>
         <td class="px-5 py-3.5 text-slate-500 dark:text-slate-400 whitespace-nowrap">{{ q.created_at|fdate }}</td>
         <td class="px-5 py-3.5 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap hidden md:table-cell">{{ q.total_amount|currency }}</td>
         <td class="px-5 py-3.5 hidden md:table-cell">

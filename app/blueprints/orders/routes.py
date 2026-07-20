@@ -18,6 +18,7 @@ from ...services              import order_service
 from ...services              import service_order_service as sos
 from ...services              import purchase_order_service as pos
 from ...utils                 import now_br
+from ...utils.export          import csv_response
 from ...utils.helpers         import parse_brl
 from ...utils.audit           import log_activity
 from ...utils.decorators      import require_permission
@@ -69,6 +70,46 @@ def index():
     orders = pagination.items
     return render_template("orders/index.html", orders=orders, pagination=pagination,
                            status=status, q=q, ORDER_STATUSES=ORDER_STATUSES)
+
+
+@orders_bp.route("/export")
+@login_required
+@require_permission("so.view")
+def export_csv():
+    """Exporta lista de Sales Orders como CSV (Excel)."""
+    status = request.args.get("status", "")
+    q      = request.args.get("q", "")
+    query  = (Order.query
+              .options(
+                  lazyload('*'),
+                  joinedload(Order.quote).lazyload('*'),
+              )
+              .filter_by(company_id=current_user.company_id, deleted_at=None))
+    if status:
+        query = query.filter_by(status=status)
+    else:
+        query = query.filter(Order.status != "excluido")
+    if q:
+        query = query.filter(
+            Order.client_name.ilike(f"%{q}%") | Order.number.ilike(f"%{q}%")
+        )
+    orders = query.order_by(Order.created_at.desc()).all()
+
+    from datetime import date as _date
+    headers = ["Nº SO", "Nº RFQ", "Cliente", "Data", "Total", "Status"]
+    rows = []
+    for o in orders:
+        total = o.computed_total if o.computed_total else 0
+        rows.append([
+            o.number,
+            o.quote.number if o.quote else "–",
+            o.client_name or "–",
+            o.created_at.strftime("%d/%m/%Y") if o.created_at else "–",
+            f"R$ {total:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+            o.status_label,
+        ])
+    filename = f"sales_orders_{_date.today().isoformat()}.csv"
+    return csv_response(filename, headers, rows)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

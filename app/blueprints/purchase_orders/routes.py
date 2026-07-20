@@ -16,6 +16,7 @@ from ...services import margin_service
 from ...utils.audit import log_activity
 from ...utils.decorators import require_permission
 from ...utils import now_br
+from ...utils.export  import csv_response
 from ...utils.helpers import parse_brl
 
 
@@ -68,6 +69,55 @@ def index():
                            po_list=po_list, pagination=pagination,
                            status=status, q=q,
                            PO_STATUSES=PO_STATUSES)
+
+
+@purchase_orders_bp.route("/export")
+@login_required
+@require_permission("po.view")
+def export_csv():
+    """Exporta lista de Purchase Orders como CSV (Excel)."""
+    cid    = current_user.company_id
+    status = request.args.get("status", "")
+    q      = request.args.get("q", "")
+    query  = (PurchaseOrder.query
+              .options(
+                  lazyload('*'),
+                  joinedload(PurchaseOrder.supplier).lazyload('*'),
+                  joinedload(PurchaseOrder.order).lazyload('*'),
+                  selectinload(PurchaseOrder.items),
+              )
+              .filter_by(company_id=cid)
+              .filter(PurchaseOrder.deleted_at.is_(None)))
+    if status:
+        query = query.filter_by(status=status)
+    else:
+        query = query.filter(PurchaseOrder.status.notin_(["excluido", "rascunho"]))
+    if q:
+        query = query.filter(
+            PurchaseOrder.number.ilike(f"%{q}%") |
+            PurchaseOrder.passenger_name.ilike(f"%{q}%")
+        )
+    po_list = query.order_by(
+        PurchaseOrder.pickup_datetime.asc().nullsfirst(),
+        PurchaseOrder.id.desc()
+    ).all()
+
+    from datetime import date as _date
+    headers = ["Nº PO", "Nº SO", "Fornecedor", "Passageiro", "Data", "Valor", "Status"]
+    rows = []
+    for po in po_list:
+        total = po.computed_total if po.computed_total else 0
+        rows.append([
+            po.number,
+            po.order.number if po.order else "–",
+            po.supplier.name if po.supplier else "–",
+            po.passenger_name or "–",
+            po.created_at.strftime("%d/%m/%Y") if po.created_at else "–",
+            f"R$ {total:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+            po.status_label,
+        ])
+    filename = f"purchase_orders_{_date.today().isoformat()}.csv"
+    return csv_response(filename, headers, rows)
 
 
 # ─── Context helper ─────────────────────────────────────────────────────────

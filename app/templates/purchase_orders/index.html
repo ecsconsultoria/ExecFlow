@@ -10,12 +10,19 @@
     <h2 class="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">Purchase Orders</h2>
     <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Gerencie e acompanhe todas as ordens de compra</p>
   </div>
+  <div class="flex items-center gap-2">
+  <a href="{{ url_for('purchase_orders.export_csv', status=status, q=q) }}"
+     class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all whitespace-nowrap"
+     title="Exportar para Excel (CSV)">
+    <i class="fa-solid fa-file-excel"></i> Exportar
+  </a>
   {% if has_perm('po.create') %}
   <a href="{{ url_for('purchase_orders.new') }}"
      class="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all whitespace-nowrap">
     <i class="fa-solid fa-plus"></i> Nova PO
   </a>
   {% endif %}
+  </div>
 </div>
 
 {# ── Filtros ── #}
