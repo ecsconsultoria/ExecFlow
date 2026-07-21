@@ -275,6 +275,10 @@ def save_all(po_id):
     try:
         data = request.form.to_dict()
         data.pop("order_id", None)   # never change linked order via save
+        # PO-level notes are handled by update_obs (separate form).
+        # Payment rows also have name="notes" which would overwrite po.notes.
+        data.pop("notes", None)
+        data.pop("internal_notes", None)
         pd = data.pop("pickup_date", "")
         pt = data.pop("pickup_time", "")
         if pd:
