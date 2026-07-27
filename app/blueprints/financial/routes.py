@@ -102,7 +102,7 @@ def index():
              .filter(*_base, FinancialRecord.type == "cost")
              .scalar() or 0)
 
-    # Totais pendentes (globais)
+    # Totais pendentes (globais — não filtrados por período)
     pending_revenue = (db.session.query(func.sum(FinancialRecord.amount))
                        .filter(FinancialRecord.company_id == cid,
                                FinancialRecord.type == "revenue",
@@ -116,6 +116,22 @@ def index():
                              FinancialRecord.status == "pendente")
                      .scalar() or 0)
 
+    # Receita total (global — todo SO com baixa, independente do período)
+    total_revenue_global = (db.session.query(func.sum(FinancialRecord.amount))
+                            .filter(FinancialRecord.company_id == cid,
+                                    FinancialRecord.type == "revenue",
+                                    FinancialRecord.deleted_at.is_(None),
+                                    FinancialRecord.status == "pago")
+                            .scalar() or 0)
+
+    # Custos totais (global — toda PO com baixa, independente do período)
+    total_costs_global = (db.session.query(func.sum(FinancialRecord.amount))
+                          .filter(FinancialRecord.company_id == cid,
+                                  FinancialRecord.type == "cost",
+                                  FinancialRecord.deleted_at.is_(None),
+                                  FinancialRecord.status == "pago")
+                          .scalar() or 0)
+
     # Registros filtrados pelo período + tipo + status
     q = (FinancialRecord.query
          .filter_by(company_id=cid)
@@ -127,6 +143,40 @@ def index():
         q = q.filter(FinancialRecord.status == fstat)
     records = q.order_by(FinancialRecord.created_at.desc()).limit(500).all()
 
+    # Resolve SO number + client name from reference (e.g. "order_payment:42")
+    record_refs = {}  # record_id -> {so_number, client_name}
+    if ftype in ("revenue", ""):
+        pmt_ids = []
+        for r in records:
+            if r.reference and r.reference.startswith("order_payment:"):
+                try:
+                    pmt_ids.append(int(r.reference.split(":")[1]))
+                except (ValueError, IndexError):
+                    pass
+        if pmt_ids:
+            from ...models.order import OrderPayment, Order
+            pmt_rows = (db.session.query(OrderPayment.id, OrderPayment.order_id, OrderPayment.amount)
+                        .filter(OrderPayment.id.in_(pmt_ids)).all())
+            pmt_map = {p.id: p.order_id for p in pmt_rows}
+            order_ids = list(set(pmt_map.values()))
+            if order_ids:
+                order_rows = (db.session.query(Order.id, Order.number, Order.client_name)
+                              .filter(Order.id.in_(order_ids)).all())
+                order_map = {o.id: (o.number, o.client_name) for o in order_rows}
+                for r in records:
+                    if r.reference and r.reference.startswith("order_payment:"):
+                        try:
+                            pid = int(r.reference.split(":")[1])
+                            oid = pmt_map.get(pid)
+                            if oid and oid in order_map:
+                                record_refs[r.id] = {
+                                    "order_id": oid,
+                                    "so_number": order_map[oid][0],
+                                    "client_name": order_map[oid][1],
+                                }
+                        except (ValueError, IndexError):
+                            pass
+
     pending_ar = (AccountReceivable.query.filter_by(company_id=cid, status="pendente")
                   .order_by(AccountReceivable.due_date.asc()).all())
 
@@ -136,9 +186,11 @@ def index():
 
     return render_template(
         "financial/index.html",
-        records=records, pending_ar=pending_ar,
+        records=records, pending_ar=pending_ar, record_refs=record_refs,
         revenue=revenue, costs=costs, profit=revenue - costs,
         pending_revenue=pending_revenue, pending_costs=pending_costs,
+        total_revenue_global=total_revenue_global,
+        total_costs_global=total_costs_global,
         period=period, date_from=date_from, date_to=date_to,
         p_start=first, p_end=last,
         period_label=period_label,
