@@ -88,21 +88,32 @@ def index():
         func.date(FinancialRecord.created_at),
     )
 
-    # P&L do período (pagos, referenciados pela data contábil)
-    _base = [
+    # Totais do período (pagos + pendentes, referenciados pela data contábil)
+    _base_period = [
         FinancialRecord.company_id == cid,
-        FinancialRecord.status == "pago",
         FinancialRecord.deleted_at.is_(None),
         ref_date.between(first, last),
     ]
-    revenue = (db.session.query(func.sum(FinancialRecord.amount))
-               .filter(*_base, FinancialRecord.type == "revenue")
-               .scalar() or 0)
-    costs = (db.session.query(func.sum(FinancialRecord.amount))
-             .filter(*_base, FinancialRecord.type == "cost")
-             .scalar() or 0)
+    revenue_paid = (db.session.query(func.sum(FinancialRecord.amount))
+                    .filter(*_base_period, FinancialRecord.type == "revenue",
+                            FinancialRecord.status == "pago")
+                    .scalar() or 0)
+    revenue_pending = (db.session.query(func.sum(FinancialRecord.amount))
+                       .filter(*_base_period, FinancialRecord.type == "revenue",
+                               FinancialRecord.status == "pendente")
+                       .scalar() or 0)
+    costs_paid = (db.session.query(func.sum(FinancialRecord.amount))
+                  .filter(*_base_period, FinancialRecord.type == "cost",
+                          FinancialRecord.status == "pago")
+                  .scalar() or 0)
+    costs_pending = (db.session.query(func.sum(FinancialRecord.amount))
+                     .filter(*_base_period, FinancialRecord.type == "cost",
+                             FinancialRecord.status == "pendente")
+                     .scalar() or 0)
 
-    # Totais pendentes (globais — não filtrados por período)
+    # Aliases para o template (compatibilidade + novos nomes)
+    revenue = revenue_paid
+    costs = costs_paid
     pending_revenue = (db.session.query(func.sum(FinancialRecord.amount))
                        .filter(FinancialRecord.company_id == cid,
                                FinancialRecord.type == "revenue",
@@ -115,22 +126,6 @@ def index():
                              FinancialRecord.deleted_at.is_(None),
                              FinancialRecord.status == "pendente")
                      .scalar() or 0)
-
-    # Receita total (global — todo SO com baixa, independente do período)
-    total_revenue_global = (db.session.query(func.sum(FinancialRecord.amount))
-                            .filter(FinancialRecord.company_id == cid,
-                                    FinancialRecord.type == "revenue",
-                                    FinancialRecord.deleted_at.is_(None),
-                                    FinancialRecord.status == "pago")
-                            .scalar() or 0)
-
-    # Custos totais (global — toda PO com baixa, independente do período)
-    total_costs_global = (db.session.query(func.sum(FinancialRecord.amount))
-                          .filter(FinancialRecord.company_id == cid,
-                                  FinancialRecord.type == "cost",
-                                  FinancialRecord.deleted_at.is_(None),
-                                  FinancialRecord.status == "pago")
-                          .scalar() or 0)
 
     # Registros filtrados pelo período + tipo + status
     q = (FinancialRecord.query
@@ -187,10 +182,10 @@ def index():
     return render_template(
         "financial/index.html",
         records=records, pending_ar=pending_ar, record_refs=record_refs,
-        revenue=revenue, costs=costs, profit=revenue - costs,
+        revenue=revenue, costs=costs, profit=revenue_paid - costs_paid,
         pending_revenue=pending_revenue, pending_costs=pending_costs,
-        total_revenue_global=total_revenue_global,
-        total_costs_global=total_costs_global,
+        revenue_paid=revenue_paid, revenue_pending=revenue_pending,
+        costs_paid=costs_paid, costs_pending=costs_pending,
         period=period, date_from=date_from, date_to=date_to,
         p_start=first, p_end=last,
         period_label=period_label,
