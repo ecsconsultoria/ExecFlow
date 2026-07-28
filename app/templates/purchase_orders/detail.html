@@ -344,6 +344,8 @@
   editDesc:          '',
   editQty:           1,
   editUnit:          '0,00',
+  editCategory:      '',
+  editDriver:        '',
   showOpItemModal:   false,
   opItemUrl:         '',
   opItemNo:          '',
@@ -620,11 +622,15 @@
                     data-edit-desc="{{ item.description or '' }}"
                     data-edit-qty="{{ item.quantity }}"
                     data-edit-unit="{{ '%.2f'|format(item.unit_cost or 0)|replace('.', ',') }}"
+                    data-edit-cat="{{ item.category_id or '' }}"
+                    data-edit-driver="{{ item.op_driver_name or '' }}"
                     @click="showEditItemModal=true;
                             editItemUrl=$el.dataset.editUrl;
                             editDesc=$el.dataset.editDesc;
                             editQty=parseInt($el.dataset.editQty)||1;
-                            editUnit=$el.dataset.editUnit"
+                            editUnit=$el.dataset.editUnit;
+                            editCategory=$el.dataset.editCat||'';
+                            editDriver=$el.dataset.editDriver||''"
                     class="p-1.5 rounded text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                     title="Editar">
               <i class="fa-solid fa-pencil text-xs"></i>
@@ -1159,6 +1165,25 @@
           <input type="text" name="description" x-model="editDesc"
                  placeholder="Descrição do serviço..."
                  class="fi">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="lbl">Categoria</label>
+            <select name="category_id" x-model="editCategory" class="fi">
+              <option value="">-- Sem categoria --</option>
+              {% for cat in categories %}
+              <option value="{{ cat.id }}">{{ cat.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="lbl">Motorista</label>
+            <select name="driver_name" x-model="editDriver" class="fi">
+              <option value="">-- Selecione --</option>
+              <option value="Monolíngue">Monolíngue</option>
+              <option value="Bilíngue">Bilíngue</option>
+            </select>
+          </div>
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>

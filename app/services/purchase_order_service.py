@@ -629,13 +629,18 @@ def add_item(po: PurchaseOrder, data: dict) -> POItem:
 
 
 def update_item(item: POItem, data: dict) -> POItem:
-    """Atualiza quantidade e custo unitário de um POItem."""
+    """Atualiza quantidade, custo unitário, categoria e motorista de um POItem."""
     if "quantity" in data:
         item.quantity = max(int(data["quantity"] or 1), 1)
     if "unit_cost" in data:
         item.unit_cost = _parse_cost(data["unit_cost"])
     if "description" in data:
         item.description = (data["description"] or "").strip()
+    if "category_id" in data:
+        cid = data.get("category_id")
+        item.category_id = int(cid) if cid and str(cid).strip() else None
+    if "driver_name" in data:
+        item.op_driver_name = (data.get("driver_name") or "").strip() or None
     item.total_cost = round((item.unit_cost or 0) * (item.quantity or 1), 2)
     db.session.flush()
     return item

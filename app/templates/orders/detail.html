@@ -300,6 +300,8 @@
   editDesc:    '',
   editQty:     1,
   editUnit:    '0,00',
+  editCategory: '',
+  editDriver:  '',
   editItemUrl: '',
   opItemUrl:   '',
   opItemNo:    '',
@@ -319,11 +321,13 @@
   discType:    '{{ order.discount_type or 'R$' }}',
   usarHora:    {{ 'true' if (order.delivery_datetime and (order.delivery_datetime.hour or order.delivery_datetime.minute)) else 'false' }},
   showOpSO:    {{ 'true' if (order.driver_name or order.vehicle_model or order.pickup_location or order.passenger_name) else 'false' }},
-  openEditItem(id, desc, qty, unit) {
+  openEditItem(id, desc, qty, unit, cat, driver) {
     this.editItemId  = id;
     this.editDesc    = desc;
     this.editQty     = qty;
     this.editUnit    = unit;
+    this.editCategory = cat || '';
+    this.editDriver   = driver || '';
     this.editItemUrl = '/orders/items/' + id + '/update';
     this.showEditItemModal = true;
   },
@@ -589,7 +593,9 @@
                       {{ item.id }},
                       '{{ (item.service.name if item.service else item.description or '') | replace("'", "\\'") }}',
                       {{ item.quantity }},
-                      '{{ '%.2f'|format(item.unit_price or 0)|replace('.', ',') }}'
+                      '{{ '%.2f'|format(item.unit_price or 0)|replace('.', ',') }}',
+                      '{{ item.category_id or '' }}',
+                      '{{ (item.driver_name or '') | replace("'", "\\'") }}'
                     )"
                     class="p-1.5 rounded text-sky-500 hover:bg-sky-50 dark:hover:bg-sky-900/20"
                     title="Editar item">
@@ -1313,6 +1319,25 @@
           <label class="lbl">Serviço</label>
           <p class="text-sm font-semibold text-slate-700 dark:text-slate-200 py-1.5 px-2
                     bg-slate-50 dark:bg-slate-700 rounded-lg" x-text="editDesc"></p>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="lbl">Categoria</label>
+            <select name="category_id" x-model="editCategory" class="fi text-sm">
+              <option value="">-- Sem categoria --</option>
+              {% for cat in categories %}
+              <option value="{{ cat.id }}">{{ cat.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="lbl">Motorista</label>
+            <select name="driver_name" x-model="editDriver" class="fi text-sm">
+              <option value="">-- Selecione --</option>
+              <option value="Monolíngue">Monolíngue</option>
+              <option value="Bilíngue">Bilíngue</option>
+            </select>
+          </div>
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>

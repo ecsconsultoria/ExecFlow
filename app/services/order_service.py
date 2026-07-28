@@ -580,13 +580,18 @@ def add_item(order: Order, data: dict) -> OrderItem:
 
 
 def update_item(item: OrderItem, data: dict) -> None:
-    """Atualiza quantidade e valor unitário de um item do pedido."""
+    """Atualiza quantidade, valor unitário, categoria e motorista de um item do pedido."""
     raw_qty   = data.get("quantity", "")
     raw_price = data.get("unit_price", "")
     if raw_qty:
         item.quantity = max(1, int(raw_qty))
     if raw_price:
         item.unit_price = _parse_float(raw_price)
+    if "category_id" in data:
+        cid = data.get("category_id")
+        item.category_id = int(cid) if cid and str(cid).strip() else None
+    if "driver_name" in data:
+        item.driver_name = (data.get("driver_name") or "").strip() or None
     item.total_price = round((item.unit_price or 0) * (item.quantity or 1), 2)
     order = item.order
     order.total_amount = sum(i.total_price or 0 for i in order.items)
