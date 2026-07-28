@@ -25,7 +25,7 @@
 
 {% if ftype == 'revenue' %}
 {# ── Cards para Receitas (apenas 3: Receitas, A Receber, Margem) ── #}
-<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
   <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 border-emerald-500">
     <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Receitas</p>
     <p class="text-xl font-bold text-emerald-600">{{ revenue_paid|currency }}</p>
@@ -36,16 +36,21 @@
     <p class="text-xl font-bold text-amber-600">{{ revenue_pending|currency }}</p>
     <p class="text-xs text-slate-400 mt-1">{{ period_label }}</p>
   </div>
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 border-sky-400">
+    <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Previsto</p>
+    <p class="text-xl font-bold text-sky-600">{{ forecast_revenue|currency }}</p>
+    <p class="text-xs text-slate-400 mt-1">{{ period_label }}</p>
+  </div>
   <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 {% if profit >= 0 %}border-blue-500{% else %}border-orange-500{% endif %}">
     <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Margem</p>
     <p class="text-xl font-bold {% if profit >= 0 %}text-blue-600{% else %}text-orange-600{% endif %}">{{ profit|currency }}</p>
-    <p class="text-xs text-slate-400 mt-1">Receitas – Pago Período</p>
+    <p class="text-xs text-slate-400 mt-1">{{ period_label }}</p>
   </div>
 </div>
 
 {% elif ftype == 'cost' %}
 {# ── Cards para Despesas (apenas 3: Custos, A Pagar, Margem) ── #}
-<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
   <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 border-red-400">
     <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Pago no Período</p>
     <p class="text-xl font-bold text-red-500">{{ costs_paid|currency }}</p>
@@ -56,10 +61,15 @@
     <p class="text-xl font-bold text-red-600">{{ costs_pending|currency }}</p>
     <p class="text-xs text-slate-400 mt-1">{{ period_label }}</p>
   </div>
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 border-sky-400">
+    <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Previsto</p>
+    <p class="text-xl font-bold text-sky-600">{{ forecast_costs|currency }}</p>
+    <p class="text-xs text-slate-400 mt-1">{{ period_label }}</p>
+  </div>
   <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 {% if profit >= 0 %}border-blue-500{% else %}border-orange-500{% endif %}">
     <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Margem</p>
     <p class="text-xl font-bold {% if profit >= 0 %}text-blue-600{% else %}text-orange-600{% endif %}">{{ profit|currency }}</p>
-    <p class="text-xs text-slate-400 mt-1">Receitas – Custos</p>
+    <p class="text-xs text-slate-400 mt-1">{{ period_label }}</p>
   </div>
 </div>
 
@@ -89,7 +99,7 @@
   <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 {% if profit >= 0 %}border-blue-500{% else %}border-orange-500{% endif %}">
     <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Margem (mês)</p>
     <p class="text-xl font-bold {% if profit >= 0 %}text-blue-600{% else %}text-orange-600{% endif %}">{{ profit|currency }}</p>
-    <p class="text-xs text-slate-400 mt-1">Receita – Custos</p>
+    <p class="text-xs text-slate-400 mt-1">{{ period_label }}</p>
   </div>
 </div>
 {% endif %}
@@ -103,36 +113,60 @@
        dateTo:   '{{ date_to   or p_end.isoformat()   }}',
        ftype:    '{{ ftype }}',
        fstat:    '{{ fstat }}',
+       fclient:    '{{ fclient }}',
+       fsupplier:  '{{ fsupplier }}',
        periodLabels: {
-         'this_month':  'Mês Atual',
-         'last_month':  'Mês Anterior',
-         'last_30':     'Últimos 30 dias',
-         'last_3m':     'Últimos 3 Meses',
-         'last_6m':     'Últimos 6 Meses',
-         'custom':      'Personalizado'
+         'all':          'Todos',
+         'today':        'Hoje',
+         'yesterday':    'Ontem',
+         'last_7':       'Últimos 7 dias',
+         'last_30':      'Últimos 30 dias',
+         'this_month':   'Este mês',
+         'last_month':   'Mês passado',
+         'this_quarter': 'Este trimestre',
+         'this_year':    'Este ano',
+         'custom':       'Personalizado...'
        },
        get label() { return this.periodLabels[this.period] || 'Período' },
        applyPeriod(p) {
          if (p !== 'custom') {
            window.location = '{{ url_for('financial.index') }}?period=' + p
-             + '&type=' + this.ftype + '&status=' + this.fstat;
+             + '&type=' + this.ftype + '&status=' + this.fstat
+             + '&client=' + this.fclient + '&supplier=' + this.fsupplier;
          }
        },
        applyCustom() {
          window.location = '{{ url_for('financial.index') }}?period=custom'
            + '&date_from=' + this.dateFrom
            + '&date_to='   + this.dateTo
-           + '&type=' + this.ftype + '&status=' + this.fstat;
+           + '&type=' + this.ftype + '&status=' + this.fstat
+           + '&client=' + this.fclient + '&supplier=' + this.fsupplier;
        },
        applyType(t) {
          window.location = '{{ url_for('financial.index') }}?period={{ period }}'
            + '&date_from={{ date_from }}&date_to={{ date_to }}'
-           + '&type=' + t + '&status=' + this.fstat;
+           + '&type=' + t + '&status=' + this.fstat
+           + '&client=' + this.fclient + '&supplier=' + this.fsupplier;
        },
        applyStatus(s) {
          window.location = '{{ url_for('financial.index') }}?period={{ period }}'
            + '&date_from={{ date_from }}&date_to={{ date_to }}'
-           + '&type=' + this.ftype + '&status=' + s;
+           + '&type=' + this.ftype + '&status=' + s
+           + '&client=' + this.fclient + '&supplier=' + this.fsupplier;
+       },
+       applyClient(c) {
+         this.fclient = c;
+         window.location = '{{ url_for('financial.index') }}?period={{ period }}'
+           + '&date_from={{ date_from }}&date_to={{ date_to }}'
+           + '&type=' + this.ftype + '&status=' + this.fstat
+           + '&client=' + c + '&supplier=' + this.fsupplier;
+       },
+       applySupplier(s) {
+         this.fsupplier = s;
+         window.location = '{{ url_for('financial.index') }}?period={{ period }}'
+           + '&date_from={{ date_from }}&date_to={{ date_to }}'
+           + '&type=' + this.ftype + '&status=' + this.fstat
+           + '&client=' + this.fclient + '&supplier=' + s;
        }
      }"
      @click.outside="periodOpen = false">
@@ -162,7 +196,7 @@
          style="display:none">
 
       {# Opções rápidas #}
-      {% for key, lbl in [('this_month','Mês Atual'),('last_month','Mês Anterior'),('last_30','Últimos 30 dias'),('last_3m','Últimos 3 Meses'),('last_6m','Últimos 6 Meses')] %}
+      {% for key, lbl in [('all','Todos'),('today','Hoje'),('yesterday','Ontem'),('last_7','Últimos 7 dias'),('last_30','Últimos 30 dias'),('this_month','Este mês'),('last_month','Mês passado'),('this_quarter','Este trimestre'),('this_year','Este ano')] %}
       <button @click="applyPeriod('{{ key }}')" type="button"
               class="w-full flex items-center justify-between px-4 py-2 text-sm transition-colors
                      {% if period == key %}
@@ -233,6 +267,32 @@
     {% endfor %}
   </select>
 
+  {# ── Cliente (Receitas) ── #}
+  {% if ftype in ('revenue', '') %}
+  <select @change="applyClient($event.target.value)"
+          class="border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700
+                 rounded-lg px-2.5 py-1.5 text-sm text-slate-700 dark:text-slate-200
+                 focus:outline-none focus:ring-1 focus:ring-blue-400 shadow-sm max-w-[180px]">
+    <option value="">Todos os clientes</option>
+    {% for c in clients %}
+    <option value="{{ c.id }}" {{ 'selected' if fclient == c.id|string }}>{{ c.name }}</option>
+    {% endfor %}
+  </select>
+  {% endif %}
+
+  {# ── Fornecedor (Despesas) ── #}
+  {% if ftype in ('cost', '') %}
+  <select @change="applySupplier($event.target.value)"
+          class="border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700
+                 rounded-lg px-2.5 py-1.5 text-sm text-slate-700 dark:text-slate-200
+                 focus:outline-none focus:ring-1 focus:ring-blue-400 shadow-sm max-w-[180px]">
+    <option value="">Todos os fornecedores</option>
+    {% for s in suppliers %}
+    <option value="{{ s.id }}" {{ 'selected' if fsupplier == s.id|string }}>{{ s.name }}</option>
+    {% endfor %}
+  </select>
+  {% endif %}
+
   {# ── Botão Novo ─────────────────────────────────────── #}
   <a href="{{ url_for('financial.new_record') }}"
      class="ml-auto bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium
@@ -253,6 +313,7 @@
         <th class="px-4 py-3 text-left">Cliente</th>
         <th class="px-4 py-3 text-left">Data Emissão</th>
         <th class="px-4 py-3 text-left">Vencimento</th>
+        <th class="px-4 py-3 text-center">Parcela</th>
         <th class="px-4 py-3 text-right">Valor Total</th>
         <th class="px-4 py-3 text-left hidden sm:table-cell">Forma Pagto</th>
         <th class="px-4 py-3 text-center">Status</th>
@@ -266,6 +327,7 @@
         <th class="px-4 py-3 text-left">Fornecedor</th>
         <th class="px-4 py-3 text-left">Data Emissão</th>
         <th class="px-4 py-3 text-left">Data Vecto</th>
+        <th class="px-4 py-3 text-center">Parcela</th>
         <th class="px-4 py-3 text-right">Valor</th>
         <th class="px-4 py-3 text-left hidden sm:table-cell">Forma Pagto</th>
         <th class="px-4 py-3 text-center">Status</th>
@@ -275,11 +337,13 @@
       {# ── Colunas para Todos ── #}
       {% else %}
       <tr class="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-        <th class="px-4 py-3 text-left">Data</th>
-        <th class="px-4 py-3 text-left">Tipo</th>
+        <th class="px-4 py-3 text-left">Nº</th>
+        <th class="px-4 py-3 text-left">Cliente / Fornecedor</th>
+        <th class="px-4 py-3 text-left">Data Emissão</th>
         <th class="px-4 py-3 text-left">Vencimento</th>
+        <th class="px-4 py-3 text-center">Parcela</th>
         <th class="px-4 py-3 text-right">Valor</th>
-        <th class="px-4 py-3 text-left hidden sm:table-cell">Forma Pag.</th>
+        <th class="px-4 py-3 text-left hidden sm:table-cell">Forma Pagto</th>
         <th class="px-4 py-3 text-center">Status</th>
         <th class="px-4 py-3 text-center w-28">Ações</th>
       </tr>
@@ -321,6 +385,11 @@
           {% if r.due_date %}{{ r.due_date|fdate }}{% else %}–{% endif %}
         </td>
 
+        {# Parcela #}
+        <td class="px-4 py-2.5 text-center text-xs text-slate-500">
+          {{ ref.installment or '–' }}
+        </td>
+
         {# Valor Total #}
         <td class="px-4 py-2.5 text-right font-semibold font-mono whitespace-nowrap text-emerald-600 text-xs">
           {{ r.amount|currency }}
@@ -334,8 +403,9 @@
         {# Status #}
         <td class="px-4 py-2.5 text-center">
           {% set st = r.status or 'pendente' %}
+          {% set st_label = 'Recebido' if st == 'pago' else ST_LABELS.get(st, st) %}
           <span class="text-xs px-2 py-0.5 rounded-full font-medium {{ ST_CLS.get(st, 'bg-slate-100 text-slate-500') }}">
-            {{ ST_LABELS.get(st, st) }}
+            {{ st_label }}
           </span>
         </td>
 
@@ -392,6 +462,11 @@
           {% if r.due_date %}{{ r.due_date|fdate }}{% else %}–{% endif %}
         </td>
 
+        {# Parcela #}
+        <td class="px-4 py-2.5 text-center text-xs text-slate-500">
+          {{ ref.installment or '–' }}
+        </td>
+
         {# Valor #}
         <td class="px-4 py-2.5 text-right font-semibold font-mono whitespace-nowrap text-red-500 text-xs">
           {{ r.amount|currency }}
@@ -437,31 +512,50 @@
         {# ── Colunas Todos ── #}
         {% else %}
 
-        {# Data #}
-        <td class="px-4 py-2.5 text-slate-500 whitespace-nowrap text-xs">
-          {{ (r.paid_date or r.due_date or r.created_at)|fdate }}
+        {# Nº (SO ou PO) #}
+        <td class="px-4 py-2.5">
+          {% if ref.so_number and ref.order_id %}
+          <a href="{{ url_for('orders.detail', oid=ref.order_id) }}"
+             class="font-mono font-semibold text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-200 transition-colors text-xs">
+            {{ ref.so_number }}
+          </a>
+          {% elif ref.po_number and ref.po_id %}
+          <a href="{{ url_for('purchase_orders.detail', po_id=ref.po_id) }}"
+             class="font-mono font-semibold text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-200 transition-colors text-xs">
+            {{ ref.po_number }}
+          </a>
+          {% else %}<span class="text-slate-400 text-xs">–</span>{% endif %}
         </td>
 
-        {# Tipo #}
-        <td class="px-4 py-2.5">
-          {% if r.type == 'revenue' %}
-          <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 font-medium whitespace-nowrap">
-            <i class="fa-solid fa-arrow-down-to-line text-[9px]"></i> Receita
+        {# Cliente / Fornecedor #}
+        <td class="px-4 py-2.5 text-slate-700 dark:text-slate-200 max-w-[160px]">
+          <span class="block truncate text-xs" title="{{ ref.client_name or ref.supplier_name or '' }}">
+            {% if r.type == 'revenue' %}
+            <span class="inline-flex items-center gap-1">
+              <span class="w-1 h-1 rounded-full bg-emerald-400 shrink-0"></span>{{ ref.client_name or '–' }}
+            </span>
+            {% else %}
+            <span class="inline-flex items-center gap-1">
+              <span class="w-1 h-1 rounded-full bg-red-400 shrink-0"></span>{{ ref.supplier_name or '–' }}
+            </span>
+            {% endif %}
           </span>
-          {% else %}
-          <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 font-medium whitespace-nowrap">
-            <i class="fa-solid fa-arrow-up-from-line text-[9px]"></i> Custo
-          </span>
-          {% endif %}
+        </td>
+
+        {# Data Emissão #}
+        <td class="px-4 py-2.5 text-slate-500 whitespace-nowrap text-xs">
+          {{ r.emission_date|fdate if r.emission_date else (r.paid_date|fdate if r.paid_date else (r.created_at|fdate)) }}
         </td>
 
         {# Vencimento #}
         <td class="px-4 py-2.5 whitespace-nowrap text-xs
                    {{ 'text-red-500 font-semibold' if is_overdue else 'text-slate-500' }}">
-          {% if r.due_date %}
-            {{ r.due_date|fdate }}
-            {% if is_overdue %}<i class="fa-solid fa-triangle-exclamation ml-1 text-[9px]"></i>{% endif %}
-          {% else %}–{% endif %}
+          {% if r.due_date %}{{ r.due_date|fdate }}{% else %}–{% endif %}
+        </td>
+
+        {# Parcela #}
+        <td class="px-4 py-2.5 text-center text-xs text-slate-500">
+          {{ ref.installment or '–' }}
         </td>
 
         {# Valor #}
@@ -470,7 +564,7 @@
           {{ r.amount|currency }}
         </td>
 
-        {# Forma de pagamento #}
+        {# Forma Pagto #}
         <td class="px-4 py-2.5 hidden sm:table-cell text-xs text-slate-500">
           {{ r.payment_method or '–' }}
         </td>
@@ -478,8 +572,9 @@
         {# Status #}
         <td class="px-4 py-2.5 text-center">
           {% set st = r.status or 'pendente' %}
+          {% set st_label = 'Recebido' if r.type == 'revenue' and st == 'pago' else ST_LABELS.get(st, st) %}
           <span class="text-xs px-2 py-0.5 rounded-full font-medium {{ ST_CLS.get(st, 'bg-slate-100 text-slate-500') }}">
-            {{ ST_LABELS.get(st, st) }}
+            {{ st_label }}
           </span>
         </td>
 
@@ -511,7 +606,7 @@
       </tr>
       {% else %}
       <tr>
-        <td colspan="{% if ftype in ('revenue','cost') %}8{% else %}7{% endif %}" class="px-4 py-14 text-center text-slate-400">
+        <td colspan="9" class="px-4 py-14 text-center text-slate-400">
           <i class="fa-solid fa-inbox text-3xl mb-3 block opacity-40"></i>
           Nenhum registro encontrado para os filtros selecionados.
         </td>

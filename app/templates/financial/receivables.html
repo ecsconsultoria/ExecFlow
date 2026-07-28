@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Contas a Pagar{% endblock %}
-{% block page_title %}<i class="fa-solid fa-file-invoice mr-2 text-red-500"></i>Contas a Pagar{% endblock %}
+{% block title %}Contas a Receber{% endblock %}
+{% block page_title %}<i class="fa-solid fa-hand-holding-dollar mr-2 text-emerald-500"></i>Contas a Receber{% endblock %}
 
 {% block content %}
 
-{% set ST_LABELS = {'pago':'Pago','pendente':'Pendente','vencido':'Vencido','cancelado':'Cancelado','parcial':'Parcial'} %}
+{% set ST_LABELS = {'pago':'Recebido','pendente':'Pendente','vencido':'Vencido','cancelado':'Cancelado','parcial':'Parcial'} %}
 {% set ST_CLS = {
   'pago':      'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
   'pendente':  'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
@@ -15,14 +15,14 @@
 
 {# ── Cards de resumo ─────────────────────────────────────────────────────── #}
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 border-red-400">
-    <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Pago no Período</p>
-    <p class="text-xl font-bold text-red-500">{{ paid_in_period|currency }}</p>
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 border-emerald-400">
+    <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Recebido no Período</p>
+    <p class="text-xl font-bold text-emerald-500">{{ received_in_period|currency }}</p>
     <p class="text-xs text-slate-400 mt-1">{{ period_label }}</p>
   </div>
-  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 border-red-500">
-    <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">A Pagar</p>
-    <p class="text-xl font-bold text-red-600">{{ pending_total|currency }}</p>
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 border-emerald-500">
+    <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">A Receber</p>
+    <p class="text-xl font-bold text-emerald-600">{{ pending_total|currency }}</p>
     <p class="text-xs text-slate-400 mt-1">{{ pending_count }} pendente(s)</p>
   </div>
   <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 border-orange-500">
@@ -44,7 +44,7 @@
        period: '{{ period }}',
        dateFrom: '{{ date_from or p_start.isoformat() }}',
        dateTo:   '{{ date_to   or p_end.isoformat()   }}',
-       fsupplier: '{{ fsupplier }}',
+       fclient: '{{ fclient }}',
        periodLabels: {
          'all':          'Todos',
          'today':        'Hoje',
@@ -60,21 +60,21 @@
        get label() { return this.periodLabels[this.period] || 'Período' },
        applyPeriod(p) {
          if (p !== 'custom') {
-           window.location = '{{ url_for('financial.payables') }}?period=' + p
-             + '&supplier=' + this.fsupplier;
+           window.location = '{{ url_for('financial.receivables') }}?period=' + p
+             + '&client=' + this.fclient;
          }
        },
        applyCustom() {
-         window.location = '{{ url_for('financial.payables') }}?period=custom'
+         window.location = '{{ url_for('financial.receivables') }}?period=custom'
            + '&date_from=' + this.dateFrom
            + '&date_to='   + this.dateTo
-           + '&supplier=' + this.fsupplier;
+           + '&client=' + this.fclient;
        },
-       applySupplier(s) {
-         this.fsupplier = s;
-         window.location = '{{ url_for('financial.payables') }}?period={{ period }}'
+       applyClient(c) {
+         this.fclient = c;
+         window.location = '{{ url_for('financial.receivables') }}?period={{ period }}'
            + '&date_from={{ date_from }}&date_to={{ date_to }}'
-           + '&supplier=' + s;
+           + '&client=' + c;
        }
      }"
      @click.outside="periodOpen = false">
@@ -146,14 +146,14 @@
     </div>
   </div>
 
-  {# ── Fornecedor ── #}
-  <select @change="applySupplier($event.target.value)"
+  {# ── Cliente ── #}
+  <select @change="applyClient($event.target.value)"
           class="border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700
                  rounded-lg px-2.5 py-1.5 text-sm text-slate-700 dark:text-slate-200
                  focus:outline-none focus:ring-1 focus:ring-blue-400 shadow-sm max-w-[180px]">
-    <option value="">Todos os fornecedores</option>
-    {% for s in suppliers %}
-    <option value="{{ s.id }}" {{ 'selected' if fsupplier == s.id|string }}>{{ s.name }}</option>
+    <option value="">Todos os clientes</option>
+    {% for c in clients %}
+    <option value="{{ c.id }}" {{ 'selected' if fclient == c.id|string }}>{{ c.name }}</option>
     {% endfor %}
   </select>
 
@@ -169,8 +169,8 @@
   <table class="w-full text-sm">
     <thead class="bg-slate-50 dark:bg-slate-700">
       <tr class="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-        <th class="px-4 py-3 text-left">Nº PO</th>
-        <th class="px-4 py-3 text-left">Fornecedor</th>
+        <th class="px-4 py-3 text-left">Nº SO</th>
+        <th class="px-4 py-3 text-left">Cliente</th>
         <th class="px-4 py-3 text-left">Data Emissão</th>
         <th class="px-4 py-3 text-left">Vencimento</th>
         <th class="px-4 py-3 text-center">Parcela</th>
@@ -187,19 +187,19 @@
       {% set ref = record_refs.get(r.id, {}) %}
       <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 {{ 'opacity-60' if is_paid }}">
 
-        {# Nº PO #}
+        {# Nº SO #}
         <td class="px-4 py-2.5">
-          {% if ref.po_number and ref.po_id %}
-          <a href="{{ url_for('purchase_orders.detail', po_id=ref.po_id) }}"
-             class="font-mono font-semibold text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-200 transition-colors text-xs">
-            {{ ref.po_number }}
+          {% if ref.so_number and ref.order_id %}
+          <a href="{{ url_for('orders.detail', oid=ref.order_id) }}"
+             class="font-mono font-semibold text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-200 transition-colors text-xs">
+            {{ ref.so_number }}
           </a>
           {% else %}<span class="text-slate-400 text-xs">–</span>{% endif %}
         </td>
 
-        {# Fornecedor #}
+        {# Cliente #}
         <td class="px-4 py-2.5 text-slate-700 dark:text-slate-200 max-w-[160px]">
-          <span class="block truncate text-xs" title="{{ ref.supplier_name or '' }}">{{ ref.supplier_name or '–' }}</span>
+          <span class="block truncate text-xs" title="{{ ref.client_name or '' }}">{{ ref.client_name or '–' }}</span>
         </td>
 
         {# Data Emissão #}
@@ -222,7 +222,7 @@
         </td>
 
         {# Valor #}
-        <td class="px-4 py-2.5 text-right font-semibold font-mono whitespace-nowrap text-red-500 text-xs">
+        <td class="px-4 py-2.5 text-right font-semibold font-mono whitespace-nowrap text-emerald-600 text-xs">
           {{ r.amount|currency }}
         </td>
 
@@ -245,7 +245,7 @@
             {% if not is_paid %}
             <button type="button" onclick="openBaixaFR({{ r.id }}, {{ r.amount }})"
                     class="p-1.5 rounded text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors"
-                    title="Dar baixa (registrar pagamento)">
+                    title="Dar baixa (registrar recebimento)">
               <i class="fa-solid fa-circle-check"></i>
             </button>
             {% endif %}
@@ -270,7 +270,7 @@
       <tr>
         <td colspan="9" class="px-4 py-14 text-center text-slate-400">
           <i class="fa-solid fa-inbox text-3xl mb-3 block opacity-40"></i>
-          Nenhuma conta a pagar encontrada para o período selecionado.
+          Nenhuma conta a receber encontrada para o período selecionado.
         </td>
       </tr>
       {% endfor %}
@@ -284,18 +284,18 @@
      style="display:none">
   <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-sm mx-4">
     <h3 class="text-base font-semibold text-slate-700 dark:text-slate-200 mb-5">
-      <i class="fa-solid fa-circle-check text-emerald-500 mr-2"></i>Registrar Pagamento
+      <i class="fa-solid fa-circle-check text-emerald-500 mr-2"></i>Registrar Recebimento
     </h3>
     <form id="fr-baixa-form" method="post" class="space-y-4">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div>
-        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Data do pagamento</label>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Data do recebimento</label>
         <input type="date" name="paid_date" id="fr-paid-date"
                value="{{ today.isoformat() }}"
                class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400">
       </div>
       <div>
-        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Valor pago (R$)</label>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Valor recebido (R$)</label>
         <input type="text" name="paid_amount" id="fr-paid-amount"
                class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm font-mono text-right focus:outline-none focus:ring-2 focus:ring-emerald-400">
       </div>

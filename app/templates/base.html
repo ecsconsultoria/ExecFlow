@@ -185,9 +185,9 @@
       {% if has_perm('financial.view') %}
       <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('financial.payables') }}" class="{{ s2_active if request.endpoint == 'financial.payables' else s2 }}">
         <i class="fa-solid fa-file-invoice w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Contas a Pagar</span></a>
-      <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('financial.index', type='revenue') }}" class="{{ s2_active if request.blueprint == 'financial' and request.args.get('type') == 'revenue' else s2 }}">
+      <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('financial.receivables') }}" class="{{ s2_active if request.endpoint == 'financial.receivables' else s2 }}">
         <i class="fa-solid fa-hand-holding-dollar w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Contas a Receber</span></a>
-      <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('financial.index', type='revenue') }}" class="{{ s2_active if request.blueprint == 'financial' and request.args.get('type') == 'revenue' else s2 }}">
+      <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('financial.index', type='revenue') }}" class="{{ s2_active if request.blueprint == 'financial' and request.args.get('type') == 'revenue' and request.endpoint != 'financial.receivables' else s2 }}">
         <i class="fa-solid fa-arrow-trend-up w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Receitas</span></a>
       <a @click="activeModule=null; localStorage.setItem('activeModule','')" href="{{ url_for('financial.index', type='cost') }}" class="{{ s2_active if request.blueprint == 'financial' and request.args.get('type') == 'cost' else s2 }}">
         <i class="fa-solid fa-arrow-trend-down w-5 text-center shrink-0 opacity-70"></i><span class="truncate">Despesas</span></a>
@@ -354,7 +354,7 @@
         </button>
         {% if has_perm('financial.view') %}
         <a href="{{ url_for('financial.payables') }}" @click="closeMobileMenu()" class="{{ dm_active if request.endpoint == 'financial.payables' else dm }}">Contas a Pagar</a>
-        <a href="{{ url_for('financial.index', type='revenue') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'financial' and request.args.get('type') == 'revenue' else dm }}">Contas a Receber</a>
+        <a href="{{ url_for('financial.receivables') }}" @click="closeMobileMenu()" class="{{ dm_active if request.endpoint == 'financial.receivables' else dm }}">Contas a Receber</a>
         <a href="{{ url_for('financial.index', type='revenue') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'financial' and request.args.get('type') == 'revenue' else dm }}">Receitas</a>
         <a href="{{ url_for('financial.index', type='cost') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'financial' and request.args.get('type') == 'cost' else dm }}">Despesas</a>
         <a href="{{ url_for('financial.index') }}" @click="closeMobileMenu()" class="{{ dm_active if request.blueprint == 'financial' and not request.args.get('type') else dm }}">Lançamentos</a>{% endif %}

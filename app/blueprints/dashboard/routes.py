@@ -182,7 +182,7 @@ def index():
 
     open_po_count = (PurchaseOrder.query
                      .filter_by(company_id=cid, deleted_at=None)
-                     .filter(PurchaseOrder.status.in_(["rascunho", "aberto", "aprovado", "em_execucao"]))
+                     .filter(PurchaseOrder.status.in_(["aberto", "aprovado", "em_execucao"]))
                      .count())
 
     pending_rfq_count = Quote.query.filter_by(company_id=cid, status="pendente", deleted_at=None).count()

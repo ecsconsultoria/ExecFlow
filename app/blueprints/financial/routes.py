@@ -15,12 +15,16 @@ from ...utils.audit import log_activity
 _PAYMENT_METHODS = ["PIX", "TRANSFERÊNCIA", "BOLETO", "DINHEIRO", "CARTÃO", "CHEQUE"]
 
 _PERIOD_LABELS = {
-    "this_month":  "Mês Atual",
-    "last_month":  "Mês Anterior",
-    "last_30":     "Últimos 30 dias",
-    "last_3m":     "Últimos 3 Meses",
-    "last_6m":     "Últimos 6 Meses",
-    "custom":      "Personalizado",
+    "all":          "Todos",
+    "today":        "Hoje",
+    "yesterday":    "Ontem",
+    "last_7":       "Últimos 7 dias",
+    "last_30":      "Últimos 30 dias",
+    "this_month":   "Este mês",
+    "last_month":   "Mês passado",
+    "this_quarter": "Este trimestre",
+    "this_year":    "Este ano",
+    "custom":       "Personalizado...",
 }
 
 
@@ -35,30 +39,36 @@ def _financial_period_bounds(period, date_from_str, date_to_str, today):
             last  = today
         return first, last
 
+    if period == "all":
+        return date(2000, 1, 1), date(2099, 12, 31)
+
+    if period == "today":
+        return today, today
+
+    if period == "yesterday":
+        return today - timedelta(days=1), today - timedelta(days=1)
+
+    if period == "last_7":
+        return today - timedelta(days=6), today
+
+    if period == "last_30":
+        return today - timedelta(days=29), today
+
     if period == "last_month":
         first_this = today.replace(day=1)
         last  = first_this - timedelta(days=1)
         first = last.replace(day=1)
         return first, last
 
-    if period == "last_30":
-        return today - timedelta(days=29), today
+    if period == "this_quarter":
+        q = (today.month - 1) // 3
+        first = date(today.year, q * 3 + 1, 1)
+        last_month = q * 3 + 3
+        last = date(today.year, last_month, monthrange(today.year, last_month)[1])
+        return first, last
 
-    if period == "last_3m":
-        m = today.month - 2
-        y = today.year
-        while m <= 0:
-            m += 12
-            y -= 1
-        return date(y, m, 1), today
-
-    if period == "last_6m":
-        m = today.month - 5
-        y = today.year
-        while m <= 0:
-            m += 12
-            y -= 1
-        return date(y, m, 1), today
+    if period == "this_year":
+        return date(today.year, 1, 1), today
 
     # Default: this_month
     first = today.replace(day=1)
@@ -73,13 +83,46 @@ def index():
     cid   = current_user.company_id
     today = now_br().date()
 
-    period    = request.args.get("period", "this_month")
+    period    = request.args.get("period", "all")
     date_from = request.args.get("date_from", "")
     date_to   = request.args.get("date_to",   "")
     ftype     = request.args.get("type",   "")
     fstat     = request.args.get("status", "")
+    fclient   = request.args.get("client", "")
+    fsupplier = request.args.get("supplier", "")
 
     first, last = _financial_period_bounds(period, date_from, date_to, today)
+
+    # ── Filtro por cliente (SO) ou fornecedor (PO) ──
+    allowed_refs = None  # se definido, filtra FinancialRecord.reference
+    if fclient:
+        from ...models.client import Client
+        from ...models.order import Order, OrderPayment
+        client_obj = Client.query.filter_by(
+            company_id=cid, id=int(fclient) if fclient.isdigit() else 0, deleted_at=None
+        ).first()
+        if client_obj:
+            order_ids = [o[0] for o in db.session.query(Order.id).filter_by(
+                company_id=cid, client_id=client_obj.id, deleted_at=None
+            ).all()]
+            if order_ids:
+                pmt_ids = [p[0] for p in db.session.query(OrderPayment.id).filter(
+                    OrderPayment.order_id.in_(order_ids)
+                ).all()]
+                if pmt_ids:
+                    allowed_refs = {f"order_payment:{pid}" for pid in pmt_ids}
+    if fsupplier:
+        from ...models.purchase_order import PurchaseOrder, POPayment
+        po_ids = [p[0] for p in db.session.query(PurchaseOrder.id).filter_by(
+            company_id=cid, supplier_id=int(fsupplier) if fsupplier.isdigit() else 0, deleted_at=None
+        ).all()]
+        if po_ids:
+            pmt_ids = [p[0] for p in db.session.query(POPayment.id).filter(
+                POPayment.po_id.in_(po_ids)
+            ).all()]
+            if pmt_ids:
+                po_refs = {f"po_payment:{pid}" for pid in pmt_ids}
+                allowed_refs = po_refs if allowed_refs is None else allowed_refs | po_refs
 
     # Data de referência contábil: emission_date > paid_date > date(created_at)
     ref_date = func.coalesce(
@@ -94,20 +137,26 @@ def index():
         FinancialRecord.deleted_at.is_(None),
         ref_date.between(first, last),
     ]
+    _ref_filter = [FinancialRecord.reference.in_(allowed_refs)] if allowed_refs is not None else []
+
     revenue_paid = (db.session.query(func.sum(FinancialRecord.amount))
-                    .filter(*_base_period, FinancialRecord.type == "revenue",
+                    .filter(*_base_period, *_ref_filter,
+                            FinancialRecord.type == "revenue",
                             FinancialRecord.status == "pago")
                     .scalar() or 0)
     revenue_pending = (db.session.query(func.sum(FinancialRecord.amount))
-                       .filter(*_base_period, FinancialRecord.type == "revenue",
+                       .filter(*_base_period, *_ref_filter,
+                               FinancialRecord.type == "revenue",
                                FinancialRecord.status == "pendente")
                        .scalar() or 0)
     costs_paid = (db.session.query(func.sum(FinancialRecord.amount))
-                  .filter(*_base_period, FinancialRecord.type == "cost",
+                  .filter(*_base_period, *_ref_filter,
+                          FinancialRecord.type == "cost",
                           FinancialRecord.status == "pago")
                   .scalar() or 0)
     costs_pending = (db.session.query(func.sum(FinancialRecord.amount))
-                     .filter(*_base_period, FinancialRecord.type == "cost",
+                     .filter(*_base_period, *_ref_filter,
+                             FinancialRecord.type == "cost",
                              FinancialRecord.status == "pendente")
                      .scalar() or 0)
 
@@ -118,13 +167,15 @@ def index():
                        .filter(FinancialRecord.company_id == cid,
                                FinancialRecord.type == "revenue",
                                FinancialRecord.deleted_at.is_(None),
-                               FinancialRecord.status == "pendente")
+                               FinancialRecord.status == "pendente",
+                               *_ref_filter)
                        .scalar() or 0)
     pending_costs = (db.session.query(func.sum(FinancialRecord.amount))
                      .filter(FinancialRecord.company_id == cid,
                              FinancialRecord.type == "cost",
                              FinancialRecord.deleted_at.is_(None),
-                             FinancialRecord.status == "pendente")
+                             FinancialRecord.status == "pendente",
+                             *_ref_filter)
                      .scalar() or 0)
 
     # Registros filtrados pelo período + tipo + status
@@ -136,6 +187,8 @@ def index():
         q = q.filter(FinancialRecord.type == ftype)
     if fstat:
         q = q.filter(FinancialRecord.status == fstat)
+    if allowed_refs is not None:
+        q = q.filter(FinancialRecord.reference.in_(allowed_refs))
     records = q.order_by(FinancialRecord.created_at.desc()).limit(500).all()
 
     # Resolve SO number + client name from reference (e.g. "order_payment:42")
@@ -150,25 +203,34 @@ def index():
                     pass
         if pmt_ids:
             from ...models.order import OrderPayment, Order
-            pmt_rows = (db.session.query(OrderPayment.id, OrderPayment.order_id, OrderPayment.amount)
+            from sqlalchemy import func as sa_func
+            pmt_rows = (db.session.query(OrderPayment.id, OrderPayment.order_id, OrderPayment.installment_no)
                         .filter(OrderPayment.id.in_(pmt_ids)).all())
-            pmt_map = {p.id: p.order_id for p in pmt_rows}
-            order_ids = list(set(pmt_map.values()))
+            pmt_map = {p.id: (p.order_id, p.installment_no) for p in pmt_rows}
+            order_ids = list(set(oid for oid, _ in pmt_map.values()))
             if order_ids:
                 order_rows = (db.session.query(Order.id, Order.number, Order.client_name)
                               .filter(Order.id.in_(order_ids)).all())
                 order_map = {o.id: (o.number, o.client_name) for o in order_rows}
+                # Conta total de parcelas por SO
+                total_pmts = dict(db.session.query(
+                    OrderPayment.order_id, sa_func.count(OrderPayment.id)
+                ).filter(OrderPayment.order_id.in_(order_ids)).group_by(OrderPayment.order_id).all())
                 for r in records:
                     if r.reference and r.reference.startswith("order_payment:"):
                         try:
                             pid = int(r.reference.split(":")[1])
-                            oid = pmt_map.get(pid)
-                            if oid and oid in order_map:
-                                record_refs[r.id] = {
-                                    "order_id": oid,
-                                    "so_number": order_map[oid][0],
-                                    "client_name": order_map[oid][1],
-                                }
+                            entry = pmt_map.get(pid)
+                            if entry:
+                                oid, inst_no = entry
+                                if oid and oid in order_map:
+                                    tot = total_pmts.get(oid, 1)
+                                    record_refs[r.id] = {
+                                        "order_id": oid,
+                                        "so_number": order_map[oid][0],
+                                        "client_name": order_map[oid][1],
+                                        "installment": f"{inst_no}/{tot}" if tot > 1 else "",
+                                    }
                         except (ValueError, IndexError):
                             pass
 
@@ -183,10 +245,11 @@ def index():
                     pass
         if po_pmt_ids:
             from ...models.purchase_order import POPayment, PurchaseOrder
-            po_pmt_rows = (db.session.query(POPayment.id, POPayment.po_id, POPayment.amount)
+            from sqlalchemy import func as sa_func2
+            po_pmt_rows = (db.session.query(POPayment.id, POPayment.po_id, POPayment.installment_no)
                            .filter(POPayment.id.in_(po_pmt_ids)).all())
-            po_pmt_map = {p.id: p.po_id for p in po_pmt_rows}
-            po_ids = list(set(po_pmt_map.values()))
+            po_pmt_map = {p.id: (p.po_id, p.installment_no) for p in po_pmt_rows}
+            po_ids = list(set(po_id for po_id, _ in po_pmt_map.values()))
             if po_ids:
                 po_rows = (db.session.query(PurchaseOrder.id, PurchaseOrder.number, PurchaseOrder.supplier_id)
                            .filter(PurchaseOrder.id.in_(po_ids)).all())
@@ -197,28 +260,119 @@ def index():
                     sup_rows = (db.session.query(Supplier.id, Supplier.name)
                                 .filter(Supplier.id.in_(supplier_ids)).all())
                     supplier_map = {s.id: s.name for s in sup_rows}
+                # Conta total de parcelas por PO
+                total_po_pmts = dict(db.session.query(
+                    POPayment.po_id, sa_func2.count(POPayment.id)
+                ).filter(POPayment.po_id.in_(po_ids)).group_by(POPayment.po_id).all())
                 for r in records:
                     if r.reference and r.reference.startswith("po_payment:"):
                         try:
                             pid = int(r.reference.split(":")[1])
-                            po_id = po_pmt_map.get(pid)
-                            if po_id:
+                            entry = po_pmt_map.get(pid)
+                            if entry:
+                                po_id, inst_no = entry
                                 po_row = next((p for p in po_rows if p.id == po_id), None)
                                 if po_row:
+                                    tot = total_po_pmts.get(po_id, 1)
                                     record_refs[r.id] = {
                                         "po_id": po_id,
                                         "po_number": po_row.number,
                                         "supplier_name": supplier_map.get(po_row.supplier_id, ""),
+                                        "installment": f"{inst_no}/{tot}" if tot > 1 else "",
                                     }
+                        except (ValueError, IndexError):
+                            pass
+
+    # ── Previsto (pendentes NÃO faturados) ──
+    forecast_revenue = 0.0
+    forecast_costs = 0.0
+    # SO: pendentes de SOs não faturados/concluídos (filtrado por período)
+    pending_rev_records = (FinancialRecord.query
+                           .filter(FinancialRecord.company_id == cid,
+                                   FinancialRecord.type == "revenue",
+                                   FinancialRecord.status == "pendente",
+                                   FinancialRecord.deleted_at.is_(None),
+                                   ref_date.between(first, last),
+                                   *_ref_filter)
+                           .all())
+    if pending_rev_records:
+        rev_pmt_ids = []
+        for r in pending_rev_records:
+            if r.reference and r.reference.startswith("order_payment:"):
+                try:
+                    rev_pmt_ids.append(int(r.reference.split(":")[1]))
+                except (ValueError, IndexError):
+                    pass
+        if rev_pmt_ids:
+            from ...models.order import OrderPayment, Order
+            rev_orders = dict(db.session.query(OrderPayment.id, OrderPayment.order_id)
+                              .filter(OrderPayment.id.in_(rev_pmt_ids)).all())
+            rev_order_ids = set(rev_orders.values())
+            if rev_order_ids:
+                non_invoiced = set(db.session.query(Order.id)
+                                   .filter(Order.id.in_(rev_order_ids),
+                                           Order.status.notin_(['faturado', 'concluido']))
+                                   .all())
+                non_invoiced = {o[0] for o in non_invoiced}
+                for r in pending_rev_records:
+                    if r.reference and r.reference.startswith("order_payment:"):
+                        try:
+                            pid = int(r.reference.split(":")[1])
+                            oid = rev_orders.get(pid)
+                            if oid and oid in non_invoiced:
+                                forecast_revenue += r.amount or 0
+                        except (ValueError, IndexError):
+                            pass
+    # PO: pendentes de POs não faturados/concluídos (filtrado por período)
+    pending_cost_records = (FinancialRecord.query
+                            .filter(FinancialRecord.company_id == cid,
+                                    FinancialRecord.type == "cost",
+                                    FinancialRecord.status == "pendente",
+                                    FinancialRecord.deleted_at.is_(None),
+                                    ref_date.between(first, last),
+                                    *_ref_filter)
+                            .all())
+    if pending_cost_records:
+        cost_pmt_ids = []
+        for r in pending_cost_records:
+            if r.reference and r.reference.startswith("po_payment:"):
+                try:
+                    cost_pmt_ids.append(int(r.reference.split(":")[1]))
+                except (ValueError, IndexError):
+                    pass
+        if cost_pmt_ids:
+            from ...models.purchase_order import POPayment, PurchaseOrder
+            cost_orders = dict(db.session.query(POPayment.id, POPayment.po_id)
+                               .filter(POPayment.id.in_(cost_pmt_ids)).all())
+            cost_po_ids = set(cost_orders.values())
+            if cost_po_ids:
+                non_invoiced_po = set(db.session.query(PurchaseOrder.id)
+                                      .filter(PurchaseOrder.id.in_(cost_po_ids),
+                                              PurchaseOrder.status.notin_(['faturado', 'concluido', 'pago']))
+                                      .all())
+                non_invoiced_po = {o[0] for o in non_invoiced_po}
+                for r in pending_cost_records:
+                    if r.reference and r.reference.startswith("po_payment:"):
+                        try:
+                            pid = int(r.reference.split(":")[1])
+                            po_id = cost_orders.get(pid)
+                            if po_id and po_id in non_invoiced_po:
+                                forecast_costs += r.amount or 0
                         except (ValueError, IndexError):
                             pass
 
     pending_ar = (AccountReceivable.query.filter_by(company_id=cid, status="pendente")
                   .order_by(AccountReceivable.due_date.asc()).all())
 
-    period_label = _PERIOD_LABELS.get(period, "Mês Atual")
+    period_label = _PERIOD_LABELS.get(period, "Todos")
     if period == "custom" and date_from and date_to:
         period_label = f"{date_from} a {date_to}"
+
+    # Listas para dropdowns de cliente/fornecedor
+    from ...models.client import Client as ClientModel
+    from ...models.supplier import Supplier as SupplierModel
+    clients = ClientModel.query.filter_by(company_id=cid, deleted_at=None).order_by(ClientModel.name).all()
+    suppliers = SupplierModel.query.filter_by(company_id=cid, deleted_at=None, is_active=True).order_by(SupplierModel.name).all()
 
     return render_template(
         "financial/index.html",
@@ -227,11 +381,13 @@ def index():
         pending_revenue=pending_revenue, pending_costs=pending_costs,
         revenue_paid=revenue_paid, revenue_pending=revenue_pending,
         costs_paid=costs_paid, costs_pending=costs_pending,
+        forecast_revenue=forecast_revenue, forecast_costs=forecast_costs,
         period=period, date_from=date_from, date_to=date_to,
         p_start=first, p_end=last,
         period_label=period_label,
         period_labels=_PERIOD_LABELS,
-        ftype=ftype, fstat=fstat,
+        ftype=ftype, fstat=fstat, fclient=fclient, fsupplier=fsupplier,
+        clients=clients, suppliers=suppliers,
         today=today,
         payment_methods=_PAYMENT_METHODS,
     )
@@ -422,11 +578,26 @@ def payables():
     cid   = current_user.company_id
     today = now_br().date()
 
-    period    = request.args.get("period", "this_month")
+    period    = request.args.get("period", "all")
     date_from = request.args.get("date_from", "")
     date_to   = request.args.get("date_to",   "")
+    fsupplier = request.args.get("supplier", "")
 
     first, last = _financial_period_bounds(period, date_from, date_to, today)
+
+    # ── Filtro por fornecedor ──
+    allowed_refs = None
+    if fsupplier:
+        from ...models.purchase_order import PurchaseOrder, POPayment
+        po_ids = [p[0] for p in db.session.query(PurchaseOrder.id).filter_by(
+            company_id=cid, supplier_id=int(fsupplier) if fsupplier.isdigit() else 0, deleted_at=None
+        ).all()]
+        if po_ids:
+            pmt_ids = [p[0] for p in db.session.query(POPayment.id).filter(
+                POPayment.po_id.in_(po_ids)
+            ).all()]
+            if pmt_ids:
+                allowed_refs = {f"po_payment:{pid}" for pid in pmt_ids}
 
     ref_date = func.coalesce(
         FinancialRecord.emission_date,
@@ -440,49 +611,102 @@ def payables():
         FinancialRecord.type == "cost",
         FinancialRecord.deleted_at.is_(None),
     ]
+    _ref_filter = [FinancialRecord.reference.in_(allowed_refs)] if allowed_refs is not None else []
 
     # Totais do período
     paid_in_period = (db.session.query(func.sum(FinancialRecord.amount))
-                      .filter(*_base, FinancialRecord.status == "pago",
+                      .filter(*_base, *_ref_filter, FinancialRecord.status == "pago",
                               ref_date.between(first, last))
                       .scalar() or 0)
 
     pending_total = (db.session.query(func.sum(FinancialRecord.amount))
-                     .filter(*_base, FinancialRecord.status == "pendente")
+                     .filter(*_base, *_ref_filter, FinancialRecord.status == "pendente")
                      .scalar() or 0)
 
     overdue_total = (db.session.query(func.sum(FinancialRecord.amount))
-                     .filter(*_base, FinancialRecord.status == "pendente",
+                     .filter(*_base, *_ref_filter, FinancialRecord.status == "pendente",
                              FinancialRecord.due_date.isnot(None),
                              FinancialRecord.due_date < today)
                      .scalar() or 0)
 
     # Contagem
     pending_count = (FinancialRecord.query
-                     .filter(*_base, FinancialRecord.status == "pendente")
+                     .filter(*_base, *_ref_filter, FinancialRecord.status == "pendente")
                      .count())
 
     overdue_count = (FinancialRecord.query
-                     .filter(*_base, FinancialRecord.status == "pendente",
+                     .filter(*_base, *_ref_filter, FinancialRecord.status == "pendente",
                              FinancialRecord.due_date.isnot(None),
                              FinancialRecord.due_date < today)
                      .count())
 
     # Lista de registros do período
     records = (FinancialRecord.query
-               .filter(*_base)
+               .filter(*_base, *_ref_filter)
                .filter(ref_date.between(first, last))
                .order_by(FinancialRecord.due_date.asc(),
                          FinancialRecord.created_at.desc())
                .limit(500).all())
 
-    period_label = _PERIOD_LABELS.get(period, "Mês Atual")
+    # Resolve PO number + supplier name from reference
+    record_refs = {}
+    if records:
+        po_pmt_ids = []
+        for r in records:
+            if r.reference and r.reference.startswith("po_payment:"):
+                try:
+                    po_pmt_ids.append(int(r.reference.split(":")[1]))
+                except (ValueError, IndexError):
+                    pass
+        if po_pmt_ids:
+            from ...models.purchase_order import POPayment, PurchaseOrder
+            from ...models.supplier import Supplier
+            from sqlalchemy import func as sa_func3
+            po_pmt_rows = (db.session.query(POPayment.id, POPayment.po_id, POPayment.installment_no)
+                           .filter(POPayment.id.in_(po_pmt_ids)).all())
+            po_pmt_map = {p.id: (p.po_id, p.installment_no) for p in po_pmt_rows}
+            po_ids = list(set(po_id for po_id, _ in po_pmt_map.values()))
+            if po_ids:
+                po_rows = (db.session.query(PurchaseOrder.id, PurchaseOrder.number, PurchaseOrder.supplier_id)
+                           .filter(PurchaseOrder.id.in_(po_ids)).all())
+                supplier_ids = [p.supplier_id for p in po_rows if p.supplier_id]
+                supplier_map = {}
+                if supplier_ids:
+                    sup_rows = (db.session.query(Supplier.id, Supplier.name)
+                                .filter(Supplier.id.in_(supplier_ids)).all())
+                    supplier_map = {s.id: s.name for s in sup_rows}
+                total_po_pmts = dict(db.session.query(
+                    POPayment.po_id, sa_func3.count(POPayment.id)
+                ).filter(POPayment.po_id.in_(po_ids)).group_by(POPayment.po_id).all())
+                for r in records:
+                    if r.reference and r.reference.startswith("po_payment:"):
+                        try:
+                            pid = int(r.reference.split(":")[1])
+                            entry = po_pmt_map.get(pid)
+                            if entry:
+                                po_id, inst_no = entry
+                                po_row = next((p for p in po_rows if p.id == po_id), None)
+                                if po_row:
+                                    tot = total_po_pmts.get(po_id, 1)
+                                    record_refs[r.id] = {
+                                        "po_id": po_id,
+                                        "po_number": po_row.number,
+                                        "supplier_name": supplier_map.get(po_row.supplier_id, ""),
+                                        "installment": f"{inst_no}/{tot}" if tot > 1 else "",
+                                    }
+                        except (ValueError, IndexError):
+                            pass
+
+    period_label = _PERIOD_LABELS.get(period, "Todos")
     if period == "custom" and date_from and date_to:
         period_label = f"{date_from} a {date_to}"
 
+    from ...models.supplier import Supplier as SupplierModel
+    suppliers = SupplierModel.query.filter_by(company_id=cid, deleted_at=None, is_active=True).order_by(SupplierModel.name).all()
+
     return render_template(
         "financial/payables.html",
-        records=records,
+        records=records, record_refs=record_refs,
         paid_in_period=paid_in_period,
         pending_total=pending_total,
         overdue_total=overdue_total,
@@ -494,4 +718,151 @@ def payables():
         period_labels=_PERIOD_LABELS,
         today=today,
         payment_methods=_PAYMENT_METHODS,
+        suppliers=suppliers, fsupplier=fsupplier,
+    )
+
+
+@financial_bp.route("/receivables")
+@login_required
+@require_permission("financial.view")
+def receivables():
+    """Painel de Contas a Receber — extrato de receitas com período e cliente."""
+    cid   = current_user.company_id
+    today = now_br().date()
+
+    period    = request.args.get("period", "all")
+    date_from = request.args.get("date_from", "")
+    date_to   = request.args.get("date_to",   "")
+    fclient   = request.args.get("client", "")
+
+    first, last = _financial_period_bounds(period, date_from, date_to, today)
+
+    # ── Filtro por cliente ──
+    allowed_refs = None
+    if fclient:
+        from ...models.client import Client
+        from ...models.order import Order, OrderPayment
+        client_obj = Client.query.filter_by(
+            company_id=cid, id=int(fclient) if fclient.isdigit() else 0, deleted_at=None
+        ).first()
+        if client_obj:
+            order_ids = [o[0] for o in db.session.query(Order.id).filter_by(
+                company_id=cid, client_id=client_obj.id, deleted_at=None
+            ).all()]
+            if order_ids:
+                pmt_ids = [p[0] for p in db.session.query(OrderPayment.id).filter(
+                    OrderPayment.order_id.in_(order_ids)
+                ).all()]
+                if pmt_ids:
+                    allowed_refs = {f"order_payment:{pid}" for pid in pmt_ids}
+
+    ref_date = func.coalesce(
+        FinancialRecord.emission_date,
+        FinancialRecord.paid_date,
+        func.date(FinancialRecord.created_at),
+    )
+
+    _base = [
+        FinancialRecord.company_id == cid,
+        FinancialRecord.type == "revenue",
+        FinancialRecord.deleted_at.is_(None),
+    ]
+    _ref_filter = [FinancialRecord.reference.in_(allowed_refs)] if allowed_refs is not None else []
+
+    # Totais do período
+    received_in_period = (db.session.query(func.sum(FinancialRecord.amount))
+                          .filter(*_base, *_ref_filter, FinancialRecord.status == "pago",
+                                  ref_date.between(first, last))
+                          .scalar() or 0)
+
+    pending_total = (db.session.query(func.sum(FinancialRecord.amount))
+                     .filter(*_base, *_ref_filter, FinancialRecord.status == "pendente")
+                     .scalar() or 0)
+
+    overdue_total = (db.session.query(func.sum(FinancialRecord.amount))
+                     .filter(*_base, *_ref_filter, FinancialRecord.status == "pendente",
+                             FinancialRecord.due_date.isnot(None),
+                             FinancialRecord.due_date < today)
+                     .scalar() or 0)
+
+    pending_count = (FinancialRecord.query
+                     .filter(*_base, *_ref_filter, FinancialRecord.status == "pendente")
+                     .count())
+    overdue_count = (FinancialRecord.query
+                     .filter(*_base, *_ref_filter, FinancialRecord.status == "pendente",
+                             FinancialRecord.due_date.isnot(None),
+                             FinancialRecord.due_date < today)
+                     .count())
+
+    records = (FinancialRecord.query
+               .filter(*_base, *_ref_filter)
+               .filter(ref_date.between(first, last))
+               .order_by(FinancialRecord.due_date.asc(),
+                         FinancialRecord.created_at.desc())
+               .limit(500).all())
+
+    # Resolve SO number + client name from reference
+    record_refs = {}
+    if records:
+        pmt_ids = []
+        for r in records:
+            if r.reference and r.reference.startswith("order_payment:"):
+                try:
+                    pmt_ids.append(int(r.reference.split(":")[1]))
+                except (ValueError, IndexError):
+                    pass
+        if pmt_ids:
+            from ...models.order import OrderPayment, Order
+            from sqlalchemy import func as sa_func4
+            pmt_rows = (db.session.query(OrderPayment.id, OrderPayment.order_id, OrderPayment.installment_no)
+                        .filter(OrderPayment.id.in_(pmt_ids)).all())
+            pmt_map = {p.id: (p.order_id, p.installment_no) for p in pmt_rows}
+            order_ids = list(set(oid for oid, _ in pmt_map.values()))
+            if order_ids:
+                order_rows = (db.session.query(Order.id, Order.number, Order.client_name)
+                              .filter(Order.id.in_(order_ids)).all())
+                order_map = {o.id: (o.number, o.client_name) for o in order_rows}
+                total_pmts = dict(db.session.query(
+                    OrderPayment.order_id, sa_func4.count(OrderPayment.id)
+                ).filter(OrderPayment.order_id.in_(order_ids)).group_by(OrderPayment.order_id).all())
+                for r in records:
+                    if r.reference and r.reference.startswith("order_payment:"):
+                        try:
+                            pid = int(r.reference.split(":")[1])
+                            entry = pmt_map.get(pid)
+                            if entry:
+                                oid, inst_no = entry
+                                if oid and oid in order_map:
+                                    tot = total_pmts.get(oid, 1)
+                                    record_refs[r.id] = {
+                                        "order_id": oid,
+                                        "so_number": order_map[oid][0],
+                                        "client_name": order_map[oid][1],
+                                        "installment": f"{inst_no}/{tot}" if tot > 1 else "",
+                                    }
+                        except (ValueError, IndexError):
+                            pass
+
+    period_label = _PERIOD_LABELS.get(period, "Todos")
+    if period == "custom" and date_from and date_to:
+        period_label = f"{date_from} a {date_to}"
+
+    from ...models.client import Client as ClientModel
+    clients = ClientModel.query.filter_by(company_id=cid, deleted_at=None).order_by(ClientModel.name).all()
+
+    return render_template(
+        "financial/receivables.html",
+        records=records, record_refs=record_refs,
+        received_in_period=received_in_period,
+        pending_total=pending_total,
+        overdue_total=overdue_total,
+        pending_count=pending_count,
+        overdue_count=overdue_count,
+        period=period, date_from=date_from, date_to=date_to,
+        p_start=first, p_end=last,
+        period_label=period_label,
+        period_labels=_PERIOD_LABELS,
+        today=today,
+        payment_methods=_PAYMENT_METHODS,
+        clients=clients, fclient=fclient,
     )
