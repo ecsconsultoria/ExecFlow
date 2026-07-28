@@ -1,29 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Sales Orders{% endblock %}
-{% block page_title %}<i class="fa-solid fa-bag-shopping mr-2 text-teal-500"></i>Sales Orders (SO){% endblock %}
+{% block page_title %}<i class="fa-solid fa-bag-shopping mr-2 text-teal-500"></i>Sales Orders (SO) <span class="text-xs text-slate-400 font-normal hidden sm:inline">· Gerencie e acompanhe todos os pedidos de venda</span>{% endblock %}
 
 {% block content %}
-
-{# ── Page header ── #}
-<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-  <div>
-    <h2 class="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">Sales Orders</h2>
-    <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Gerencie e acompanhe todos os pedidos de venda</p>
-  </div>
-  <div class="flex items-center gap-2">
-  <a href="{{ url_for('orders.export_csv', status=status, q=q) }}"
-     class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all whitespace-nowrap"
-     title="Exportar para Excel (CSV)">
-    <i class="fa-solid fa-file-excel"></i> Exportar
-  </a>
-  {% if has_perm('so.create') %}
-  <a href="{{ url_for('orders.new') }}"
-     class="inline-flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all whitespace-nowrap">
-    <i class="fa-solid fa-plus"></i> Novo SO
-  </a>
-  {% endif %}
-  </div>
-</div>
 
 {# ── Filtros ── #}
 <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm mb-4"
@@ -31,7 +10,7 @@
   <button type="button" @click="open = !open"
           class="w-full flex items-center justify-between px-5 py-3.5 text-left">
     <span class="flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
-      <i class="fa-solid fa-sliders text-slate-400 text-xs"></i> Filtros
+      <i class="fa-solid fa-sliders text-slate-400 text-xs"></i>
     </span>
     <i class="fa-solid fa-chevron-down text-slate-400 text-xs transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
   </button>
@@ -55,6 +34,18 @@
       <button class="inline-flex items-center gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg px-4 py-2 text-sm font-semibold transition-colors">
         <i class="fa-solid fa-magnifying-glass text-xs"></i> Aplicar
       </button>
+      <a href="{{ url_for('orders.export_csv', status=status, q=q) }}"
+         class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors"
+         title="Exportar Excel">
+        <i class="fa-solid fa-file-excel text-sm"></i>
+      </a>
+      {% if has_perm('so.create') %}
+      <a href="{{ url_for('orders.new') }}"
+         class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-teal-600 hover:bg-teal-700 text-white transition-colors"
+         title="Novo Sales Order">
+        <i class="fa-solid fa-plus"></i>
+      </a>
+      {% endif %}
     </form>
   </div>
 </div>
