@@ -206,7 +206,24 @@
            x-transition:leave="transition ease-in duration-150"
            x-transition:leave-start="opacity-100 translate-y-0"
            x-transition:leave-end="opacity-0 -translate-y-1"
-           class="absolute right-0 top-full mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 py-3 px-4 w-[calc(100vw-2rem)] max-w-[730px] max-h-[70vh] overflow-y-auto">
+           class="fixed left-1/2 -translate-x-1/2 top-16 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-600 z-[99] py-4 px-5 w-[94vw] max-w-[1400px] overflow-y-auto" style="max-height:calc(100vh - 5rem)">
+        {# ── Vínculos (topo) ── #}
+        {% if order.quote %}
+        <div class="mb-2">
+          <p class="lbl">RFQ Vinculada</p>
+          <a href="{{ url_for('quotes.detail', qid=order.quote_id) }}"
+             class="text-xs font-mono text-violet-600 hover:underline">{{ order.quote.number }}</a>
+        </div>
+        {% endif %}
+        {% if order.purchase_orders %}
+        <div class="mb-3 pb-3 border-b border-slate-100 dark:border-slate-700">
+          <p class="lbl">PO(s) Gerada(s)</p>
+          {% for po in order.purchase_orders %}
+          <a href="{{ url_for('purchase_orders.detail', po_id=po.id) }}"
+             class="block text-xs font-mono text-teal-600 hover:underline">{{ po.number }}</a>
+          {% endfor %}
+        </div>
+        {% endif %}
         {% if audit_logs %}
         <ol class="relative border-l border-slate-200 dark:border-slate-600 ml-2 space-y-3">
           {% for log in audit_logs %}
@@ -249,22 +266,6 @@
           </div>
           {% endif %}
         </dl>
-        {% endif %}
-        {% if order.quote %}
-        <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700">
-          <p class="lbl">RFQ Vinculada</p>
-          <a href="{{ url_for('quotes.detail', qid=order.quote_id) }}"
-             class="text-xs font-mono text-teal-600 hover:underline">{{ order.quote.number }}</a>
-        </div>
-        {% endif %}
-        {% if order.purchase_orders %}
-        <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700">
-          <p class="lbl">PO(s) Gerada(s)</p>
-          {% for po in order.purchase_orders %}
-          <a href="{{ url_for('purchase_orders.detail', po_id=po.id) }}"
-             class="block text-xs font-mono text-violet-600 hover:underline">{{ po.number }}</a>
-          {% endfor %}
-        </div>
         {% endif %}
         {% if order.cancel_reason %}
         <div class="mt-2 p-2 bg-red-50 dark:bg-red-900/20 rounded text-xs text-red-600">
