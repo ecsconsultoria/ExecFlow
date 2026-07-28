@@ -104,9 +104,20 @@ def add():
         db.session.add(svc)
         db.session.flush()
 
-    if ServicePricing.query.filter_by(service_id=svc.id, category_id=category_id,
-                                      driver_type=driver_type).first():
-        flash("Já existe um registro para esse serviço/veículo/motorista.", "warning")
+    existing = ServicePricing.query.filter_by(
+        service_id=svc.id, category_id=category_id, driver_type=driver_type
+    ).first()
+
+    if existing:
+        if existing.is_active:
+            flash("Já existe um registro para esse serviço/veículo/motorista.", "warning")
+            return redirect(url_for("services.index"))
+        # Reativa precificação inativa em vez de bloquear
+        existing.is_active  = True
+        existing.price_cost = price_cost
+        existing.price_base = price_base
+        db.session.commit()
+        flash("Serviço reativado com sucesso.", "success")
         return redirect(url_for("services.index"))
 
     db.session.add(ServicePricing(service_id=svc.id, category_id=category_id,
