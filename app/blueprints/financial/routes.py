@@ -139,7 +139,7 @@ def index():
     records = q.order_by(FinancialRecord.created_at.desc()).limit(500).all()
 
     # Resolve SO number + client name from reference (e.g. "order_payment:42")
-    record_refs = {}  # record_id -> {so_number, client_name}
+    record_refs = {}  # record_id -> {so_number, client_name, order_id}
     if ftype in ("revenue", ""):
         pmt_ids = []
         for r in records:
@@ -169,6 +169,47 @@ def index():
                                     "so_number": order_map[oid][0],
                                     "client_name": order_map[oid][1],
                                 }
+                        except (ValueError, IndexError):
+                            pass
+
+    # Resolve PO number + supplier name from reference (e.g. "po_payment:42")
+    if ftype in ("cost", ""):
+        po_pmt_ids = []
+        for r in records:
+            if r.reference and r.reference.startswith("po_payment:"):
+                try:
+                    po_pmt_ids.append(int(r.reference.split(":")[1]))
+                except (ValueError, IndexError):
+                    pass
+        if po_pmt_ids:
+            from ...models.purchase_order import POPayment, PurchaseOrder
+            po_pmt_rows = (db.session.query(POPayment.id, POPayment.po_id, POPayment.amount)
+                           .filter(POPayment.id.in_(po_pmt_ids)).all())
+            po_pmt_map = {p.id: p.po_id for p in po_pmt_rows}
+            po_ids = list(set(po_pmt_map.values()))
+            if po_ids:
+                po_rows = (db.session.query(PurchaseOrder.id, PurchaseOrder.number, PurchaseOrder.supplier_id)
+                           .filter(PurchaseOrder.id.in_(po_ids)).all())
+                supplier_ids = [p.supplier_id for p in po_rows if p.supplier_id]
+                supplier_map = {}
+                if supplier_ids:
+                    from ...models.supplier import Supplier
+                    sup_rows = (db.session.query(Supplier.id, Supplier.name)
+                                .filter(Supplier.id.in_(supplier_ids)).all())
+                    supplier_map = {s.id: s.name for s in sup_rows}
+                for r in records:
+                    if r.reference and r.reference.startswith("po_payment:"):
+                        try:
+                            pid = int(r.reference.split(":")[1])
+                            po_id = po_pmt_map.get(pid)
+                            if po_id:
+                                po_row = next((p for p in po_rows if p.id == po_id), None)
+                                if po_row:
+                                    record_refs[r.id] = {
+                                        "po_id": po_id,
+                                        "po_number": po_row.number,
+                                        "supplier_name": supplier_map.get(po_row.supplier_id, ""),
+                                    }
                         except (ValueError, IndexError):
                             pass
 
