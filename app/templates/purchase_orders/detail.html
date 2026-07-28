@@ -246,7 +246,7 @@
            x-transition:leave="transition ease-in duration-150"
            x-transition:leave-start="opacity-100 translate-y-0"
            x-transition:leave-end="opacity-0 -translate-y-1"
-           class="fixed left-1/2 -translate-x-1/2 top-16 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-600 z-[99] py-4 px-5 w-[94vw] max-w-[1400px] overflow-y-auto" style="max-height:calc(100vh - 5rem)">
+           class="fixed left-1/2 -translate-x-1/2 top-16 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-600 z-[99] py-4 px-5 w-[1100px] max-w-[calc(100vw-2rem)] overflow-y-auto" style="max-height:calc(100vh - 5rem)">
         {# ── Vínculos (topo) ── #}
         {% if po and po.order %}
         <div class="mb-3 pb-3 border-b border-slate-100 dark:border-slate-700">
@@ -304,13 +304,6 @@
         </dl>
         {% else %}
         <p class="text-xs text-slate-400 leading-relaxed">O número da PO será gerado automaticamente após salvar.</p>
-        {% endif %}
-        {% if po and po.order %}
-        <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700">
-          <p class="lbl">SO Vinculado</p>
-          <a href="{{ url_for('orders.detail', oid=po.order.id) }}"
-             class="text-xs font-mono text-teal-600 hover:underline">{{ po.order.number }}</a>
-        </div>
         {% endif %}
         {% if linked_order and not po %}
         <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700">
