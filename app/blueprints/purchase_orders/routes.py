@@ -55,9 +55,10 @@ def index():
         # Exclui rascunhos não salvos e POs excluídas da listagem padrão
         query = query.filter(PurchaseOrder.status.notin_(["excluido", "rascunho"]))
     if q:
-        query = query.filter(
+        from ...models.supplier import Supplier
+        query = query.outerjoin(Supplier, PurchaseOrder.supplier_id == Supplier.id).filter(
             PurchaseOrder.number.ilike(f"%{q}%") |
-            PurchaseOrder.passenger_name.ilike(f"%{q}%")
+            Supplier.name.ilike(f"%{q}%")
         )
     page = request.args.get("page", 1, type=int)
     pagination = query.order_by(
@@ -93,9 +94,10 @@ def export_csv():
     else:
         query = query.filter(PurchaseOrder.status.notin_(["excluido", "rascunho"]))
     if q:
-        query = query.filter(
+        from ...models.supplier import Supplier
+        query = query.outerjoin(Supplier, PurchaseOrder.supplier_id == Supplier.id).filter(
             PurchaseOrder.number.ilike(f"%{q}%") |
-            PurchaseOrder.passenger_name.ilike(f"%{q}%")
+            Supplier.name.ilike(f"%{q}%")
         )
     po_list = query.order_by(
         PurchaseOrder.pickup_datetime.asc().nullsfirst(),

@@ -28,11 +28,8 @@
       </div>
       <div class="flex flex-col gap-1.5">
         <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Buscar</label>
-        <div class="relative">
-          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-          <input type="search" name="q" value="{{ q }}" placeholder="Número ou cliente..."
-                 class="border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 w-52">
-        </div>
+        <input type="search" name="q" value="{{ q }}" placeholder="Nº ou cliente..."
+               class="border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 w-36">
       </div>
       <a href="{{ url_for('orders.export_csv', status=status, q=q) }}"
          class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors"
