@@ -357,7 +357,7 @@
   @open-cancel-modal.window="showCancelModal = true"
   @open-delete-modal.window="showDeleteModal = true">
 
-{% set locked = order.status in ('concluido', 'faturado', 'cancelado', 'excluido') %}
+{% set locked = order.status in ('concluido', 'cancelado', 'excluido') %}
 
 {# ══════════════════════════════════════════
    MAIN FORM — cabeçalho + ajustes + faturar modal
