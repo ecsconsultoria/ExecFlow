@@ -1138,6 +1138,7 @@
     updateAParar(d.a_pagar);
     showPmtTable();
     document.getElementById('gp-custom-amount').value = '';
+    _clearDirty();
   }
 
   async function deletePmt(pid) {
@@ -1191,7 +1192,7 @@
     }
 
     // Intentional navigations that should NOT trigger the dialog
-    ['open-order-form', 'gen-payments-form', 'reabrir-form'].forEach(id => {
+    ['open-order-form', 'gen-payments-form', 'reabrir-form', 'baixa-o-form'].forEach(id => {
       const f = document.getElementById(id);
       if (f) f.addEventListener('submit', () => { dirty = false; });
     });
