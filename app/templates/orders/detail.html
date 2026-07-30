@@ -847,7 +847,7 @@
               {% if pmt.paid_at %}{{ pmt.paid_at|fdate }}{% else %}–{% endif %}
             </td>
             <td class="px-2 py-1.5 text-center">
-              {% if order.status in ('faturado', 'aberto') %}
+              {% if order.status in ('faturado', 'aberto', 'concluido') %}
               <button type="button" onclick="estornarPmt({{ pmt.id }})"
                       class="p-1 rounded text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/30"
                       title="Estornar pagamento">
