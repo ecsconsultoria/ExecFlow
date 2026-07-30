@@ -180,7 +180,7 @@
     </button>
     {% endif %}
 
-    {% if order.status == 'faturado' and has_role('ADMIN') %}
+    {% if order.status in ('faturado', 'concluido') and has_role('ADMIN') %}
     <button type="button" onclick="document.getElementById('reabrir-form').submit()" title="Reabrir pedido"
             class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-amber-600 hover:bg-amber-700 text-white">
       <i class="fa-solid fa-rotate-left text-[11px]"></i> Reabrir

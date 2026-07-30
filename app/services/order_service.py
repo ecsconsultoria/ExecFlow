@@ -280,8 +280,8 @@ def reabrir(order: Order, user_id: int) -> None:
     - Parcelas já pagas (exige estorno primeiro)
     - Lançamentos financeiros vinculados (exige cancelamento primeiro)
     """
-    if order.status != "faturado":
-        raise ValueError(f"Somente pedidos faturados podem ser reabertos (status atual: '{order.status}')")
+    if order.status not in ("faturado", "concluido"):
+        raise ValueError(f"Somente pedidos faturados ou concluídos podem ser reabertos (status atual: '{order.status}')")
     # Validação financeira
     if order.payments:
         paid = [p for p in order.payments if p.is_paid]
