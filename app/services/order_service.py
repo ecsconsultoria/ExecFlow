@@ -290,18 +290,19 @@ def reabrir(order: Order, user_id: int) -> None:
                 f"Existe(m) {len(paid)} parcela(s) já paga(s). "
                 "Estorne os recebimentos antes de reabrir o pedido."
             )
-    # Verifica lançamentos financeiros vinculados
+    # Verifica lançamentos financeiros vinculados (apenas os pagos bloqueiam)
     from ..models.financial import FinancialRecord
     refs = [f"order_payment:{p.id}" for p in order.payments]
     if refs:
         fr_count = FinancialRecord.query.filter(
             FinancialRecord.reference.in_(refs),
+            FinancialRecord.status == "pago",
             FinancialRecord.deleted_at.is_(None),
         ).count()
         if fr_count > 0:
             raise ValueError(
-                f"Existe(m) {fr_count} lançamento(s) financeiro(s) vinculado(s). "
-                "Cancele os lançamentos financeiros antes de reabrir o pedido."
+                f"Existe(m) {fr_count} lançamento(s) financeiro(s) pago(s) vinculado(s). "
+                "Estorne os recebimentos antes de reabrir o pedido."
             )
     order.status         = "aberto"
     order.reopened_at    = now_br()
