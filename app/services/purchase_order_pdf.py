@@ -669,7 +669,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
     total_items = len(items_sorted)
 
     if op_groups:
-        story.append(Spacer(1, 4 * mm))
+        story.append(PageBreak())
 
     for key, items in op_groups:
         sample = items[0]

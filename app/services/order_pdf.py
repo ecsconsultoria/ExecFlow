@@ -11,6 +11,7 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.platypus import (
     HRFlowable,
+    PageBreak,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
@@ -598,6 +599,9 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
                 op_groups.append((key, [it]))
 
     total_items = len(items_sorted)
+
+    if op_groups:
+        story.append(PageBreak())
 
     for key, items in op_groups:
         sample = items[0]
