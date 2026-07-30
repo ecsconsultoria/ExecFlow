@@ -600,6 +600,8 @@ def update_item(item: OrderItem, data: dict) -> None:
         item.category_id = int(cid) if cid and str(cid).strip() else None
     if "driver_name" in data:
         item.driver_name = (data.get("driver_name") or "").strip() or None
+    if "description" in data:
+        item.description = (data.get("description") or "").strip()
     item.total_price = round((item.unit_price or 0) * (item.quantity or 1), 2)
     order = item.order
     order.total_amount = sum(i.total_price or 0 for i in order.items)
