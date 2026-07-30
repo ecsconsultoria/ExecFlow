@@ -563,6 +563,12 @@ def add_item(order: Order, data: dict) -> OrderItem:
         svc = db.session.get(Service, svc_id)
         if svc:
             desc = svc.name
+    # Parse service_date / service_time vindos do formulário
+    from datetime import date as _date, time as _tm, datetime as _dt
+    svc_date_str = (data.get("service_date") or "").strip()
+    svc_time_str = (data.get("service_time") or "").strip()
+    svc_date = _date.fromisoformat(svc_date_str) if svc_date_str else None
+    svc_time = _tm.fromisoformat(svc_time_str)   if svc_time_str else None
     item = OrderItem(
         order_id            = order.id,
         service_id          = svc_id,
@@ -575,9 +581,15 @@ def add_item(order: Order, data: dict) -> OrderItem:
         unit_price          = price,
         total_price         = round(price * qty, 2),
         sort_order          = max((i.sort_order or 0 for i in order.items), default=0) + 1,
+        service_date        = svc_date,
+        service_time        = svc_time,
     )
     db.session.add(item)
     db.session.flush()
+    # Auto-preenche op_pickup_datetime a partir da data/hora informada
+    if svc_date:
+        t = svc_time if svc_time else _tm(0, 0)
+        item.op_pickup_datetime = _dt.combine(svc_date, t)
     db.session.expire(order, ['items'])  # força reload para incluir o novo item no total
     order.total_amount = sum(i.total_price or 0 for i in order.items)
     margin_service.recalculate_order(order)

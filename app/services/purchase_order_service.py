@@ -619,6 +619,12 @@ def add_item(po: PurchaseOrder, data: dict) -> POItem:
         if svc:
             description = svc.name
 
+    # Parse service_date / service_time vindos do formulário
+    from datetime import date as _date, time as _tm, datetime as _dt
+    svc_date_str = (data.get("service_date") or "").strip()
+    svc_time_str = (data.get("service_time") or "").strip()
+    svc_date = _date.fromisoformat(svc_date_str) if svc_date_str else None
+    svc_time = _tm.fromisoformat(svc_time_str)   if svc_time_str else None
     sort_order = len(po.items)
     item = POItem(
         po_id       = po.id,
@@ -630,9 +636,15 @@ def add_item(po: PurchaseOrder, data: dict) -> POItem:
         total_cost  = total_cost,
         sort_order  = sort_order,
         op_driver_name = driver_type,
+        service_date   = svc_date,
+        service_time   = svc_time,
     )
     db.session.add(item)
     db.session.flush()
+    # Auto-preenche op_pickup_datetime a partir da data/hora informada
+    if svc_date:
+        t = svc_time if svc_time else _tm(0, 0)
+        item.op_pickup_datetime = _dt.combine(svc_date, t)
     return item
 
 
