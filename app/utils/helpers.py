@@ -33,8 +33,14 @@ def parse_brl(value) -> float:
         # Padrão brasileiro: último separador é vírgula (decimal)
         # Remove pontos (milhar) e troca vírgula por ponto
         s = s.replace(".", "").replace(",", ".")
-    else:
-        # Padrão internacional: último separador é ponto (decimal)
+    elif last_dot >= 0:
+        # Padrão internacional ou digitado com ponto decimal
+        # Se tiver mais de um ponto, assume que o último é decimal
+        dot_count = s.count(".")
+        if dot_count > 1:
+            # Ex: "21.600.00" → último ponto é decimal, anteriores são milhar
+            parts = s.rsplit(".", 1)
+            s = parts[0].replace(".", "") + "." + parts[1]
         # Remove vírgulas (milhar)
         s = s.replace(",", "")
 
