@@ -345,7 +345,7 @@ def reabrir(oid):
 @require_permission("so.edit")
 def generate_payments(oid):
     order = _get_order(oid)
-    if order.status in ("concluido", "faturado", "cancelado"):
+    if order.status in ("concluido", "cancelado"):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({'ok': False, 'error': 'Pedido bloqueado'}), 403
         flash("Pedido não pode ser editado no status atual.", "warning")
@@ -402,7 +402,7 @@ def generate_payments(oid):
 def recalculate_payments(oid):
     """Apaga parcelas não-pagas e regera com base no total atual."""
     order = _get_order(oid)
-    if order.status in ("concluido", "faturado", "cancelado"):
+    if order.status in ("concluido", "cancelado"):
         flash("Pedido não pode ser editado no status atual.", "warning")
         return redirect(url_for("orders.detail", oid=oid))
     pmts = order_service.generate_payments(order)  # REGENERATE MODE
