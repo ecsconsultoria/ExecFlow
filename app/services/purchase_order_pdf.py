@@ -632,8 +632,8 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
         textColor=BRAND_DARK, leading=10, spaceAfter=0,
     )
     op_title_st = ParagraphStyle(
-        "po_op_title", fontName="Helvetica-Bold", fontSize=8,
-        textColor=colors.white, alignment=TA_LEFT, leading=10,
+        "po_op_title", fontName="Helvetica-Bold", fontSize=11,
+        textColor=colors.white, alignment=TA_LEFT, leading=14,
     )
 
     items_sorted = sorted(po.items, key=lambda it: (getattr(it, "sort_order", 0) or 0, it.id))

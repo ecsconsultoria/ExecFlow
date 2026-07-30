@@ -562,8 +562,8 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         textColor=BRAND_DARK, leading=10, spaceAfter=0,
     )
     op_title_st = ParagraphStyle(
-        "op_title_c", fontName="Helvetica-Bold", fontSize=8,
-        textColor=colors.white, alignment=TA_LEFT, leading=10,
+        "op_title_c", fontName="Helvetica-Bold", fontSize=11,
+        textColor=colors.white, alignment=TA_LEFT, leading=14,
     )
 
     items_sorted = sorted(order.items, key=lambda it: (it.sort_order or 0, it.id))
