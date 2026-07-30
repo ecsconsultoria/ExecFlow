@@ -344,7 +344,7 @@ def generate_payments(order: Order, custom_total: float = None) -> list:
             paid_amount    = 0,
         )
         db.session.add(pmt)
-        db.session.commit()
+        db.session.flush()
         return [pmt]
 
     # ── REGENERATE MODE ──────────────────────────────────────────────────────
@@ -391,7 +391,7 @@ def generate_payments(order: Order, custom_total: float = None) -> list:
         db.session.add(pmt)
         created.append(pmt)
 
-    db.session.commit()
+    db.session.flush()
     return created
 
 
