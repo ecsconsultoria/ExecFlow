@@ -717,6 +717,7 @@
         {%- endif -%}
         <p class="text-xs text-slate-400 uppercase mb-0.5">A Pagar</p>
         <p class="text-xl font-extrabold text-teal-300 font-mono" id="pmt-apagar-val">{{ apagar|currency }}</p>
+        <input type="hidden" id="pmt-apagar-raw" value="{{ apagar }}">
         {% if order.total_paid() > 0 %}
         <p class="text-xs text-emerald-400">Pago: {{ order.total_paid()|currency }}</p>
         {% endif %}
@@ -1007,6 +1008,8 @@
     if (el) el.textContent = fmtBRL(val);
     const inp = document.getElementById('gp-custom-amount');
     if (inp) inp.placeholder = fmtBRL(val);
+    const raw = document.getElementById('pmt-apagar-raw');
+    if (raw) raw.value = val;
   }
   function updatePmtCounters(total) {
     document.querySelectorAll('[data-pmt-no]').forEach((el, i) => {
@@ -1085,9 +1088,24 @@
   }
 
   async function submitGenPayments() {
-    const amount = document.getElementById('gp-custom-amount').value.trim();
+    let amount = document.getElementById('gp-custom-amount').value.trim();
+
+    // Se nenhum valor foi digitado mas já existem parcelas na tabela,
+    // usa o saldo restante (a_pagar) como ADD MODE em vez de REGENERATE MODE
+    // (que apagaria as parcelas existentes não-pagas).
     if (!amount) {
-      // Regenerate mode — full page reload
+      const hasInstallments = document.querySelectorAll('[data-pmt-no]').length > 0;
+      if (hasInstallments) {
+        const rawEl = document.getElementById('pmt-apagar-raw');
+        const remaining = rawEl ? parseFloat(rawEl.value) : 0;
+        if (remaining > 0.01) {
+          amount = String(remaining);
+        }
+      }
+    }
+
+    if (!amount) {
+      // Regenerate mode — full page reload (sem parcelas existentes)
       document.getElementById('gp-f-method').value = document.getElementById('gp-payment-method').value;
       document.getElementById('gp-f-terms').value  = document.getElementById('gp-payment-terms').value;
       document.getElementById('gp-f-amount').value = '';
