@@ -76,7 +76,14 @@ def create_from_quote(quote, user_id: int) -> Order:
             driver_name         = qi.driver_name         or "",
             state_code          = qi.state_code          or "",
             ref_note            = qi.ref_note            or "",
+            service_date        = qi.service_date,
+            service_time        = qi.service_time,
         )
+        # Auto-preencher op_pickup_datetime se service_date/service_time vierem da RFQ
+        if qi.service_date:
+            from datetime import datetime as _dt, time as _tm
+            t = qi.service_time if qi.service_time else _tm(0, 0)
+            item.op_pickup_datetime = _dt.combine(qi.service_date, t)
         db.session.add(item)
 
     quote.status = "reserva_confirmada"

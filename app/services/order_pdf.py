@@ -27,6 +27,7 @@ from .quote_pdf import (
     _billing_label,
     _fmt_brl,
     _fmt_phone_link,
+    _fmt_time_12h,
     _total_cell_text,
     _total_cell_aligned,
     _PAYMENT_TERMS_EN,
@@ -42,41 +43,41 @@ _T: dict[str, dict[str, str]] = {
     **_QT,
     "order_title":      {"pt": "PEDIDO DE VENDA",          "en": "SALES ORDER"},
     "order_no":         {"pt": "Nº Pedido",                "en": "Order No."},
-    "emission":         {"pt": "Data de Emissão",          "en": "Issue Date"},
-    "delivery":         {"pt": "Data de Entrega",          "en": "Delivery Date"},
-    "subtotal":         {"pt": "Subtotal",                 "en": "Subtotal"},
-    "discount":         {"pt": "Desconto",                 "en": "Discount"},
-    "freight":          {"pt": "Frete",                    "en": "Freight"},
-    "other_costs":      {"pt": "Custos Extras",            "en": "Extra Costs"},
+    "emission":         {"pt": "DATA DE EMISSÃO",          "en": "ISSUE DATE"},
+    "delivery":         {"pt": "DATA DE ENTREGA",          "en": "DELIVERY DATE"},
+    "subtotal":         {"pt": "SUBTOTAL",                 "en": "SUBTOTAL"},
+    "discount":         {"pt": "DESCONTO",                 "en": "DISCOUNT"},
+    "freight":          {"pt": "FRETE",                    "en": "FREIGHT"},
+    "other_costs":      {"pt": "CUSTOS EXTRAS",            "en": "EXTRA COSTS"},
     "final_total":      {"pt": "TOTAL FINAL",              "en": "TOTAL AMOUNT"},
-    "payment_hdr":      {"pt": "Pagamento",                "en": "Payment"},
-    "installment_no":   {"pt": "Parcela",                  "en": "Installment"},
-    "due_date":         {"pt": "Vencimento",               "en": "Due Date"},
-    "amount_col":       {"pt": "Valor (R$)",               "en": "Amount (R$)"},
+    "payment_hdr":      {"pt": "PAGAMENTO",                "en": "PAYMENT"},
+    "installment_no":   {"pt": "PARCELA",                  "en": "INSTALLMENT"},
+    "due_date":         {"pt": "VENCIMENTO",               "en": "DUE DATE"},
+    "amount_col":       {"pt": "VALOR (R$)",               "en": "AMOUNT (R$)"},
     "payment_status":   {"pt": "PAGAMENTO",               "en": "PAYMENT"},
     "status_paid":      {"pt": "PAGO",                     "en": "PAID"},
     "status_open":      {"pt": "PENDENTE",                 "en": "PENDING"},
-    "obs_hdr":          {"pt": "Observações",              "en": "Notes"},
-    "vendor_lbl":       {"pt": "Vendedor",                 "en": "Sales Rep."},
-    "billing_lbl":      {"pt": "Faturamento",              "en": "Billing"},
-    "prazo_lbl":        {"pt": "Prazo",                    "en": "Terms"},
-    "page_lbl":         {"pt": "Página",                   "en": "Page"},
-    "generated":        {"pt": "Gerado em",                "en": "Generated on"},
+    "obs_hdr":          {"pt": "OBSERVAÇÕES",              "en": "NOTES"},
+    "vendor_lbl":       {"pt": "VENDEDOR",                 "en": "SALES REP."},
+    "billing_lbl":      {"pt": "FATURAMENTO",              "en": "BILLING"},
+    "prazo_lbl":        {"pt": "PRAZO",                    "en": "TERMS"},
+    "page_lbl":         {"pt": "PÁGINA",                   "en": "PAGE"},
+    "generated":        {"pt": "GERADO EM",                "en": "GENERATED ON"},
     # Operational data
     "op_hdr":           {"pt": "DADOS OPERACIONAIS",       "en": "OPERATIONAL DATA"},
-    "op_driver":        {"pt": "Motorista",                "en": "Driver Name"},
-    "op_driver_phone":  {"pt": "Fone",                     "en": "Mobile"},
-    "op_modelo":        {"pt": "Modelo",                   "en": "Vehicle Model"},
-    "op_plate":         {"pt": "Placa",                    "en": "License Plate"},
-    "op_pickup":        {"pt": "Data / Hora Pickup",        "en": "Pickup Date/Time"},
-    "op_pickup_date":   {"pt": "Data Pickup",               "en": "Pickup Date"},
-    "op_pickup_time":   {"pt": "Hora Pickup",               "en": "Pickup Time"},
-    "op_from":          {"pt": "Embarque",                  "en": "Pickup Location"},
-    "op_to":            {"pt": "Desembarque",               "en": "Drop-off Location"},
-    "op_passenger":     {"pt": "Passageiro",               "en": "Passenger"},
-    "op_pax_phone":     {"pt": "Fone Pax",                 "en": "Pax Phone"},
-    "op_flight":        {"pt": "Nº Voo",                  "en": "Flight No."},
-    "op_obs":           {"pt": "Observações",              "en": "Notes"},
+    "op_driver":        {"pt": "MOTORISTA",                "en": "DRIVER NAME"},
+    "op_driver_phone":  {"pt": "FONE",                     "en": "MOBILE"},
+    "op_modelo":        {"pt": "MODELO",                   "en": "VEHICLE MODEL"},
+    "op_plate":         {"pt": "PLACA",                    "en": "LICENSE PLATE"},
+    "op_pickup":        {"pt": "DATA / HORA PICKUP",        "en": "PICKUP DATE/TIME"},
+    "op_pickup_date":   {"pt": "DATA PICKUP",               "en": "PICKUP DATE"},
+    "op_pickup_time":   {"pt": "HORA PICKUP",               "en": "PICKUP TIME"},
+    "op_from":          {"pt": "EMBARQUE",                  "en": "PICKUP LOCATION"},
+    "op_to":            {"pt": "DESEMBARQUE",               "en": "DROP-OFF LOCATION"},
+    "op_passenger":     {"pt": "PASSAGEIRO",               "en": "PASSENGER"},
+    "op_pax_phone":     {"pt": "FONE PAX",                 "en": "PAX PHONE"},
+    "op_flight":        {"pt": "Nº VOO",                  "en": "FLIGHT NO."},
+    "op_obs":           {"pt": "OBSERVAÇÕES",              "en": "NOTES"},
 }
 
 
@@ -134,7 +135,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
                                  textColor=BRAND_DARK, leading=12, spaceBefore=3, spaceAfter=3)
     footer_st  = ParagraphStyle("fs", fontSize=7.5, textColor=colors.HexColor("#666"),
                                  alignment=TA_CENTER, leading=11)
-    cell_hdr   = ParagraphStyle("ch", fontSize=8, fontName="Helvetica-Bold",
+    cell_hdr   = ParagraphStyle("ch", fontSize=7, fontName="Helvetica-Bold",
                                  textColor=colors.white, leading=10, alignment=TA_CENTER)
     cell_hdr_l = ParagraphStyle("chl", parent=cell_hdr, alignment=TA_LEFT)
     cell_body  = ParagraphStyle("cb", fontSize=8, textColor=BRAND_DARK, leading=11)
@@ -297,7 +298,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
     i_col_w = [W * 0.05, W * 0.52, W * 0.07, W * 0.17, W * 0.19]
     items_rows = [[
         Paragraph(_t("hash_col",    lang), cell_hdr),
-        Paragraph(_t("service_col", lang), cell_hdr_l),
+        Paragraph(_t("service_col", lang), cell_hdr),
         Paragraph(_t("qty_col",     lang), cell_hdr),
         Paragraph(_t("unit_col",    lang), cell_hdr),
         Paragraph(_t("total_col",   lang), cell_hdr),
@@ -321,19 +322,34 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         main_label = " – ".join(main_parts)
 
         sub_parts = []
-        if cat_name_disp:
-            sub_parts.append(cat_name_disp)
         if driver_disp:
             sub_parts.append(driver_disp)
+        if cat_name_disp:
+            sub_parts.append(cat_name_disp)
         sub_label = " – ".join(sub_parts)
 
         vehicle_model = _get_vehicle_model(cat_name_raw, lang) or vehicle_desc
+        if vehicle_model and sub_label:
+            sub_label = f'{sub_label} ({vehicle_model})'
+
+        date_prefix = ''
+        if item.service_date:
+            if lang == 'en':
+                date_prefix = item.service_date.strftime('%m/%d')
+            else:
+                date_prefix = item.service_date.strftime('%d/%m')
+            if item.service_time:
+                h = item.service_time.hour
+                m = item.service_time.minute
+                ampm = 'AM' if h < 12 else 'PM'
+                h12 = h if 1 <= h <= 12 else (h - 12 if h > 12 else 12)
+                date_prefix += f' {h12}:{m:02d} {ampm}'
+        if date_prefix:
+            main_label = f'{date_prefix} – {main_label}'
 
         svc_lines = [f"<b>{main_label}</b>"]
         if sub_label:
             svc_lines.append(f'<font color="#334155" size="7.5">{sub_label}</font>')
-        if vehicle_model:
-            svc_lines.append(f'<font color="#888888" size="7"><i>{vehicle_model}</i></font>')
         svc_para = Paragraph("<br/>".join(svc_lines), cell_body)
 
         total = item.total_price or round((item.unit_price or 0) * (item.quantity or 1), 2)
@@ -589,7 +605,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         pickup_date_str = _fmt_date(pickup_dt.date() if pickup_dt else None, lang) if pickup_dt else ""
         if pickup_date_str == "\u2013":
             pickup_date_str = ""
-        pickup_time_str = pickup_dt.strftime("%H:%M") if pickup_dt else ""
+        pickup_time_str = _fmt_time_12h(pickup_dt, lang) if pickup_dt else ""
 
         fields = [
             ("op_driver",       key[0]),

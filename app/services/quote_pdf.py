@@ -56,7 +56,7 @@ _T: dict[str, dict[str, str]] = {
     "qty_col":          {"pt": "QTD.",                     "en": "QTY."},
     "unit_col":         {"pt": "UNIT.",                    "en": "UNIT."},
     "overtime_col":     {"pt": "HORA EXTRA",               "en": "OVERTIME"},
-    "total_col":        {"pt": "TOTAL",                    "en": "TOTAL"},
+    "total_col":        {"pt": "PREÇO TOTAL",              "en": "TOTAL PRICE"},
     "payment_col":      {"pt": "FORMA DE PAGAMENTO",       "en": "PAYMENT METHOD"},
     "included_col":     {"pt": "FATURAMENTO FISCAL",        "en": "INVOICE"},
     "prazo_col":        {"pt": "PRAZO DE PAGAMENTO",        "en": "PAYMENT TERMS"},
@@ -135,6 +135,18 @@ def _billing_label(billing_type: str, lang: str) -> str:
 
 def _fee_label(billing_type: str, lang: str) -> str:
     return _t(f"fee_{billing_type}", lang)
+
+
+def _fmt_time_12h(dt, lang: str = "pt") -> str:
+    """Formata hora em 12h com AM/PM."""
+    h = dt.hour
+    m = dt.minute
+    if lang == "en":
+        ampm = "AM" if h < 12 else "PM"
+    else:
+        ampm = "AM" if h < 12 else "PM"
+    h12 = h if 1 <= h <= 12 else (h - 12 if h > 12 else 12)
+    return f"{h12}:{m:02d} {ampm}"
 
 
 def _fmt_brl(value: float) -> str:
@@ -493,7 +505,7 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
                                 alignment=TA_CENTER, leading=12)
     footer_st = ParagraphStyle("fs", fontSize=7.5, textColor=colors.HexColor("#666"),
                                 alignment=TA_CENTER, leading=11)
-    cell_hdr  = ParagraphStyle("ch", fontSize=8, fontName="Helvetica-Bold",
+    cell_hdr  = ParagraphStyle("ch", fontSize=7, fontName="Helvetica-Bold",
                                 textColor=colors.white, leading=10, alignment=TA_CENTER)
     cell_hdr_l = ParagraphStyle("chl", parent=cell_hdr, alignment=TA_LEFT)
     cell_body  = ParagraphStyle("cb", fontSize=8, textColor=BRAND_DARK, leading=11)
@@ -641,23 +653,38 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
         main_parts.append(service_name_disp)
         main_label = " – ".join(main_parts)
 
-        # Line 2: category + driver (smaller, dark)
+        # Line 2: driver + category + vehicle model in parentheses
         sub_parts = []
-        if cat_name_disp:
-            sub_parts.append(cat_name_disp)
         if driver_disp:
             sub_parts.append(driver_disp)
+        if cat_name_disp:
+            sub_parts.append(cat_name_disp)
         sub_label = " – ".join(sub_parts)
 
-        # Line 3: vehicle model from DB description, fallback to hardcoded dict
         vehicle_model_raw = vehicle_desc or _get_vehicle_model(cat_name_raw, lang)
         vehicle_model = _translate_vehicle_desc(vehicle_model_raw, lang)
+        if vehicle_model and sub_label:
+            sub_label = f'{sub_label} ({vehicle_model})'
+
+        # Date/time prefix
+        date_prefix = ''
+        if it.service_date:
+            if lang == 'en':
+                date_prefix = it.service_date.strftime('%m/%d')
+            else:
+                date_prefix = it.service_date.strftime('%d/%m')
+            if it.service_time:
+                h = it.service_time.hour
+                m = it.service_time.minute
+                ampm = 'AM' if h < 12 else 'PM'
+                h12 = h if 1 <= h <= 12 else (h - 12 if h > 12 else 12)
+                date_prefix += f' {h12}:{m:02d} {ampm}'
+        if date_prefix:
+            main_label = f'{date_prefix} – {main_label}'
 
         svc_lines = [f'<b>{main_label}</b>']
         if sub_label:
             svc_lines.append(f'<font color="#334155" size="7.5">{sub_label}</font>')
-        if vehicle_model:
-            svc_lines.append(f'<font color="#888888" size="7"><i>{vehicle_model}</i></font>')
         svc_para = Paragraph("<br/>".join(svc_lines), cell_body)
 
         qty     = it.quantity or 1

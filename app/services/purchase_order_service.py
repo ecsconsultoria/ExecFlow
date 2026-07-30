@@ -85,7 +85,8 @@ def _add_items_from_so(po, order):
             po_id       = po.id,
             service_id  = item.service_id,
             category_id = item.category_id,
-            description = item.description or "",
+            description         = item.description or "",
+            vehicle_description = item.vehicle_description or "",
             quantity    = qty,
             unit_cost   = cost_price,
             total_cost  = round(cost_price * qty, 2),
@@ -102,7 +103,14 @@ def _add_items_from_so(po, order):
             op_flight_number    = item.op_flight_number or "",
             op_pax_count        = getattr(item, 'op_pax_count', None),
             op_notes            = item.op_notes or "",
+            service_date        = item.service_date,
+            service_time        = item.service_time,
         )
+        # Auto-preencher op_pickup_datetime se service_date/service_time vierem do SO
+        if item.service_date:
+            from datetime import datetime as _dt, time as _tm
+            t = item.service_time if item.service_time else _tm(0, 0)
+            poi.op_pickup_datetime = _dt.combine(item.service_date, t)
         db.session.add(poi)
 
 

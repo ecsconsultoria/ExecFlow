@@ -105,9 +105,11 @@ class QuoteItem(db.Model, TimestampMixin):
     price_cartao    = db.Column(db.Float, default=0)
     price_nf_cartao = db.Column(db.Float, default=0)
 
-    driver_name = db.Column(db.String(200))
-    state_code  = db.Column(db.String(10))
-    ref_note    = db.Column(db.String(200))
+    driver_name   = db.Column(db.String(200))
+    state_code    = db.Column(db.String(10))
+    ref_note      = db.Column(db.String(200))
+    service_date  = db.Column(db.Date, nullable=True)
+    service_time  = db.Column(db.Time, nullable=True)
 
     category = db.relationship("VehicleCategory", foreign_keys=[category_id], lazy="select")
 

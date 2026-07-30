@@ -25,7 +25,7 @@ from reportlab.platypus.frames import Frame
 from reportlab.lib.pagesizes import landscape as _landscape
 
 # Re-use brand constants + helpers from quote_pdf
-from .quote_pdf import BRAND_DARK, BRAND_GOLD, BRAND_LIGHT, _fmt_brl, _fmt_phone_link
+from .quote_pdf import BRAND_DARK, BRAND_GOLD, BRAND_LIGHT, _fmt_brl, _fmt_phone_link, _fmt_time_12h, _get_vehicle_model, _translate_service, _translate_vehicle, _translate_driver
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -53,51 +53,51 @@ def _fmt_datetime(d, lang: str = "pt") -> str:
 _LABELS: dict[str, dict[str, str]] = {
     "doc_title":       {"pt": "PEDIDO DE COMPRA",          "en": "PURCHASE ORDER"},
     "po_no":           {"pt": "Nº PC/PO",                  "en": "PO No."},
-    "linked_so":       {"pt": "SO Vinculado",               "en": "Linked SO"},
-    "payment":         {"pt": "Forma Pagto.",               "en": "Payment"},
-    "supplier_lbl":    {"pt": "Fornecedor",                 "en": "Supplier"},
+    "linked_so":       {"pt": "SO VINCULADO",               "en": "LINKED SO"},
+    "payment":         {"pt": "FORMA PGTO.",                "en": "PAYMENT"},
+    "supplier_lbl":    {"pt": "FORNECEDOR",                 "en": "SUPPLIER"},
     "supplier_hdr":    {"pt": "FORNECEDOR",                 "en": "SUPPLIER"},
-    "service_col":     {"pt": "Serviço / Descrição",        "en": "Service / Description"},
+    "service_col":     {"pt": "SERVIÇO",                     "en": "SERVICE"},
     "hash_col":        {"pt": "#",                          "en": "#"},
-    "qty_col":         {"pt": "Qtd",                        "en": "Qty"},
-    "unit_col":        {"pt": "Unit. R$",                   "en": "Unit R$"},
-    "total_col":       {"pt": "Total R$",                   "en": "Total R$"},
-    "discount":        {"pt": "Desconto",                   "en": "Discount"},
-    "freight":         {"pt": "Frete",                      "en": "Freight"},
-    "other_costs":     {"pt": "Custos Extras",              "en": "Extra Costs"},
-    "payment_col":     {"pt": "Forma de Pagamento",         "en": "Payment Method"},
-    "prazo_col":       {"pt": "Prazo",                      "en": "Terms"},
-    "total_price_col": {"pt": "Total Final",                "en": "Final Total"},
-    "installment_no":  {"pt": "Parcela",                    "en": "Installment"},
-    "due_date":        {"pt": "Vencimento",                 "en": "Due Date"},
-    "amount_col":      {"pt": "Valor (R$)",                 "en": "Amount (R$)"},
+    "qty_col":         {"pt": "QTD",                        "en": "QTY"},
+    "unit_col":        {"pt": "UNIT. R$",                   "en": "UNIT R$"},
+    "total_col":       {"pt": "TOTAL R$",                   "en": "TOTAL R$"},
+    "discount":        {"pt": "DESCONTO",                   "en": "DISCOUNT"},
+    "freight":         {"pt": "FRETE",                      "en": "FREIGHT"},
+    "other_costs":     {"pt": "CUSTOS EXTRAS",              "en": "EXTRA COSTS"},
+    "payment_col":     {"pt": "FORMA DE PAGAMENTO",         "en": "PAYMENT METHOD"},
+    "prazo_col":       {"pt": "PRAZO",                      "en": "TERMS"},
+    "total_price_col": {"pt": "PREÇO TOTAL",                "en": "TOTAL PRICE"},
+    "installment_no":  {"pt": "PARCELA",                    "en": "INSTALLMENT"},
+    "due_date":        {"pt": "VENCIMENTO",                 "en": "DUE DATE"},
+    "amount_col":      {"pt": "VALOR (R$)",                 "en": "AMOUNT (R$)"},
     "payment_status":  {"pt": "PAGAMENTO",                  "en": "PAYMENT"},
     "status_paid":     {"pt": "PAGO",                       "en": "PAID"},
     "status_open":     {"pt": "PENDENTE",                   "en": "PENDING"},
     "notes_hdr":       {"pt": "OBSERVAÇÕES",                "en": "NOTES"},
-    "approved_by":     {"pt": "Aprovado por",               "en": "Approved by"},
-    "supplier_sig":    {"pt": "Fornecedor",                 "en": "Supplier"},
-    "date_sig":        {"pt": "Data",                       "en": "Date"},
-    "emission":        {"pt": "Data de Emissão",            "en": "Issue Date"},
-    "delivery":        {"pt": "Data Pickup",                "en": "Pickup Date"},
-    "vendor_lbl":      {"pt": "Comprador",                  "en": "Buyer"},
-    "generated":       {"pt": "Gerado em",                  "en": "Generated on"},
+    "approved_by":     {"pt": "APROVADO POR",               "en": "APPROVED BY"},
+    "supplier_sig":    {"pt": "FORNECEDOR",                 "en": "SUPPLIER"},
+    "date_sig":        {"pt": "DATA",                       "en": "DATE"},
+    "emission":        {"pt": "DATA DE EMISSÃO",            "en": "ISSUE DATE"},
+    "delivery":        {"pt": "DATA PICKUP",                "en": "PICKUP DATE"},
+    "vendor_lbl":      {"pt": "COMPRADOR",                  "en": "BUYER"},
+    "generated":       {"pt": "GERADO EM",                  "en": "GENERATED ON"},
     # Operational
     "op_hdr":          {"pt": "DADOS OPERACIONAIS",           "en": "OPERATIONAL DATA"},
-    "op_driver":       {"pt": "Motorista",                    "en": "Driver"},
-    "op_driver_phone": {"pt": "Fone",                          "en": "Phone"},
-    "op_modelo":       {"pt": "Modelo",                        "en": "Model"},
-    "op_plate":        {"pt": "Placa",                        "en": "Plate"},
-    "op_pickup":       {"pt": "Data / Hora Pickup",            "en": "Pickup Date/Time"},
-    "op_pickup_date":  {"pt": "Data Pickup",                  "en": "Pickup Date"},
-    "op_pickup_time":  {"pt": "Hora Pickup",                  "en": "Pickup Time"},
-    "op_from":         {"pt": "Embarque",                        "en": "Pickup Location"},
-    "op_to":           {"pt": "Desembarque",                     "en": "Dropoff Location"},
-    "op_passenger":    {"pt": "Passageiro",                   "en": "Passenger"},
-    "op_pax_phone":    {"pt": "Fone Pax",                      "en": "Passenger Phone"},
-    "op_flight":       {"pt": "Nº Voo",                       "en": "Flight No."},
+    "op_driver":       {"pt": "MOTORISTA",                    "en": "DRIVER"},
+    "op_driver_phone": {"pt": "FONE",                          "en": "PHONE"},
+    "op_modelo":       {"pt": "MODELO",                        "en": "MODEL"},
+    "op_plate":        {"pt": "PLACA",                        "en": "PLATE"},
+    "op_pickup":       {"pt": "DATA / HORA PICKUP",            "en": "PICKUP DATE/TIME"},
+    "op_pickup_date":  {"pt": "DATA PICKUP",                  "en": "PICKUP DATE"},
+    "op_pickup_time":  {"pt": "HORA PICKUP",                  "en": "PICKUP TIME"},
+    "op_from":         {"pt": "EMBARQUE",                        "en": "PICKUP LOCATION"},
+    "op_to":           {"pt": "DESEMBARQUE",                     "en": "DROPOFF LOCATION"},
+    "op_passenger":    {"pt": "PASSAGEIRO",                   "en": "PASSENGER"},
+    "op_pax_phone":    {"pt": "FONE PAX",                      "en": "PASSENGER PHONE"},
+    "op_flight":       {"pt": "Nº VOO",                       "en": "FLIGHT NO."},
     "op_pax":          {"pt": "PAX",                          "en": "PAX"},
-    "op_obs":          {"pt": "Observações",                  "en": "Notes"},
+    "op_obs":          {"pt": "OBSERVAÇÕES",                  "en": "NOTES"},
 }
 
 
@@ -343,10 +343,10 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
     sup_tbl = Table(
         [[Paragraph(h, cell_hdr) for h in [
             _t("supplier_lbl", lang),
-            "Contato" if lang == "pt" else "Contact",
-            "Email",
-            "Telefone" if lang == "pt" else "Phone",
-            "CNPJ/CPF" if lang == "pt" else "Tax ID"]],
+            "CONTATO" if lang == "pt" else "CONTACT",
+            "EMAIL",
+            "TELEFONE" if lang == "pt" else "PHONE",
+            "CNPJ/CPF" if lang == "pt" else "TAX ID"]],
          [Paragraph(v, cell_body_c) for v in [
             sup_name, sup_contact, sup_email, sup_phone, sup_doc]]],
         colWidths=[W * 0.22, W * 0.17, W * 0.23, W * 0.16, W * 0.22],
@@ -390,7 +390,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
     i_col_w   = [W * 0.05, W * 0.52, W * 0.07, W * 0.17, W * 0.19]
     items_rows = [[
         Paragraph(_t("hash_col",    lang), cell_hdr),
-        Paragraph(_t("service_col", lang), cell_hdr_l),
+        Paragraph(_t("service_col", lang), cell_hdr),
         Paragraph(_t("qty_col",     lang), cell_hdr),
         Paragraph(_t("unit_col",    lang), cell_hdr),
         Paragraph(_t("total_col",   lang), cell_hdr),
@@ -398,11 +398,42 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
 
     if getattr(po, "items", None):
         for idx, item in enumerate(sorted(po.items, key=lambda x: getattr(x, "sort_order", 0) or 0), 1):
-            desc = item.description or (item.service.name if getattr(item, "service", None) else "–")
-            cat_name = (item.category.name if getattr(item, "category", None) else "") or ""
-            svc_lines = [f"<b>{desc}</b>"]
+            service_name_raw = item.description or (item.service.name if getattr(item, "service", None) else "–")
+            cat_name_raw = (item.category.name if getattr(item, "category", None) else "") or ""
+            driver_name_raw = getattr(item, 'op_driver_name', '') or ''
+
+            desc = _translate_service(service_name_raw, lang, cat_name_raw)
+            cat_name = _translate_vehicle(cat_name_raw, lang)
+            driver_disp = _translate_driver(driver_name_raw, lang)
+            date_prefix = ''
+            if getattr(item, 'service_date', None):
+                if lang == 'en':
+                    date_prefix = item.service_date.strftime('%m/%d')
+                else:
+                    date_prefix = item.service_date.strftime('%d/%m')
+                if getattr(item, 'service_time', None):
+                    h = item.service_time.hour
+                    m = item.service_time.minute
+                    ampm = 'AM' if h < 12 else 'PM'
+                    h12 = h if 1 <= h <= 12 else (h - 12 if h > 12 else 12)
+                    date_prefix += f' {h12}:{m:02d} {ampm}'
+            if date_prefix:
+                desc = f'{date_prefix} – {desc}'
+
+            # Build sub-label: driver + category + vehicle model
+            sub_parts = []
+            if driver_disp:
+                sub_parts.append(driver_disp)
             if cat_name:
-                svc_lines.append(f'<font color="#334155" size="7.5">{cat_name}</font>')
+                sub_parts.append(cat_name)
+            cat_display = " – ".join(sub_parts)
+            vehicle_model = item.vehicle_description or _get_vehicle_model(cat_name_raw, lang) or ''
+            if vehicle_model and cat_display:
+                cat_display = f'{cat_display} ({vehicle_model})'
+
+            svc_lines = [f"<b>{desc}</b>"]
+            if cat_display:
+                svc_lines.append(f'<font color="#334155" size="7.5">{cat_display}</font>')
             total = item.total_cost or round((item.unit_cost or 0) * (item.quantity or 1), 2)
             items_rows.append([
                 Paragraph(str(idx),                                    cell_body_c),
@@ -537,7 +568,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
         ]]
         for pmt in sorted_pmts:
             status_label = _t("status_paid", lang) if pmt.is_paid else _t("status_open", lang)
-            st_p = ParagraphStyle("sp", fontSize=8, fontName="Helvetica-Bold",
+            st_p = ParagraphStyle("sp", fontSize=7, fontName="Helvetica-Bold",
                                   textColor=colors.white, alignment=TA_CENTER, leading=10)
             inst_rows.append([
                 Paragraph(f"{pmt.installment_no}/{total_pmts}", cell_body_c),
@@ -646,7 +677,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
         pickup_date_str = _fmt_date(pickup_dt.date() if pickup_dt else None, lang) if pickup_dt else ""
         if pickup_date_str == "\u2013":
             pickup_date_str = ""
-        pickup_time_str = pickup_dt.strftime("%H:%M") if pickup_dt else ""
+        pickup_time_str = _fmt_time_12h(pickup_dt, lang) if pickup_dt else ""
 
         fields = [
             ("op_passenger",    key[3]),

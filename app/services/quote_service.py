@@ -1,5 +1,6 @@
 """QuoteService — criação e atualização de orçamentos."""
 import json
+from datetime import date, time
 from ..models.quote  import Quote, QuoteItem, QuoteInclusion
 from ..extensions    import db
 from ..utils         import now_br
@@ -8,6 +9,28 @@ from ..utils         import now_br
 def _next_number(company_id: int) -> str:
     from . import numbering_service
     return numbering_service.next_rfq(company_id)
+
+
+def _parse_date(raw) -> date | None:
+    """Converte string de data em date; retorna None se vazio/inválido."""
+    from datetime import date as _dt, datetime
+    if raw is None or str(raw).strip() == "":
+        return None
+    try:
+        return _dt.fromisoformat(str(raw).strip())
+    except (ValueError, TypeError):
+        return None
+
+
+def _parse_time(raw) -> time | None:
+    """Converte string de hora em time; retorna None se vazio/inválido."""
+    from datetime import time as _tm
+    if raw is None or str(raw).strip() == "":
+        return None
+    try:
+        return _tm.fromisoformat(str(raw).strip())
+    except (ValueError, TypeError):
+        return None
 
 
 def _parse_usd_rate(raw) -> float | None:
@@ -88,6 +111,8 @@ class QuoteService:
                 driver_name         = it.get("driver_name", "") or "",
                 state_code          = it.get("state_code", "") or "",
                 ref_note            = it.get("ref_note", "") or "",
+                service_date        = _parse_date(it.get("service_date")),
+                service_time        = _parse_time(it.get("service_time")),
                 quantity            = qty,
                 unit_price          = price,
                 hour_extra          = hour_extra_rate,
@@ -179,6 +204,8 @@ class QuoteService:
                 driver_name         = it.get("driver_name", "") or "",
                 state_code          = it.get("state_code", "") or "",
                 ref_note            = it.get("ref_note", "") or "",
+                service_date        = _parse_date(it.get("service_date")),
+                service_time        = _parse_time(it.get("service_time")),
                 quantity            = qty,
                 unit_price          = price,
                 hour_extra          = hour_extra_rate,

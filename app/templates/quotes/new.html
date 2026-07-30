@@ -213,18 +213,22 @@
               <div x-show="isCatOpen(cat.id)" x-transition
                    class="bg-slate-50 dark:bg-slate-700/20 border-t border-slate-100 dark:border-slate-700">
                 <template x-for="svc in cat.services" :key="svc.id">
-                  <div class="flex items-center gap-3 px-5 py-2.5 border-b border-slate-100 dark:border-slate-700/50 last:border-0 hover:bg-white dark:hover:bg-slate-700/30 transition-colors">
+                  <div class="flex items-center gap-2 px-5 py-2 border-b border-slate-100 dark:border-slate-700/50 last:border-0 hover:bg-white dark:hover:bg-slate-700/30 transition-colors">
+                    <input type="date"
+                           :id="'svcdate-' + svc.id"
+                           :value="getSvcDate(svc.id)"
+                           @input="setSvcDate(svc.id, $event.target.value)"
+                           class="w-[108px] shrink-0 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 rounded px-1 py-1 text-[11px] text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-400">
+                    <input type="time"
+                           :id="'svctime-' + svc.id"
+                           :value="getSvcTime(svc.id)"
+                           @input="setSvcTime(svc.id, $event.target.value)"
+                           class="w-[84px] shrink-0 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 rounded px-1 py-1 text-[11px] text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-400">
                     <div class="flex-1 min-w-0">
                       <p class="text-xs font-semibold text-slate-700 dark:text-slate-200"
                          x-text="svc.name + (svc.driver_type ? ' – ' + svc.driver_type : '')"></p>
                       <p class="text-xs text-slate-400 mt-0.5" x-show="svc.km_included > 0"
                          x-text="svc.km_included + ' km incl.'"></p>
-                      <input type="text"
-                             :id="'refnote-' + svc.id"
-                             placeholder="Ref / Data (opcional)"
-                             :value="getRefNote(svc.id)"
-                             @input="setRefNote(svc.id, $event.target.value)"
-                             class="mt-1 w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 rounded px-2 py-0.5 text-xs text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-400">
                     </div>
                     <div class="flex items-center gap-2 flex-shrink-0">
                       <span class="text-sm font-bold text-blue-600 min-w-[64px] text-right"
@@ -381,7 +385,8 @@ function quoteBuilder() {
     filterState:   '',
     cart:      [],
     qtyMap:    {},
-    refNoteMap: {},
+    svcDateMap: {},
+    svcTimeMap: {},
     inclusions: DEFAULT_INCLUSIONS.map((inc, i) => ({...inc, included: true, sort_order: i})),
 
     init() {
@@ -404,6 +409,8 @@ function quoteBuilder() {
             name:                it.description || '',
             driver_type:         it.driver_name || '',
             ref_note:            it.ref_note    || '',
+            service_date:        it.service_date || '',
+            service_time:        it.service_time || '',
             quantity:            it.quantity    || 1,
             unit_price:          it.unit_price  || 0,
             hour_extra:          it.hour_extra  || 0,
@@ -498,12 +505,16 @@ function quoteBuilder() {
 
     getQty(pricingId)     { return this.qtyMap[pricingId] || 1; },
     setQty(pricingId, val){ this.qtyMap[pricingId] = Math.max(1, parseInt(val) || 1); },
-    getRefNote(pricingId) { return this.refNoteMap[pricingId] || ''; },
-    setRefNote(pricingId, val) { this.refNoteMap[pricingId] = val; },
+    getSvcDate(pricingId) { return this.svcDateMap[pricingId] || ''; },
+    setSvcDate(pricingId, val) { this.svcDateMap[pricingId] = val; },
+    getSvcTime(pricingId) { return this.svcTimeMap[pricingId] || ''; },
+    setSvcTime(pricingId, val) { this.svcTimeMap[pricingId] = val; },
 
     addToCart(cat, svc) {
-      const refEl   = document.getElementById('refnote-' + svc.id);
-      const refNote = refEl ? refEl.value.trim() : '';
+      const dateEl = document.getElementById('svcdate-' + svc.id);
+      const timeEl = document.getElementById('svctime-' + svc.id);
+      const svcDate = dateEl ? dateEl.value : '';
+      const svcTime = timeEl ? timeEl.value : '';
       const price   = this.priceFor(svc);
 
       const origCat   = this.catalog.find(c => c.id === cat.id) || cat;
@@ -522,7 +533,8 @@ function quoteBuilder() {
         vehicle_description: cat.description || '',
         name:                svc.name,
         driver_type:         svc.driver_type || '',
-        ref_note:            refNote,
+        service_date:        svcDate,
+        service_time:        svcTime,
         unit_price:          price,
         hour_extra:          hourExtraRate,
         price_base:          svc.price_base,
@@ -533,8 +545,9 @@ function quoteBuilder() {
         _svc:                svc,
         quantity:            1,
       });
-      // Limpa ref note após adicionar
-      if (refEl) { refEl.value = ''; this.refNoteMap[svc.id] = ''; }
+      // Limpa data/hora após adicionar
+      if (dateEl) { dateEl.value = ''; this.svcDateMap[svc.id] = ''; }
+      if (timeEl) { timeEl.value = ''; this.svcTimeMap[svc.id] = ''; }
     },
 
     cartTotal() { return this.cart.reduce((s, i) => s + (i.unit_price * i.quantity), 0); },
@@ -554,7 +567,8 @@ function quoteBuilder() {
           description:         item.name,
           vehicle_description: item.vehicle_description,
           driver_name:         item.driver_type || '',
-          ref_note:            item.ref_note,
+          service_date:        item.service_date,
+          service_time:        item.service_time,
           quantity:            item.quantity,
           unit_price:          item.unit_price,
           hour_extra:          item.hour_extra || 0,

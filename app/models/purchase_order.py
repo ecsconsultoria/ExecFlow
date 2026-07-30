@@ -212,6 +212,8 @@ class POItem(db.Model, TimestampMixin):
     category_id         = db.Column(db.Integer, db.ForeignKey("vehicle_categories.id"), nullable=True)
     description         = db.Column(db.String(500))
     vehicle_description = db.Column(db.String(200))
+    service_date        = db.Column(db.Date, nullable=True)
+    service_time        = db.Column(db.Time, nullable=True)
     quantity            = db.Column(db.Integer, default=1)
     unit_cost           = db.Column(db.Float,   default=0)
     total_cost          = db.Column(db.Float,   default=0)
