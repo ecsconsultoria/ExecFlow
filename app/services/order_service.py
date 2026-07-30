@@ -332,7 +332,7 @@ def generate_payments(order: Order, custom_total: float = None) -> list:
     # ── ADD MODE ────────────────────────────────────────────────────────────
     if custom_total is not None:
         existing      = list(order.payments)
-        already_alloc = sum(p.amount or 0 for p in existing)
+        already_alloc = sum((p.paid_amount or p.amount or 0) for p in existing)
         unscheduled   = round(order.computed_total - already_alloc, 2)
         first_amt     = min(round(custom_total, 2), max(unscheduled, 0))
         if first_amt < 0.01:
