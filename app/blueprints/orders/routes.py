@@ -715,10 +715,13 @@ def pdf(oid, lang):
     gc.collect()
     filename = f"{order.number}.pdf"
     resp = make_response(send_file(buf, mimetype="application/pdf",
-                           as_attachment=True, download_name=filename))
-    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+                           as_attachment=False, download_name=filename,
+                           conditional=False))
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
     resp.headers["Pragma"] = "no-cache"
     resp.headers["Expires"] = "0"
+    resp.headers["ETag"] = ""
+    resp.headers["Last-Modified"] = ""
     return resp
 
 

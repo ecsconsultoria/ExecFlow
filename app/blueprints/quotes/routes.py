@@ -281,8 +281,13 @@ def pdf(qid, lang):
     from ...services.quote_pdf import generate_quote_pdf
     buf = generate_quote_pdf(quote, lang=lang)
     filename = f"{quote.number}.pdf"
-    return send_file(buf, mimetype="application/pdf",
-                     as_attachment=True, download_name=filename)
+    resp = make_response(send_file(buf, mimetype="application/pdf",
+                           as_attachment=True, download_name=filename,
+                           conditional=False))
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
 
 
 @quotes_bp.route("/<int:qid>/approve", methods=["POST"])

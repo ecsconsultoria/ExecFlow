@@ -225,9 +225,13 @@ def pdf(po_id):
     buf  = generate_po_pdf(po, lang=lang)
     buf.seek(0)
     gc.collect()
-    return send_file(buf, mimetype="application/pdf",
-                     download_name=f"{po.number}.pdf",
-                     as_attachment=False)
+    resp = make_response(send_file(buf, mimetype="application/pdf",
+                           download_name=f"{po.number}.pdf",
+                           as_attachment=False, conditional=False))
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
 
 
 # ─── Detail ──────────────────────────────────────────────────────────────────
