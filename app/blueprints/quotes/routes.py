@@ -277,7 +277,10 @@ def pdf(qid, lang):
     """Generate and download PDF in PT or EN."""
     if lang not in ("pt", "en"):
         abort(400)
-    quote = Quote.query.filter_by(id=qid, company_id=current_user.company_id, deleted_at=None).first_or_404()
+    quote = (Quote.query
+             .populate_existing()
+             .filter_by(id=qid, company_id=current_user.company_id, deleted_at=None)
+             .first_or_404())
     from ...services.quote_pdf import generate_quote_pdf
     buf = generate_quote_pdf(quote, lang=lang)
     filename = f"{quote.number}.pdf"

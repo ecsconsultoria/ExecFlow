@@ -219,6 +219,7 @@ def pdf(po_id):
                 joinedload(PurchaseOrder.service_order).lazyload('*'),
                 selectinload(PurchaseOrder.items),
             )
+            .populate_existing()
             .filter_by(id=po_id, company_id=current_user.company_id)
             .first_or_404())
     lang = request.args.get("lang", "pt")
