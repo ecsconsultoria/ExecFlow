@@ -649,6 +649,52 @@ def add_item(po: PurchaseOrder, data: dict) -> POItem:
     return item
 
 
+def duplicate_item(item: POItem) -> POItem:
+    """Duplica um item da PO, inserindo abaixo do original."""
+    new_item = POItem(
+        po_id               = item.po_id,
+        service_id          = item.service_id,
+        category_id         = item.category_id,
+        description         = item.description,
+        vehicle_description = item.vehicle_description,
+        quantity            = item.quantity,
+        unit_cost           = item.unit_cost,
+        total_cost          = item.total_cost,
+        sort_order          = (item.sort_order or 0) + 1,
+        op_driver_name      = item.op_driver_name,
+        op_driver_phone     = item.op_driver_phone,
+        op_vehicle_model    = item.op_vehicle_model,
+        op_vehicle_plate    = item.op_vehicle_plate,
+        op_pickup_datetime  = item.op_pickup_datetime,
+        op_pickup_location  = item.op_pickup_location,
+        op_dropoff_location = item.op_dropoff_location,
+        op_passenger_name   = item.op_passenger_name,
+        op_passenger_phone  = item.op_passenger_phone,
+        op_flight_number    = item.op_flight_number,
+        op_notes            = item.op_notes,
+        service_date        = item.service_date,
+        service_time        = item.service_time,
+    )
+    po = item.purchase_order
+    existing = list(po.items)
+    for i in existing:
+        if i.sort_order is not None and i.sort_order > (item.sort_order or 0):
+            i.sort_order += 1
+    db.session.add(new_item)
+    db.session.flush()
+    db.session.commit()
+    return new_item
+
+
+def reorder_items(po, item_ids: list[int]) -> None:
+    """Atualiza sort_order dos itens da PO conforme a ordem da lista recebida."""
+    for idx, item_id in enumerate(item_ids):
+        item = next((i for i in po.items if i.id == item_id), None)
+        if item:
+            item.sort_order = idx
+    db.session.commit()
+
+
 def update_item(item: POItem, data: dict) -> POItem:
     """Atualiza quantidade, custo unitário, categoria e motorista de um POItem."""
     if "quantity" in data:

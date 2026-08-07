@@ -562,6 +562,7 @@
   <table class="w-full text-xs">
     <thead class="bg-slate-50 dark:bg-slate-700/70">
       <tr>
+        {% if not locked %}<th class="px-1 py-2 w-5"></th>{% endif %}
         <th class="px-3 py-2 text-center font-semibold text-slate-500 uppercase tracking-wide w-8">#</th>
         <th class="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wide">Serviço / Descrição</th>
         <th class="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wide hidden sm:table-cell">Categoria</th>
@@ -575,8 +576,9 @@
     <tbody id="po-items-tbody" class="divide-y divide-slate-100 dark:divide-slate-700">
       {% if po %}
       {% for item in po.items %}
-      <tr id="poi-row-{{ item.id }}">
-        <td class="px-3 py-2 text-center text-slate-400">{{ loop.index }}</td>
+      <tr id="poi-row-{{ item.id }}" class="po-item-row" draggable="true" data-item-id="{{ item.id }}">
+        {% if not locked %}<td class="px-1 py-2 text-center drag-handle" style="cursor:grab"><i class="fa-solid fa-grip-vertical text-slate-300 text-xs"></i></td>{% endif %}
+        <td class="px-3 py-2 text-center text-slate-400 po-item-pos">{{ loop.index }}</td>
         <td class="px-3 py-2">
           <p class="font-medium text-slate-700 dark:text-slate-200">
             {{ item.description or (item.service.name if item.service else '–') }}
@@ -636,6 +638,12 @@
                     class="p-1.5 rounded text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                     title="Editar">
               <i class="fa-solid fa-pencil text-xs"></i>
+            </button>
+            <button type="button"
+                    onclick="duplicatePoItem({{ item.id }})"
+                    class="p-1.5 rounded text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                    title="Duplicar item">
+              <i class="fa-solid fa-copy text-xs"></i>
             </button>
             <button type="button"
                     onclick="deletePoItem('{{ url_for('purchase_orders.delete_item', item_id=item.id) }}')"
@@ -1780,6 +1788,69 @@ async function estornarPmt(pid) {
     window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 })();
+
+async function duplicatePoItem(iid) {
+  const resp = await fetch('/po/items/' + iid + '/duplicate', {
+    method: 'POST',
+    headers: {'X-CSRFToken': '{{ csrf_token() }}'},
+  });
+  const d = await resp.json();
+  if (!d.ok) return;
+  location.reload();
+}
+
+// ── Drag-and-drop reorder dos itens da PO ─────────────────────────
+{% if po and not locked %}
+(function(){
+  const tbody = document.querySelector('.po-item-row')?.parentNode;
+  if (!tbody) return;
+  let dragRow = null;
+
+  tbody.addEventListener('dragstart', function(e) {
+    dragRow = e.target.closest('.po-item-row');
+    if (!dragRow) return;
+    dragRow.classList.add('opacity-50');
+    e.dataTransfer.effectAllowed = 'move';
+  });
+
+  tbody.addEventListener('dragend', function(e) {
+    if (dragRow) dragRow.classList.remove('opacity-50');
+    dragRow = null;
+  });
+
+  tbody.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  });
+
+  tbody.addEventListener('drop', function(e) {
+    e.preventDefault();
+    const targetRow = e.target.closest('.po-item-row');
+    if (!targetRow || !dragRow || targetRow === dragRow) return;
+
+    const rect = targetRow.getBoundingClientRect();
+    const mid = rect.top + rect.height / 2;
+    if (e.clientY < mid) {
+      tbody.insertBefore(dragRow, targetRow);
+    } else {
+      tbody.insertBefore(dragRow, targetRow.nextSibling);
+    }
+
+    const rows = tbody.querySelectorAll('.po-item-row');
+    const itemIds = Array.from(rows).map(r => parseInt(r.dataset.itemId));
+    rows.forEach((r, i) => {
+      const posCell = r.querySelector('.po-item-pos');
+      if (posCell) posCell.textContent = i + 1;
+    });
+
+    fetch('{{ url_for("purchase_orders.reorder_items", po_id=po.id) }}', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}'},
+      body: JSON.stringify({items: itemIds}),
+    });
+  });
+})();
+{% endif %}
 </script>
 
 {% endblock %}

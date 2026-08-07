@@ -395,6 +395,46 @@ def generate_payments(order: Order, custom_total: float = None) -> list:
     return created
 
 
+def duplicate_item(item: OrderItem) -> OrderItem:
+    """Duplica um item do pedido, inserindo abaixo do original."""
+    new_item = OrderItem(
+        order_id            = item.order_id,
+        service_id          = item.service_id,
+        category_id         = item.category_id,
+        description         = item.description,
+        vehicle_description = item.vehicle_description,
+        quantity            = item.quantity,
+        unit_price          = item.unit_price,
+        total_price         = item.total_price,
+        sort_order          = (item.sort_order or 0) + 1,
+        driver_name         = item.driver_name,
+        state_code          = item.state_code,
+        ref_note            = item.ref_note,
+        service_date        = item.service_date,
+        service_time        = item.service_time,
+    )
+    # Shift sort_order of items below
+    order = item.order
+    existing = list(order.items)
+    for i in existing:
+        if i.sort_order is not None and i.sort_order > (item.sort_order or 0):
+            i.sort_order += 1
+    db.session.add(new_item)
+    db.session.flush()
+    order.total_amount = sum(i.total_price or 0 for i in order.items)
+    db.session.commit()
+    return new_item
+
+
+def reorder_items(order: Order, item_ids: list[int]) -> None:
+    """Atualiza sort_order dos itens conforme a ordem da lista recebida."""
+    for idx, item_id in enumerate(item_ids):
+        item = next((i for i in order.items if i.id == item_id), None)
+        if item:
+            item.sort_order = idx
+    db.session.commit()
+
+
 def add_payment(order: Order, data: dict) -> OrderPayment:
     next_no = max((p.installment_no for p in order.payments), default=0) + 1
     due = None

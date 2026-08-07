@@ -702,6 +702,45 @@ def add_item(po_id):
     return redirect(url_for("purchase_orders.detail", po_id=po_id))
 
 
+@purchase_orders_bp.route("/items/<int:item_id>/duplicate", methods=["POST"])
+@login_required
+@require_permission("po.edit")
+def duplicate_item(item_id):
+    item = POItem.query.get_or_404(item_id)
+    po = item.purchase_order
+    if po.company_id != current_user.company_id:
+        return jsonify({"ok": False, "error": "Não autorizado"}), 403
+    if po.status in ("cancelado", "excluido"):
+        return jsonify({"ok": False, "error": "PO bloqueada"}), 403
+    new_item = pos.duplicate_item(item)
+    return jsonify({
+        "ok": True,
+        "item": {
+            "id": new_item.id,
+            "sort_order": new_item.sort_order,
+            "description": new_item.description or (new_item.service.name if new_item.service else "–"),
+            "quantity": new_item.quantity,
+            "unit_cost": float(new_item.unit_cost or 0),
+            "total_cost": float(new_item.total_cost or 0),
+        }
+    })
+
+
+@purchase_orders_bp.route("/<int:po_id>/items/reorder", methods=["POST"])
+@login_required
+@require_permission("po.edit")
+def reorder_items(po_id):
+    po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
+    if po.status in ("cancelado", "excluido"):
+        return jsonify({"ok": False, "error": "PO bloqueada"}), 403
+    data = request.get_json()
+    item_ids = data.get("items", [])
+    if not item_ids:
+        return jsonify({"ok": False, "error": "Nenhum item enviado"}), 400
+    pos.reorder_items(po, item_ids)
+    return jsonify({"ok": True})
+
+
 @purchase_orders_bp.route("/items/<int:item_id>/update", methods=["POST"])
 @login_required
 @require_permission("po.edit")

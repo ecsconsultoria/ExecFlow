@@ -424,6 +424,44 @@ def add_payment(oid):
     return redirect(url_for("orders.detail", oid=oid))
 
 
+@orders_bp.route("/items/<int:iid>/duplicate", methods=["POST"])
+@login_required
+@require_permission("so.edit")
+def duplicate_item(iid):
+    item = OrderItem.query.get_or_404(iid)
+    order = item.order
+    _check_company(order)
+    if order.status in ("cancelado", "excluido"):
+        return jsonify({"ok": False, "error": "Pedido bloqueado"}), 403
+    new_item = order_service.duplicate_item(item)
+    return jsonify({
+        "ok": True,
+        "item": {
+            "id": new_item.id,
+            "sort_order": new_item.sort_order,
+            "description": new_item.description or (new_item.service.name if new_item.service else "–"),
+            "quantity": new_item.quantity,
+            "unit_price": float(new_item.unit_price or 0),
+            "total_price": float(new_item.total_price or 0),
+        }
+    })
+
+
+@orders_bp.route("/<int:oid>/items/reorder", methods=["POST"])
+@login_required
+@require_permission("so.edit")
+def reorder_order_items(oid):
+    order = _get_order(oid)
+    if order.status in ("cancelado", "excluido"):
+        return jsonify({"ok": False, "error": "Pedido bloqueado"}), 403
+    data = request.get_json()
+    item_ids = data.get("items", [])
+    if not item_ids:
+        return jsonify({"ok": False, "error": "Nenhum item enviado"}), 400
+    order_service.reorder_items(order, item_ids)
+    return jsonify({"ok": True})
+
+
 @orders_bp.route("/payments/<int:pid>/delete", methods=["POST"])
 @login_required
 @require_permission("so.edit")
