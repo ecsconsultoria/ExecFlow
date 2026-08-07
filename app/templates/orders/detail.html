@@ -465,19 +465,21 @@
 
       <div class="f-email">
         <label class="lbl">Email</label>
+        {% set _email = order.client.email if order.client and order.client.email else order.email %}
         {% if locked %}
-        <p class="fi-ro"><span class="truncate">{{ order.email or '–' }}</span></p>
+        <p class="fi-ro"><span class="truncate">{{ _email or '–' }}</span></p>
         {% else %}
-        <input type="email" name="email" value="{{ order.email or '' }}" class="fi">
+        <input type="email" name="email" value="{{ _email or '' }}" class="fi">
         {% endif %}
       </div>
 
       <div class="f-celular">
         <label class="lbl">Celular</label>
+        {% set _cel = order.client.whatsapp if order.client and order.client.whatsapp else (order.client.phone if order.client and order.client.phone else order.celular) %}
         {% if locked %}
-        <p class="fi-ro">{{ order.celular or '–' }}</p>
+        <p class="fi-ro">{{ _cel or '–' }}</p>
         {% else %}
-        <input type="text" name="celular" value="{{ order.celular or '' }}" class="fi">
+        <input type="text" name="celular" value="{{ _cel or '' }}" class="fi">
         {% endif %}
       </div>
 
