@@ -595,12 +595,15 @@ def save_all(oid):
             if c:
                 order.client_id   = c.id
                 order.client_name = c.name
+                order.email       = c.email or order.email
+                order.phone       = c.phone or order.phone
+                order.celular     = c.whatsapp or c.phone or order.celular
         except (ValueError, TypeError):
             pass
-    # Contact fields
+    # Contact fields (manual override via form)
     for field in ("client_name", "email", "phone", "celular"):
-        if field in data:
-            setattr(order, field, data[field] or "")
+        if field in data and data[field]:
+            setattr(order, field, data[field])
     db.session.commit()
     # Adjustments
     order_service.update_adjustments(order, data)
