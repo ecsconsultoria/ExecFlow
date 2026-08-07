@@ -256,12 +256,9 @@ def open_order(oid):
         if c:
             order.client_id   = c.id
             order.client_name = c.name
-            if not order.email and c.email:
-                order.email = c.email
-            if not order.phone and c.phone:
-                order.phone = c.phone
-            if not order.celular and c.whatsapp:
-                order.celular = c.whatsapp
+            order.email       = c.email or ""
+            order.phone       = c.phone or ""
+            order.celular     = c.whatsapp or c.phone or ""
     try:
         order_service.open_order(order, current_user.id)
         log_activity("order", order.id, order.company_id, "Aberto", current_user.id)
@@ -595,9 +592,9 @@ def save_all(oid):
             if c:
                 order.client_id   = c.id
                 order.client_name = c.name
-                order.email       = c.email or order.email
-                order.phone       = c.phone or order.phone
-                order.celular     = c.whatsapp or c.phone or order.celular
+                order.email       = c.email or ""
+                order.phone       = c.phone or ""
+                order.celular     = c.whatsapp or c.phone or ""
         except (ValueError, TypeError):
             pass
     # Contact fields (manual override via form)
