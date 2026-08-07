@@ -484,6 +484,11 @@
       </div>
 
       <div class="f-cnpj">
+        <label class="lbl">Contato</label>
+        <p class="fi-ro">{{ order.client.contact if order.client and order.client.contact else (order.contact_name or '–') }}</p>
+      </div>
+
+      <div class="f-cnpj">
         <label class="lbl">CNPJ / CPF</label>
         <p class="fi-ro">
           {{ order.client.document if order.client and order.client.document else '–' }}

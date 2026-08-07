@@ -258,10 +258,10 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
          Paragraph(_t("contact_col", lang), cell_hdr),
          Paragraph(_t("email_col",   lang), cell_hdr),
          Paragraph(_t("mobile_col",  lang), cell_hdr)],
-        [Paragraph(order.client_name  or "–", cell_body_c),
-         Paragraph(order.contact_name or "–", cell_body_c),
-         Paragraph(order.email        or "–", cell_body_c),
-         Paragraph((getattr(order, "celular", None) or order.phone or "–").replace('\xa0', ' '), cell_body_c)],
+        [Paragraph((order.client.name if order.client and order.client.name else order.client_name) or "–", cell_body_c),
+         Paragraph((order.client.contact if order.client and order.client.contact else order.contact_name) or "–", cell_body_c),
+         Paragraph((order.client.email if order.client and order.client.email else order.email) or "–", cell_body_c),
+         Paragraph(((order.client.whatsapp if order.client and order.client.whatsapp else (order.client.phone if order.client else None)) or getattr(order, "celular", None) or order.phone or "–").replace('\xa0', ' '), cell_body_c)],
     ]
     client_tbl = Table(client_tbl_data,
                        colWidths=[W * 0.28, W * 0.24, W * 0.30, W * 0.18])
