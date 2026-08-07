@@ -694,8 +694,8 @@ def update_payment(pid):
 def pdf(oid, lang):
     import gc
     from ...services.order_pdf import generate_order_pdf
-    # Neutraliza lazy="joined" em cascata (6 users + quote) que dispara 15+ JOINs
-    # e hidrata MB desnecessarios -> estouro de memoria no Render 512MB.
+    # Força refresh dos dados — expulsa objeto do cache da sessão
+    db.session.expire_all()
     order = (Order.query
              .options(
                  lazyload('*'),
