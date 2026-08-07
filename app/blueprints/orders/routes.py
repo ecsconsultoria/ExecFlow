@@ -694,14 +694,13 @@ def update_payment(pid):
 def pdf(oid, lang):
     import gc
     from ...services.order_pdf import generate_order_pdf
-    # Força refresh dos dados — expulsa objeto do cache da sessão
-    db.session.expire_all()
     order = (Order.query
              .options(
                  lazyload('*'),
                  selectinload(Order.items),
                  selectinload(Order.payments),
              )
+             .populate_existing()
              .filter_by(id=oid, company_id=current_user.company_id, deleted_at=None)
              .first_or_404())
     lang  = lang if lang in ("pt", "en") else "pt"
