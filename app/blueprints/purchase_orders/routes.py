@@ -271,7 +271,7 @@ def detail(po_id):
 @require_permission("po.edit")
 def save_all(po_id):
     po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
-    if po.status in ("concluido", "faturado", "cancelado"):
+    if po.status in ("concluido", "cancelado"):
         flash("PO não pode ser editada no status atual.", "warning")
         return redirect(url_for("purchase_orders.detail", po_id=po_id))
     try:
@@ -551,7 +551,7 @@ def generate_payments(po_id):
 def recalculate_payments(po_id):
     """Apaga parcelas não-pagas e regera com base no total atual."""
     po = PurchaseOrder.query.filter_by(id=po_id, company_id=current_user.company_id).first_or_404()
-    if po.status in ("concluido", "faturado", "cancelado"):
+    if po.status in ("concluido", "cancelado"):
         flash("PO não pode ser editada no status atual.", "warning")
         return redirect(url_for("purchase_orders.detail", po_id=po_id))
     pmts = pos.generate_payments(po)  # REGENERATE MODE

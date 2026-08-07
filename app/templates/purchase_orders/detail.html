@@ -55,7 +55,7 @@
 {% endblock %}
 
 {% block page_title %}
-{% set locked = po and po.status in ('concluido', 'faturado', 'pago', 'cancelado', 'excluido') %}
+{% set locked = po and po.status in ('concluido', 'pago', 'cancelado', 'excluido') %}
 <div class="w-full">
   <div class="flex flex-wrap items-center gap-2 pa-wrap">
     <span class="inline-flex items-center gap-2 flex-shrink-0 pa-header">
@@ -186,7 +186,7 @@
       </div>
 
       {# Reabrir #}
-      {% if po.status == 'faturado' and has_role('ADMIN') %}
+      {% if po.status in ('faturado', 'concluido') and has_role('ADMIN') %}
       <button type="button" onclick="document.getElementById('po-reabrir-form').submit()" title="Reabrir PO"
               class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-amber-600 hover:bg-amber-700 text-white">
         <i class="fa-solid fa-rotate-left text-[11px]"></i> Reabrir
@@ -390,7 +390,7 @@
   @open-po-cancel-modal.window="showCancelModal = true"
   @open-po-delete-modal.window="showDeleteModal = true">
 
-{% set locked = po and po.status in ('concluido', 'faturado', 'pago', 'cancelado', 'excluido') %}
+{% set locked = po and po.status in ('concluido', 'pago', 'cancelado', 'excluido') %}
 
 {# ══════════════════════════════════════════
    MAIN FORM
@@ -888,7 +888,7 @@
               {% if pmt.paid_at %}{{ pmt.paid_at|fdatetime }}{% else %}–{% endif %}
             </td>
             <td class="px-2 py-1.5 text-center">
-              {% if po.status not in ('concluido', 'cancelado', 'rascunho') %}
+              {% if po.status not in ('cancelado', 'rascunho') %}
               <button type="button" onclick="estornarPmt({{ pmt.id }})"
                       class="p-1 rounded text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/30"
                       title="Estornar pagamento">
