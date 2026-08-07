@@ -135,11 +135,11 @@
            class="absolute left-0 top-full mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 py-1 overflow-hidden"
            style="min-width:200px">
         <div style="display:grid;grid-template-columns:1fr 1fr">
-          <a href="{{ url_for('quotes.pdf', qid=quote.id, lang='pt') }}" @click="open=false" title="Baixar PDF em Português"
+          <a href="{{ url_for('quotes.pdf', qid=quote.id, lang='pt') }}?_cb={{ quote.updated_at.timestamp() if quote.updated_at else 0 }}" @click="open=false" title="Baixar PDF em Português"
              class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
             <i class="fa-solid fa-download text-rose-500"></i> PDF PT
           </a>
-          <a href="{{ url_for('quotes.pdf', qid=quote.id, lang='en') }}" @click="open=false" title="Download PDF in English"
+          <a href="{{ url_for('quotes.pdf', qid=quote.id, lang='en') }}?_cb={{ quote.updated_at.timestamp() if quote.updated_at else 0 }}" @click="open=false" title="Download PDF in English"
              class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
             <i class="fa-solid fa-download text-rose-700"></i> PDF EN
           </a>
@@ -507,8 +507,8 @@
     client:  "{{ ((quote.client.name if quote.client else quote.client_name) or '')|e }}",
     email:   "{{ ((quote.client.email if quote.client and quote.client.email else quote.email) or '')|e }}",
     phone:   "{{ ((quote.client.whatsapp if quote.client and quote.client.whatsapp else quote.phone) or '')|e }}",
-    pdfPT:   "{{ url_for('quotes.pdf', qid=quote.id, lang='pt') }}",
-    pdfEN:   "{{ url_for('quotes.pdf', qid=quote.id, lang='en') }}",
+    pdfPT:   "{{ url_for('quotes.pdf', qid=quote.id, lang='pt') }}?_cb={{ quote.updated_at.timestamp() if quote.updated_at else 0 }}",
+    pdfEN:   "{{ url_for('quotes.pdf', qid=quote.id, lang='en') }}?_cb={{ quote.updated_at.timestamp() if quote.updated_at else 0 }}",
   };
 
   window.sendEmail = function(lang) {

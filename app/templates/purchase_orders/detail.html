@@ -145,12 +145,12 @@
              class="absolute left-0 top-full mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 py-1 overflow-hidden"
              style="min-width:200px">
           <div style="display:grid;grid-template-columns:1fr 1fr">
-            <a href="{{ url_for('purchase_orders.pdf', po_id=po.id, lang='pt') }}" target="_blank"
+            <a href="{{ url_for('purchase_orders.pdf', po_id=po.id, lang='pt') }}?_cb={{ po.updated_at.timestamp() if po and po.updated_at else 0 }}" target="_blank"
                @click="open=false" title="Baixar PDF em Português"
                class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
               <i class="fa-solid fa-download text-rose-500"></i> PDF PT
             </a>
-            <a href="{{ url_for('purchase_orders.pdf', po_id=po.id, lang='en') }}" target="_blank"
+            <a href="{{ url_for('purchase_orders.pdf', po_id=po.id, lang='en') }}?_cb={{ po.updated_at.timestamp() if po and po.updated_at else 0 }}" target="_blank"
                @click="open=false" title="Download PDF in English"
                class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
               <i class="fa-solid fa-download text-rose-700"></i> PDF EN
@@ -1762,8 +1762,8 @@ async function estornarPmt(pid) {
     email:   "{{ ((po.supplier.email if po and po.supplier and po.supplier.email else '') or '')|e }}",
     phone:   "{{ ((po.supplier.phone if po and po.supplier and po.supplier.phone else '') or '')|e }}",
     {% if po %}
-    pdfPT:   "{{ url_for('purchase_orders.pdf', po_id=po.id, lang='pt') }}",
-    pdfEN:   "{{ url_for('purchase_orders.pdf', po_id=po.id, lang='en') }}",
+    pdfPT:   "{{ url_for('purchase_orders.pdf', po_id=po.id, lang='pt') }}?_cb={{ po.updated_at.timestamp() if po and po.updated_at else 0 }}",
+    pdfEN:   "{{ url_for('purchase_orders.pdf', po_id=po.id, lang='en') }}?_cb={{ po.updated_at.timestamp() if po and po.updated_at else 0 }}",
     {% else %}
     pdfPT: "", pdfEN: "",
     {% endif %}
