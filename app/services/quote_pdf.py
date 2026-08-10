@@ -692,12 +692,23 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
         total    = it.total_price or round(price * qty, 2)
         grand_total += total
 
+        usd_rate = getattr(quote, 'usd_rate', None)
+        show_usd = lang == 'en' and usd_rate and usd_rate > 0
+
+        unit_cell = _fmt_brl(price)
+        total_cell = _fmt_brl(total)
+        if show_usd:
+            usd_unit = price / usd_rate
+            usd_total = total / usd_rate
+            unit_cell += f'<br/><font size="7" color="#888888">$ {usd_unit:,.2f}</font>'
+            total_cell += f'<br/><font size="7" color="#888888">$ {usd_total:,.2f}</font>'
+
         items_rows.append([
             Paragraph(str(idx),                  cell_body_c),
             svc_para,
             Paragraph(str(qty),                  cell_body_c),
-            Paragraph(_fmt_brl(price),           cell_body_r),
-            Paragraph(_fmt_brl(total),           cell_body_r),
+            Paragraph(unit_cell,                 cell_body_r),
+            Paragraph(total_cell,                cell_body_r),
         ])
 
     items_tbl = Table(items_rows, colWidths=i_col_w, repeatRows=1)
