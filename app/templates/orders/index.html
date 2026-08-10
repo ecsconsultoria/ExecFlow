@@ -61,6 +61,7 @@
   <table class="w-full text-sm">
     <thead>
       <tr class="border-b-2 border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-700/50">
+        <th class="px-3 py-3.5 w-8"><input type="checkbox" id="bulk-select-all" class="rounded" onchange="toggleAll(this)"></th>
         <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Nº SO</th>
         <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Nº RFQ</th>
         <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Cliente</th>
@@ -73,6 +74,9 @@
     <tbody class="divide-y divide-slate-100 dark:divide-slate-700/60">
       {% for o in orders %}
       <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-700/30 transition-colors">
+        <td class="px-3 py-3.5">
+          {% if o.status == 'aberto' %}<input type="checkbox" class="bulk-check rounded" value="{{ o.id }}" onchange="updateBulkBar()">{% endif %}
+        </td>
         <td class="px-5 py-3.5">
           <a href="{{ url_for('orders.detail', oid=o.id) }}"
              class="font-mono font-bold text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-200 transition-colors">
@@ -105,7 +109,7 @@
       </tr>
       {% else %}
       <tr>
-        <td colspan="7" class="px-5 py-16 text-center">
+        <td colspan="8" class="px-5 py-16 text-center">
           <div class="flex flex-col items-center gap-3">
             <div class="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
               <i class="fa-solid fa-bag-shopping text-2xl text-slate-300 dark:text-slate-500"></i>
@@ -117,6 +121,85 @@
       </tr>
       {% endfor %}
     </tbody>
+    {% if orders %}
+    <tfoot>
+      <tr class="border-t-2 border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50">
+        <td></td><td class="hidden md:table-cell"></td><td class="hidden md:table-cell"></td><td class="hidden md:table-cell"></td><td class="hidden md:table-cell"></td>
+        <td class="px-5 py-2 text-right whitespace-nowrap hidden md:table-cell">
+          <span class="font-bold text-xs text-slate-500 uppercase">Total</span>
+          <span class="font-bold font-mono text-slate-700 dark:text-slate-200 ml-2">{{ total_filtered|currency }}</span>
+        </td>
+        <td class="hidden md:table-cell"></td><td></td>
+      </tr>
+    </tfoot>
+    {% endif %}
   </table>
 </div>
+
+{# ── Bulk action bar ── #}
+<div id="bulk-bar" class="fixed left-6 right-6 bottom-6 bg-slate-800 text-white px-4 py-3 flex items-center justify-between gap-3 shadow-2xl rounded-xl z-40 transition-all duration-200"
+     :class="activeModule ? 'lg:left-[336px]' : 'lg:left-[96px]'"
+     style="transform:translateY(calc(100% + 24px))">
+  <span class="text-sm font-semibold">
+    <span id="bulk-count" class="text-teal-300 font-extrabold mr-1">0</span>
+    pedido(s) selecionado(s)
+  </span>
+  <div class="flex items-center gap-2 shrink-0">
+    <button type="button" onclick="bulkFaturar()"
+            class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 rounded-lg whitespace-nowrap">
+      <i class="fa-solid fa-file-invoice mr-1"></i>Faturar
+    </button>
+    <button type="button" onclick="clearBulk()" class="text-slate-400 hover:text-white text-sm whitespace-nowrap px-2 py-2">
+      <i class="fa-solid fa-xmark mr-1"></i>Cancelar
+    </button>
+  </div>
+</div>
+
+<script>
+function toggleAll(el) {
+  document.querySelectorAll('.bulk-check').forEach(cb => { cb.checked = el.checked; });
+  updateBulkBar();
+}
+function updateBulkBar() {
+  const checked = document.querySelectorAll('.bulk-check:checked');
+  const count = checked.length;
+  document.getElementById('bulk-count').textContent = count;
+  document.getElementById('bulk-bar').style.transform = count > 0 ? 'translateY(0)' : 'translateY(calc(100% + 24px))';
+}
+function clearBulk() {
+  document.querySelectorAll('.bulk-check').forEach(cb => { cb.checked = false; });
+  document.getElementById('bulk-select-all').checked = false;
+  updateBulkBar();
+}
+async function bulkFaturar() {
+  const ids = Array.from(document.querySelectorAll('.bulk-check:checked')).map(cb => cb.value);
+  if (!ids.length) return;
+  if (!confirm('Faturar ' + ids.length + ' pedido(s)?')) return;
+  try {
+    const resp = await fetch('{{ url_for("orders.bulk_faturar") }}', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}'},
+      body: JSON.stringify({ids: ids}),
+    });
+    const ctype = resp.headers.get('content-type') || '';
+    if (!ctype.includes('application/json')) {
+      const text = await resp.text();
+      console.error('Resposta inesperada do servidor:', resp.status, text.slice(0, 500));
+      alert('Erro do servidor (HTTP ' + resp.status + '). Veja o console para detalhes.');
+      return;
+    }
+    const d = await resp.json();
+    if (!resp.ok || d.ok === false) {
+      alert('Erro: ' + (d.error || 'Falha ao faturar.'));
+      return;
+    }
+    let msg = d.faturados + ' faturado(s) com sucesso.';
+    if (d.falhas > 0) msg += '\n' + d.falhas + ' falha(s):\n' + (d.erros||[]).join('\n');
+    alert(msg);
+    location.reload();
+  } catch(e) {
+    alert('Erro de comunicação: ' + e.message);
+  }
+}
+</script>
 {% endblock %}

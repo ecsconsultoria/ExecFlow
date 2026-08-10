@@ -10,7 +10,7 @@ from ...models.service import Service, ServicePricing
 from ...models.vehicle import VehicleCategory
 from ...models.service_order import ServiceOrder
 from ...models.order import Order, OrderItem
-from ...extensions import db
+from ...extensions import db, csrf
 from ...services import purchase_order_service as pos
 from ...services import margin_service
 from ...utils.audit import log_activity
@@ -66,10 +66,59 @@ def index():
         PurchaseOrder.id.desc()
     ).paginate(page=page, per_page=25, error_out=False)
     po_list = pagination.items
+
+    # Soma dos totais filtrados (todos os registros, sem paginação)
+    all_filtered = query.order_by(None).all()
+    total_filtered = sum(p.computed_total or 0 for p in all_filtered)
+
     return render_template("purchase_orders/index.html",
                            po_list=po_list, pagination=pagination,
                            status=status, q=q,
-                           PO_STATUSES=PO_STATUSES)
+                           PO_STATUSES=PO_STATUSES,
+                           total_filtered=total_filtered)
+
+
+@purchase_orders_bp.route("/bulk-faturar", methods=["POST"])
+@login_required
+def bulk_faturar():
+    try:
+        if not current_user.has_permission("financial.manage"):
+            return jsonify({"ok": False, "error": "Permissão negada"}), 403
+        data = request.get_json(force=True, silent=True) or {}
+        ids = data.get("ids", [])
+        if not ids:
+            return jsonify({"ok": False, "error": "Nenhuma PO selecionada"}), 400
+        results = {"ok": True, "faturados": 0, "falhas": 0, "erros": []}
+        for pid in ids:
+            try:
+                po = PurchaseOrder.query.filter_by(id=int(pid), company_id=current_user.company_id).filter(
+                    PurchaseOrder.deleted_at.is_(None)
+                ).first()
+                if not po:
+                    results["falhas"] += 1
+                    results["erros"].append(f"PO {pid} não encontrada")
+                    continue
+                if po.status not in ("aberto", "aprovado", "em_execucao"):
+                    results["falhas"] += 1
+                    results["erros"].append(f"{po.number} não pode ser faturada (status: {po.status_label})")
+                    continue
+                if not po.supplier_id:
+                    results["falhas"] += 1
+                    results["erros"].append(f"{po.number} sem fornecedor selecionado")
+                    continue
+                pos.faturar(po, current_user.id)
+                log_activity("po", po.id, po.company_id, "Faturada (bulk)", current_user.id)
+                results["faturados"] += 1
+            except Exception as e:
+                results["falhas"] += 1
+                results["erros"].append(f"Erro na PO {pid}: {str(e)}")
+        db.session.commit()
+        return jsonify(results)
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+csrf.exempt(bulk_faturar)
 
 
 @purchase_orders_bp.route("/export")

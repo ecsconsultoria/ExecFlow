@@ -13,7 +13,7 @@ from ...models.purchase_order import PurchaseOrder
 from ...models.service        import Service
 from ...models.vehicle        import VehicleCategory
 from ...models.company        import Company
-from ...extensions            import db
+from ...extensions            import db, csrf
 from ...services              import order_service
 from ...services              import service_order_service as sos
 from ...services              import purchase_order_service as pos
@@ -68,8 +68,57 @@ def index():
     page = request.args.get("page", 1, type=int)
     pagination = query.order_by(Order.created_at.desc()).paginate(page=page, per_page=25, error_out=False)
     orders = pagination.items
+
+    # Soma dos totais filtrados (todos os registros, sem paginação)
+    all_filtered = query.order_by(None).all()  # remove order_by para performance
+    total_filtered = sum(o.computed_total or 0 for o in all_filtered)
+
     return render_template("orders/index.html", orders=orders, pagination=pagination,
-                           status=status, q=q, ORDER_STATUSES=ORDER_STATUSES)
+                           status=status, q=q, ORDER_STATUSES=ORDER_STATUSES,
+                           total_filtered=total_filtered)
+
+
+@orders_bp.route("/bulk-faturar", methods=["POST"])
+@login_required
+def bulk_faturar():
+    try:
+        if not current_user.has_permission("so.invoice"):
+            return jsonify({"ok": False, "error": "Permissão negada"}), 403
+        data = request.get_json(force=True, silent=True) or {}
+        ids = data.get("ids", [])
+        if not ids:
+            return jsonify({"ok": False, "error": "Nenhum pedido selecionado"}), 400
+        results = {"ok": True, "faturados": 0, "falhas": 0, "erros": []}
+        for oid in ids:
+            try:
+                order = Order.query.filter_by(id=int(oid), company_id=current_user.company_id, deleted_at=None).first()
+                if not order:
+                    results["falhas"] += 1
+                    results["erros"].append(f"Pedido {oid} não encontrado")
+                    continue
+                if order.status != "aberto":
+                    results["falhas"] += 1
+                    results["erros"].append(f"{order.number} não está aberto (status: {order.status_label})")
+                    continue
+                if not order.emission_date:
+                    order.emission_date = now_br().date()
+                if not list(order.payments):
+                    results["falhas"] += 1
+                    results["erros"].append(f"{order.number} sem parcelas geradas")
+                    continue
+                order_service.faturar(order, {}, current_user.id)
+                log_activity("order", order.id, order.company_id, "Faturado (bulk)", current_user.id)
+                results["faturados"] += 1
+            except Exception as e:
+                results["falhas"] += 1
+                results["erros"].append(f"Erro no pedido {oid}: {str(e)}")
+        db.session.commit()
+        return jsonify(results)
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+csrf.exempt(bulk_faturar)
 
 
 @orders_bp.route("/export")
