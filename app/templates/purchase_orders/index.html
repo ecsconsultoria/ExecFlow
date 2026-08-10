@@ -61,6 +61,7 @@
   <table class="w-full text-sm">
     <thead>
       <tr class="border-b-2 border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-700/50">
+        <th class="px-3 py-3.5 w-8"><input type="checkbox" id="bulk-select-all" class="rounded" onchange="toggleAll(this)"></th>
         <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Nº PO</th>
         <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Nº SO</th>
         <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Fornecedor</th>
@@ -73,6 +74,9 @@
     <tbody class="divide-y divide-slate-100 dark:divide-slate-700/60">
       {% for po in po_list %}
       <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-700/30 transition-colors">
+        <td class="px-3 py-3.5">
+          {% if po.status in ('aberto', 'aprovado', 'em_execucao') %}<input type="checkbox" class="bulk-check rounded" value="{{ po.id }}" onchange="updateBulkBar()">{% endif %}
+        </td>
         <td class="px-5 py-3.5">
           <a href="{{ url_for('purchase_orders.detail', po_id=po.id) }}"
              class="font-mono font-bold text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-200 transition-colors">
@@ -105,7 +109,7 @@
       </tr>
       {% else %}
       <tr>
-        <td colspan="7" class="px-5 py-16 text-center">
+        <td colspan="8" class="px-5 py-16 text-center">
           <div class="flex flex-col items-center gap-3">
             <div class="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
               <i class="fa-solid fa-cart-flatbed text-2xl text-slate-300 dark:text-slate-500"></i>
@@ -117,6 +121,72 @@
       </tr>
       {% endfor %}
     </tbody>
+    {% if po_list %}
+    <tfoot>
+      <tr class="border-t-2 border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50">
+        <td></td><td class="hidden md:table-cell"></td><td class="hidden md:table-cell"></td><td class="hidden md:table-cell"></td><td class="hidden md:table-cell"></td>
+        <td class="px-5 py-2 text-right whitespace-nowrap hidden md:table-cell">
+          <span class="font-bold text-xs text-slate-500 uppercase">Total</span>
+          <span class="font-bold font-mono text-slate-700 dark:text-slate-200 ml-2">{{ total_filtered|currency }}</span>
+        </td>
+        <td class="hidden md:table-cell"></td><td></td>
+      </tr>
+    </tfoot>
+    {% endif %}
   </table>
 </div>
+
+{# ── Bulk action bar ── #}
+<div id="bulk-bar" class="fixed inset-x-0 bottom-0 bg-slate-800 text-white px-4 py-3 flex items-center justify-between gap-3 shadow-2xl z-40 transition-transform duration-200" style="transform:translateY(100%)">
+  <span class="text-sm font-semibold">
+    <span id="bulk-count" class="text-violet-300 font-extrabold mr-1">0</span>
+    pedido(s) selecionado(s)
+  </span>
+  <div class="flex items-center gap-2 shrink-0">
+    <button type="button" onclick="bulkFaturar()"
+            class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 rounded-lg whitespace-nowrap">
+      <i class="fa-solid fa-file-invoice mr-1"></i>Faturar
+    </button>
+    <button type="button" onclick="clearBulk()" class="text-slate-400 hover:text-white text-sm whitespace-nowrap px-2 py-2">
+      <i class="fa-solid fa-xmark mr-1"></i>Cancelar
+    </button>
+  </div>
+</div>
+
+<script>
+function toggleAll(el) {
+  document.querySelectorAll('.bulk-check').forEach(cb => { cb.checked = el.checked; });
+  updateBulkBar();
+}
+function updateBulkBar() {
+  const checked = document.querySelectorAll('.bulk-check:checked');
+  const count = checked.length;
+  document.getElementById('bulk-count').textContent = count;
+  document.getElementById('bulk-bar').style.transform = count > 0 ? 'translateY(0)' : 'translateY(100%)';
+}
+function clearBulk() {
+  document.querySelectorAll('.bulk-check').forEach(cb => { cb.checked = false; });
+  document.getElementById('bulk-select-all').checked = false;
+  updateBulkBar();
+}
+async function bulkFaturar() {
+  const ids = Array.from(document.querySelectorAll('.bulk-check:checked')).map(cb => cb.value);
+  if (!ids.length) return;
+  if (!confirm('Faturar ' + ids.length + ' PO(s)?')) return;
+  try {
+    const resp = await fetch('{{ url_for("purchase_orders.bulk_faturar") }}', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}'},
+      body: JSON.stringify({ids: ids}),
+    });
+    const d = await resp.json();
+    let msg = d.faturados + ' faturada(s) com sucesso.';
+    if (d.falhas > 0) msg += '\n' + d.falhas + ' falha(s):\n' + (d.erros||[]).join('\n');
+    alert(msg);
+    location.reload();
+  } catch(e) {
+    alert('Erro de comunicação: ' + e.message);
+  }
+}
+</script>
 {% endblock %}
