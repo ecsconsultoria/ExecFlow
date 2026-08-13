@@ -39,6 +39,9 @@ from .quote_pdf import (
     _fmt_usd_raw,
     _fmt_phone_link,
     _translate_service,
+    _translate_vehicle,
+    _translate_driver,
+    _get_vehicle_model,
 )
 from .order_pdf import _fmt_date, _fmt_datetime
 from ..utils import now_br
@@ -181,6 +184,23 @@ def build_receipt_context(order, payment, lang: str = "pt") -> dict:
     reference = (f"{order.number} / {_t('installment_word', lang)} "
                  f"{payment.installment_no}{inst_sep}{total_inst}")
 
+    # Veículo: orders.vehicle_model → vehicle_description do 1º item →
+    # modelo derivado da categoria (mesma regra do PDF do SO)
+    vehicle_raw = (order.vehicle_model
+                   or (first.vehicle_description if first else "")
+                   or "").strip()
+    first_cat = (first.category.name if first and first.category else "") or ""
+    vehicle_disp = (vehicle_raw
+                    or (_get_vehicle_model(first_cat, lang) if first_cat else "")
+                    or (_translate_vehicle(first_cat, lang) if first_cat else "")
+                    or "–")
+
+    # Motorista: orders.driver_name → driver_name do item, traduzido (PT/EN)
+    driver_raw = ((order.driver_name or "").strip()
+                  or next(((it.driver_name or "").strip() for it in items
+                           if (it.driver_name or "").strip()), ""))
+    driver_disp = _translate_driver(driver_raw, lang) if driver_raw else "–"
+
     cli = order.client
     return {
         "lang": lang,
@@ -208,8 +228,8 @@ def build_receipt_context(order, payment, lang: str = "pt") -> dict:
             "order_number": order.number,
             "order_date":   order.emission_date,
             "summary":      service_summary,
-            "vehicle":      (order.vehicle_model or (first.vehicle_description if first else "")) or "–",
-            "driver":       (order.driver_name or (first.driver_name if first else "")) or "–",
+            "vehicle":      vehicle_disp,
+            "driver":       driver_disp,
             "service_date": (first.service_date if first else None),
         },
         "summary": {

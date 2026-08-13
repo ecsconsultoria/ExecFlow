@@ -62,7 +62,9 @@ def _login(app, email=ADMIN_EMAIL, password=ADMIN_PWD):
 
 
 def _seed_order(app, *, status="concluido", installments=2, paid=2,
-                usd_rate=None, payment_method="TRANSFERÊNCIA"):
+                usd_rate=None, payment_method="TRANSFERÊNCIA",
+                category_name=None, vehicle_description="Luxury Van Jet",
+                driver_name="Bilingual Driver"):
     """Cria Company-agnostic: client + order + itens + parcelas + espelho financeiro."""
     with app.app_context():
         company = Company.query.first()
@@ -88,9 +90,18 @@ def _seed_order(app, *, status="concluido", installments=2, paid=2,
         db.session.add(order)
         db.session.flush()
 
+        category_id = None
+        if category_name:
+            from app.models.vehicle import VehicleCategory
+            cat = (VehicleCategory.query
+                   .filter(db.func.lower(VehicleCategory.name) == category_name.lower())
+                   .first())
+            category_id = cat.id if cat else None
+
         db.session.add(OrderItem(
             order_id=order.id, description="Executive Transportation",
-            vehicle_description="Luxury Van Jet", driver_name="Bilingual Driver",
+            vehicle_description=vehicle_description, driver_name=driver_name,
+            category_id=category_id,
             quantity=1, unit_price=17500.0, total_price=17500.0,
             service_date=date.today(),
         ))
@@ -278,6 +289,19 @@ def test_context_single_payment_full(testing_app):
     assert ctx["summary"]["is_final"] is True
     assert ctx["payment"]["payment_type"] == "Full Payment"
     assert "1 of 1" in ctx["payment"]["reference"]
+
+
+def test_context_vehicle_from_category(testing_app):
+    # Item sem vehicle_description: veículo deriva da categoria (regra do SO)
+    oid, pids = _seed_order(testing_app, status="concluido", installments=1, paid=1,
+                            category_name="Van Blindada", vehicle_description="",
+                            driver_name="Bilíngue")
+    with testing_app.app_context():
+        order = db.session.get(Order, oid)
+        pmt = db.session.get(OrderPayment, pids[0])
+        ctx = build_receipt_context(order, pmt, lang="en")
+    assert ctx["service"]["vehicle"] == "Mercedes Sprinter or Similar"
+    assert ctx["service"]["driver"] == "Bilingual Driver"
 
 
 def test_values_come_from_real_payment_records(testing_app):
