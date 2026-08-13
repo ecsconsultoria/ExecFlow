@@ -124,6 +124,20 @@ def _amount_cell(brl_value: float, usd_rate, color, bold: bool = True,
     return Paragraph(brl_part, st)
 
 
+def _unit_cell(brl_value: float, usd_rate) -> Paragraph:
+    """Célula de preço unitário/total da tabela de serviços: R$ / USD na mesma linha."""
+    base = _fmt_brl(brl_value)
+    if usd_rate and usd_rate > 0:
+        usd_val = brl_value / usd_rate
+        return Paragraph(
+            f"{base} / <font color='#888888' size='7'>USD {_fmt_usd_raw(usd_val)}</font>",
+            ParagraphStyle("unit_cell", fontSize=8, textColor=BRAND_DARK,
+                           alignment=TA_RIGHT, leading=11),
+        )
+    return Paragraph(base, ParagraphStyle("unit_cell_brl", fontSize=8,
+                                          textColor=BRAND_DARK, alignment=TA_RIGHT, leading=11))
+
+
 def _esc(text: str) -> str:
     """Escapa texto vindo do banco para uso em marcação de parágrafo."""
     return (text or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
@@ -290,6 +304,7 @@ def generate_receipt_pdf(order, payment, receipt_number: str, lang: str = "pt",
     ctx = build_receipt_context(order, payment, lang)
     ctx["receipt_number"] = receipt_number
     ctx["issued_at"] = now_br()  # data de emissão = data/hora real da geração
+    usd_rate = ctx["summary"]["usd_rate"]
 
     # Dados públicos da empresa (config) — sem inventar dados do cliente
     from flask import current_app
@@ -471,7 +486,7 @@ def generate_receipt_pdf(order, payment, receipt_number: str, lang: str = "pt",
         disc_amt = discount_v
         disc_row_lbl = f"{_t('discount', lang)} ({_fmt_brl(discount_v)})" if discount_v else ""
 
-    i_col_w = [W * 0.05, W * 0.52, W * 0.07, W * 0.17, W * 0.19]
+    i_col_w = [W * 0.04, W * 0.42, W * 0.06, W * 0.22, W * 0.26]
     items_rows = [[
         Paragraph(_t("hash_col",    lang), cell_hdr),
         Paragraph(_t("service_col", lang), cell_hdr),
@@ -530,8 +545,8 @@ def generate_receipt_pdf(order, payment, receipt_number: str, lang: str = "pt",
             Paragraph(str(idx),                        cell_body_c),
             svc_para,
             Paragraph(str(item.quantity or 1),         cell_body_c),
-            Paragraph(_fmt_brl(item.unit_price or 0),  cell_body_r),
-            Paragraph(_fmt_brl(total),                 cell_body_r),
+            _unit_cell(item.unit_price or 0, usd_rate),
+            _unit_cell(total, usd_rate),
         ])
 
     item_data_end = len(items_rows)

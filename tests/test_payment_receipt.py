@@ -24,6 +24,7 @@ from app.services.receipt_pdf import (
     build_receipt_context,
     generate_receipt_pdf,
     _amount_cell,
+    _unit_cell,
 )
 from app.services.quote_pdf import BRAND_DARK
 from app.utils import now_br
@@ -338,6 +339,12 @@ def test_usd_only_when_usd_rate_set():
     # Mesma linha: "R$ 17.500,00 / USD 3,333.33" — nunca abaixo do R$
     assert "R$ 17.500,00 / USD 3,333.33" in text
     assert "\n" not in text
+    # Preço unitário/total da tabela de serviços também com USD na mesma linha
+    unit = _unit_cell(8750.0, 5.25)
+    assert "R$ 8.750,00 / USD 1,666.67" in unit.getPlainText()
+    assert "\n" not in unit.getPlainText()
+    unit_off = _unit_cell(8750.0, None)
+    assert "USD" not in unit_off.getPlainText()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
