@@ -334,7 +334,10 @@ def test_usd_only_when_usd_rate_set():
     cell_off = _amount_cell(17500.0, None, BRAND_DARK)
     assert "USD" not in cell_off.getPlainText()
     cell_on = _amount_cell(17500.0, 5.25, BRAND_DARK)
-    assert "USD 3,333.33" in cell_on.getPlainText()
+    text = cell_on.getPlainText()
+    # Mesma linha: "R$ 17.500,00 / USD 3,333.33" — nunca abaixo do R$
+    assert "R$ 17.500,00 / USD 3,333.33" in text
+    assert "\n" not in text
 
 
 # ─────────────────────────────────────────────────────────────────────────────

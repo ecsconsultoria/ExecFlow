@@ -105,19 +105,20 @@ def _fmt_whatsapp(raw: str) -> str:
 
 def _amount_cell(brl_value: float, usd_rate, color, bold: bool = True,
                  align=TA_RIGHT) -> Paragraph:
-    """Célula de valor: R$ em negrito + USD em cinza quando há cotação (padrão do SO)."""
-    font = "Helvetica-Bold" if bold else "Helvetica"
+    """Célula de valor em uma linha: "R$ 8.750,00 / USD 1.666,67" (USD cinza)."""
     st = ParagraphStyle(
-        "amt_cell", fontSize=9, fontName=font, textColor=color,
+        "amt_cell", fontSize=9, fontName="Helvetica", textColor=color,
         alignment=align, leading=11,
     )
     base = _fmt_brl(brl_value)
+    brl_part = f"<b>{base}</b>" if bold else base
     if usd_rate and usd_rate > 0:
         usd_val = brl_value / usd_rate
         return Paragraph(
-            f"{base}<br/><font color='#888888' size='7'>USD {_fmt_usd_raw(usd_val)}</font>", st
+            f"{brl_part}  /  <font color='#888888' size='7'>USD {_fmt_usd_raw(usd_val)}</font>",
+            st,
         )
-    return Paragraph(base, st)
+    return Paragraph(brl_part, st)
 
 
 def _esc(text: str) -> str:
