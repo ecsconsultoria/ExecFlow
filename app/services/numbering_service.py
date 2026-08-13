@@ -52,3 +52,10 @@ def next_po(company_id: int) -> str:
     from ..models.purchase_order import PurchaseOrder
     prefix = "PO-" + now_br().strftime("%y%m%d")
     return _next_seq(PurchaseOrder, "number", company_id, prefix)
+
+
+def next_receipt(company_id: int) -> str:
+    """Próximo número de Recibo de Pagamento: REC-AAMMDD-NNN."""
+    from ..models.payment_receipt import PaymentReceipt
+    prefix = "REC-" + now_br().strftime("%y%m%d")
+    return _next_seq(PaymentReceipt, "receipt_number", company_id, prefix)

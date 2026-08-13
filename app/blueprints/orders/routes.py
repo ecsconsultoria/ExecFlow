@@ -3,6 +3,7 @@ from datetime import datetime
 
 from flask import make_response, render_template, request, redirect, url_for, flash, abort, send_file, jsonify
 from flask_login import login_required, current_user
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import lazyload, joinedload, selectinload
 
 from . import orders_bp
@@ -764,6 +765,79 @@ def pdf(oid, lang):
     filename = f"{order.number}.pdf"
     resp = make_response(send_file(buf, mimetype="application/pdf",
                            as_attachment=False, download_name=filename,
+                           conditional=False))
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    resp.headers["ETag"] = ""
+    resp.headers["Last-Modified"] = ""
+    return resp
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Payment Receipt (Recibo de Pagamento) — somente leitura/documentação
+# ─────────────────────────────────────────────────────────────────────────────
+
+@orders_bp.route("/<int:oid>/receipt/<int:pid>/<lang>")
+@login_required
+@require_permission("so.view")
+def payment_receipt(oid, pid, lang):
+    from ...models.payment_receipt import PaymentReceipt
+    from ...services.numbering_service import next_receipt
+    from ...services.receipt_pdf import generate_receipt_pdf
+
+    order = (Order.query
+             .options(
+                 lazyload('*'),
+                 selectinload(Order.items),
+                 selectinload(Order.payments),
+             )
+             .populate_existing()
+             .filter_by(id=oid, company_id=current_user.company_id, deleted_at=None)
+             .first_or_404())
+    lang = lang if lang in ("pt", "en") else "pt"
+
+    # Regra: recibo só é gerado para SO concluído, com a parcela paga.
+    # Geração é read-only em relação às finanças — não cria lançamentos.
+    if order.status != "concluido":
+        abort(403)
+    payment = next((p for p in order.payments if p.id == pid), None)
+    if payment is None:
+        abort(404)
+    if not payment.is_paid:
+        abort(400)
+
+    # 1 parcela → 1 recibo oficial. Regeneração reutiliza o mesmo número.
+    receipt = (PaymentReceipt.query
+               .filter_by(company_id=order.company_id, payment_id=payment.id)
+               .first())
+    if receipt is None:
+        try:
+            receipt = PaymentReceipt(
+                company_id=order.company_id,
+                order_id=order.id,
+                payment_id=payment.id,
+                receipt_number=next_receipt(order.company_id),
+                issued_by=current_user.id,
+            )
+            db.session.add(receipt)
+            db.session.flush()  # next_receipt depende do registro anterior visível
+            log_activity("order", order.id, order.company_id,
+                         f"Recibo {receipt.receipt_number} emitido (parcela {payment.installment_no})",
+                         current_user.id)
+            db.session.commit()
+        except IntegrityError:
+            # Corrida de geração simultânea: outro request emitiu primeiro
+            db.session.rollback()
+            receipt = (PaymentReceipt.query
+                       .filter_by(company_id=order.company_id, payment_id=payment.id)
+                       .first())
+            if receipt is None:
+                raise
+
+    buf = generate_receipt_pdf(order, payment, receipt.receipt_number, lang=lang)
+    resp = make_response(send_file(buf, mimetype="application/pdf",
+                           as_attachment=False, download_name=f"{receipt.receipt_number}.pdf",
                            conditional=False))
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
     resp.headers["Pragma"] = "no-cache"

@@ -39,6 +39,9 @@ class Config:
     PIX_MERCHANT_NAME = os.environ.get("PIX_MERCHANT_NAME", "Executive Car SP")
     PIX_MERCHANT_CITY = os.environ.get("PIX_MERCHANT_CITY", "Sao Paulo")
 
+    # Company public contact (usado no bloco da empresa dos recibos)
+    COMPANY_WEBSITE = os.environ.get("COMPANY_WEBSITE", "www.executivecarsp.com")
+
     # App
     BASE_URL       = os.environ.get("BASE_URL", "http://localhost:5004")
     ORCAMENTOS_DIR = os.environ.get("ORCAMENTOS_DIR", "orcamentos")

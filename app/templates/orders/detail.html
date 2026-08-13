@@ -164,6 +164,40 @@
       </div>
     </div>
 
+    {# Payment Receipt dropdown — apenas para SO concluído com parcela paga #}
+    {% set paid_payments = order.payments|selectattr('is_paid')|list %}
+    {% if order.status == 'concluido' and paid_payments and has_perm('so.view') %}
+    <div class="relative" x-data="{recOpen:false}" @click.outside="recOpen=false">
+      <button type="button" @click="recOpen=!recOpen" title="Gerar recibo de pagamento"
+              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-amber-500 hover:bg-amber-600 text-white">
+        <i class="fa-solid fa-file-invoice-dollar text-[11px]"></i> Generate Payment Receipt
+      </button>
+      <div x-show="recOpen" x-cloak
+           class="absolute left-0 top-full mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 py-1 overflow-hidden"
+           style="min-width:260px">
+        {% for pmt in paid_payments %}
+        <div class="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400
+                    {% if not loop.first %}border-t border-slate-100 dark:border-slate-700{% endif %}">
+          Parcela {{ pmt.installment_no }}/{{ order.payments|length }} — {{ pmt.paid_amount|currency }}
+          {% if loop.last and order.total_pending() <= 0 %}
+          <span class="ml-1 text-emerald-600 normal-case tracking-normal">· Pagamento final</span>
+          {% endif %}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr">
+          <a href="#" @click.prevent="recOpen=false; window.open('{{ url_for('orders.payment_receipt', oid=order.id, pid=pmt.id, lang='pt') }}?ts='+Date.now(), '_blank');" title="Baixar recibo em Português"
+             class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
+            <i class="fa-solid fa-download text-amber-600"></i> Recibo PT
+          </a>
+          <a href="#" @click.prevent="recOpen=false; window.open('{{ url_for('orders.payment_receipt', oid=order.id, pid=pmt.id, lang='en') }}?ts='+Date.now(), '_blank');" title="Download receipt in English"
+             class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
+            <i class="fa-solid fa-download text-amber-800"></i> Receipt EN
+          </a>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
     {% if order.status not in ('concluido','cancelado') and has_perm('so.cancel') %}
     <button type="button" onclick="window.dispatchEvent(new CustomEvent('open-cancel-modal'))" title="Cancelar pedido"
             class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-red-500 hover:bg-red-600 text-white">

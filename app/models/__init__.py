@@ -23,6 +23,7 @@ from .supplier_payment         import SupplierPayment, PAYMENT_STATUSES
 from .financial_entry          import FinancialEntry, ENTRY_TYPES
 from .order                    import Order, OrderItem, OrderPayment, ORDER_STATUSES
 from .purchase_order           import PurchaseOrder, POPayment, POItem, PO_STATUSES
+from .payment_receipt          import PaymentReceipt
 
 __all__ = [
     "TimestampMixin", "SoftDeleteMixin",
@@ -49,4 +50,6 @@ __all__ = [
     "Order", "OrderItem", "OrderPayment", "ORDER_STATUSES",
     # Purchase Order (PO)
     "PurchaseOrder", "PO_STATUSES",
+    # Payment Receipt (Recibo de Pagamento)
+    "PaymentReceipt",
 ]
