@@ -1580,7 +1580,6 @@ function poFetchItemCost() {
 }
 
 function deletePoItem(url) {
-  if (!confirm('Remover este item?')) return;
   const form = document.createElement('form');
   form.method = 'POST';
   form.action = url;

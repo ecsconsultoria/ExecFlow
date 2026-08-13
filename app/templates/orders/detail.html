@@ -953,8 +953,7 @@
 <div id="item-delete-forms" class="hidden">
   {% for item in order.items %}
   <form id="del-item-{{ item.id }}" method="post"
-        action="{{ url_for('orders.delete_item', iid=item.id) }}"
-        {% if order.status != 'novo' %}onsubmit="return confirm('Remover item {{ loop.index }}?')"{% endif %}>
+        action="{{ url_for('orders.delete_item', iid=item.id) }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   </form>
   {% endfor %}
@@ -1216,11 +1215,7 @@
   document.querySelectorAll('[data-del-item]').forEach(btn => {
     btn.addEventListener('click', function() {
       const form = document.getElementById('del-item-' + this.dataset.delItem);
-      {% if order.status == 'novo' %}
       if (form) { _clearDirty(); form.submit(); }
-      {% else %}
-      if (form && confirm('Remover este item?')) { _clearDirty(); form.submit(); }
-      {% endif %}
     });
   });
 
