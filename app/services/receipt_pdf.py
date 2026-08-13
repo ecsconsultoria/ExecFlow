@@ -457,7 +457,6 @@ def generate_receipt_pdf(order, payment, receipt_number: str, lang: str = "pt",
 
     # ── SERVICE INFORMATION — mesmos serviços do SO (colunas, linhas, valores) ─
     story.append(Paragraph(_t("service_hdr", lang), sec_hdr))
-    story.append(HRFlowable(width=W, thickness=1, color=BRAND_GOLD, spaceAfter=3))
 
     subtotal_v       = order.total_amount or 0
     discount_v       = order.discount_value or 0
@@ -604,7 +603,6 @@ def generate_receipt_pdf(order, payment, receipt_number: str, lang: str = "pt",
 
     # ── PAYMENT SUMMARY (destaque) ──────────────────────────────────────────
     story.append(Paragraph(_t("summary_hdr", lang), sec_hdr))
-    story.append(HRFlowable(width=W, thickness=1, color=BRAND_GOLD, spaceAfter=3))
     s = ctx["summary"]
     outstanding_color = BRAND_GREEN if s["outstanding"] <= 0 else BRAND_RED
     sum_tbl = Table(
