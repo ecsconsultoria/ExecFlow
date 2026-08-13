@@ -96,10 +96,10 @@ def _t(key: str, lang: str) -> str:
 
 
 def _fmt_whatsapp(raw: str) -> str:
-    """Formata o número do WhatsApp da config (ex: 5511989178312 → +55 (11) 9.8917-8312)."""
+    """Formata o número do WhatsApp da config (ex: 5511989178312 → +55 11 98917-8312)."""
     digits = "".join(c for c in (raw or "") if c.isdigit())
     if len(digits) == 13 and digits.startswith("55"):
-        return f"+{digits[0:2]} ({digits[2:4]}) {digits[4]}.{digits[5:9]}-{digits[9:]}"
+        return f"+{digits[0:2]} {digits[2:4]} {digits[4:9]}-{digits[9:]}"
     return raw or "–"
 
 
@@ -300,6 +300,8 @@ def generate_receipt_pdf(order, payment, receipt_number: str, lang: str = "pt",
     from flask import current_app
     try:
         ctx["company"]["website"]  = current_app.config.get("COMPANY_WEBSITE", "www.executivecarsp.com")
+        ctx["company"]["phone"]    = (current_app.config.get("COMPANY_PHONE", "")
+                                      or ctx["company"]["phone"])
         ctx["company"]["whatsapp"] = _fmt_whatsapp(current_app.config.get("WPP_NUMBER", ""))
     except RuntimeError:
         ctx["company"]["website"]  = "www.executivecarsp.com"
@@ -535,40 +537,14 @@ def generate_receipt_pdf(order, payment, receipt_number: str, lang: str = "pt",
     if s["is_final"]:
         story.append(Spacer(1, 2 * mm))
         story.append(Paragraph(_t("confirmation", lang), conf_st))
-    story.append(Spacer(1, 4 * mm))
 
-    # ── Dados da empresa ────────────────────────────────────────────────────
-    comp = ctx["company"]
-    comp_rows = [
-        [
-            _lv_cell(_t("tax_id", lang),      _esc(comp["document"] or "–"), val_st),
-            _lv_cell(_t("website_lbl", lang), _esc(comp["website"]),         val_st),
-            _lv_cell(_t("email_col", lang),   _esc(comp["email"]),           val_st),
-            _lv_cell(_t("office_lbl", lang),  _esc(comp["phone"]),           val_st),
-        ],
-        [
-            _lv_cell(_t("whatsapp_lbl", lang), _esc(comp["whatsapp"]), val_st),
-            Paragraph("", val_st), Paragraph("", val_st), Paragraph("", val_st),
-        ],
-    ]
-    comp_tbl = Table(comp_rows, colWidths=[W / 4] * 4)
-    comp_tbl.setStyle(TableStyle([
-        ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#f8fafc")),
-        ("BOX",           (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
-        ("INNERGRID",     (0, 0), (-1, -1), 0.3, colors.HexColor("#e2e8f0")),
-        ("TOPPADDING",    (0, 0), (-1, -1), 3),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-        ("LEFTPADDING",   (0, 0), (-1, -1), 5),
-        ("RIGHTPADDING",  (0, 0), (-1, -1), 5),
-        ("VALIGN",        (0, 0), (-1, -1), "TOP"),
-    ]))
-    story.append(comp_tbl)
-
-    # ── Footer as page callback (padrão do SO, em 2 linhas curtas) ───────────
+    # ── Footer as page callback (padrão do SO, em 3 linhas curtas) ───────────
+    # Linha 1: empresa (negrito) + tagline + CNPJ
+    # Linha 2: contato (website • telefone • WhatsApp) — dados de config
+    # Linha 3: GERADO EM data/hora
     cnpj_lbl_footer = "CNPJ" if lang == "pt" else "TAX ID"
     now_str = now_br().strftime("%m/%d/%Y %H:%M" if lang == "en" else "%d/%m/%Y %H:%M")
     tagline = _t("tagline", lang)
-    # Linha 1: nome da empresa em negrito + tagline + CNPJ (sem repetir o nome)
     _footer_tail = f" • {tagline}"
     if company_doc:
         _footer_tail += f" • {cnpj_lbl_footer} {company_doc}"
@@ -576,7 +552,9 @@ def generate_receipt_pdf(order, payment, receipt_number: str, lang: str = "pt",
         (company_name.upper(), "Helvetica-Bold", 7.5),
         (_footer_tail, "Helvetica", 7.5),
     ]
-    _footer_line2 = f"{_t('generated', lang)} {now_str}"
+    _footer_contact = (f"{ctx['company']['website']}  •  {ctx['company']['phone']}  •  "
+                       f"WhatsApp {ctx['company']['whatsapp']}")
+    _footer_line3 = f"{_t('generated', lang)} {now_str}"
     _lm, _rm, _pw = 15 * mm, A4[0] - 15 * mm, A4[0]
 
     from reportlab.pdfbase.pdfmetrics import stringWidth
@@ -585,18 +563,19 @@ def generate_receipt_pdf(order, payment, receipt_number: str, lang: str = "pt",
         canvas.saveState()
         canvas.setStrokeColor(colors.HexColor("#cccccc"))
         canvas.setLineWidth(0.5)
-        canvas.line(_lm, 14 * mm, _rm, 14 * mm)
+        canvas.line(_lm, 16 * mm, _rm, 16 * mm)
         canvas.setFillColor(colors.HexColor("#666666"))
         # Linha 1 centralizada com o nome da empresa em negrito
         total_w = sum(stringWidth(t, f, s) for t, f, s in _footer_parts)
         x = (_pw - total_w) / 2
         for text, font, size in _footer_parts:
             canvas.setFont(font, size)
-            canvas.drawString(x, 10.5 * mm, text)
+            canvas.drawString(x, 12.5 * mm, text)
             x += stringWidth(text, font, size)
-        # Linha 2
+        # Linha 2 (contato) e linha 3 (geração)
         canvas.setFont("Helvetica", 7.5)
-        canvas.drawCentredString(_pw / 2, 6.5 * mm, _footer_line2)
+        canvas.drawCentredString(_pw / 2, 8.5 * mm, _footer_contact)
+        canvas.drawCentredString(_pw / 2, 5 * mm, _footer_line3)
         canvas.restoreState()
 
     # ReportLab 4.x: canvasmaker é parâmetro do build(), não do SimpleDocTemplate
