@@ -69,6 +69,9 @@ _T: dict[str, dict[str, str]] = {
     "vehicle_lbl":        {"pt": "VEÍCULO",                  "en": "VEHICLE"},
     "driver_lbl":         {"pt": "MOTORISTA",                "en": "DRIVER"},
     "service_date_lbl":   {"pt": "DATA DO SERVIÇO",          "en": "SERVICE DATE"},
+    "subtotal":           {"pt": "SUBTOTAL",                 "en": "SUBTOTAL"},
+    "discount":           {"pt": "DESCONTO",                 "en": "DISCOUNT"},
+    "other_costs":        {"pt": "CUSTOS EXTRAS",            "en": "EXTRA COSTS"},
     "summary_hdr":        {"pt": "RESUMO DO PAGAMENTO",      "en": "PAYMENT SUMMARY"},
     "total_amount":       {"pt": "VALOR TOTAL DO CONTRATO",  "en": "TOTAL CONTRACT VALUE"},
     "previously_paid":    {"pt": "VALOR JÁ PAGO",            "en": "PREVIOUSLY PAID"},
@@ -124,14 +127,6 @@ def _amount_cell(brl_value: float, usd_rate, color, bold: bool = True,
 def _esc(text: str) -> str:
     """Escapa texto vindo do banco para uso em marcação de parágrafo."""
     return (text or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-
-
-def _lv_cell(label: str, value: str, style: ParagraphStyle) -> Paragraph:
-    """Célula label/valor em duas linhas — valores alinhados à esquerda em grid."""
-    return Paragraph(
-        f"<font size='7' color='#64748b'><b>{_esc(label)}</b></font><br/>{value}",
-        style,
-    )
 
 
 def build_receipt_context(order, payment, lang: str = "pt") -> dict:
@@ -460,33 +455,151 @@ def generate_receipt_pdf(order, payment, receipt_number: str, lang: str = "pt",
     story.append(pay_tbl)
     story.append(Spacer(1, 4 * mm))
 
-    # ── SERVICE INFORMATION (compacto, 4 colunas label: valor) ──────────────
+    # ── SERVICE INFORMATION — mesmos serviços do SO (colunas, linhas, valores) ─
     story.append(Paragraph(_t("service_hdr", lang), sec_hdr))
     story.append(HRFlowable(width=W, thickness=1, color=BRAND_GOLD, spaceAfter=3))
-    svc = ctx["service"]
-    svc_cells = [
-        _lv_cell(_t("sales_order", lang), _esc(svc["order_number"]), val_st),
-        _lv_cell(_t("service_lbl", lang), svc["summary"], val_st),
-        _lv_cell(_t("vehicle_lbl", lang), _esc(svc["vehicle"]), val_st),
-        _lv_cell(_t("driver_lbl", lang), _esc(svc["driver"]), val_st),
-        _lv_cell(_t("service_date_lbl", lang),
-                 _fmt_date(svc["service_date"], lang), val_st),
-    ]
-    while len(svc_cells) % 4 != 0:
-        svc_cells.append(Paragraph("", val_st))
-    svc_rows = [svc_cells[i:i + 4] for i in range(0, len(svc_cells), 4)]
-    svc_tbl = Table(svc_rows, colWidths=[W / 4] * 4)
-    svc_tbl.setStyle(TableStyle([
-        ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#f8fafc")),
-        ("BOX",           (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
-        ("INNERGRID",     (0, 0), (-1, -1), 0.3, colors.HexColor("#e2e8f0")),
-        ("TOPPADDING",    (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+
+    subtotal_v       = order.total_amount or 0
+    discount_v       = order.discount_value or 0
+    discount_type    = order.discount_type or "R$"
+    other_costs_v    = order.other_costs_amount or 0
+    other_costs_lbl_v = getattr(order, "other_costs_label", "") or ""
+
+    if discount_type == "%":
+        disc_amt = subtotal_v * (discount_v / 100)
+        disc_row_lbl = f"{_t('discount', lang)} ({discount_v:.2f}%)"
+    else:
+        disc_amt = discount_v
+        disc_row_lbl = f"{_t('discount', lang)} ({_fmt_brl(discount_v)})" if discount_v else ""
+
+    i_col_w = [W * 0.05, W * 0.52, W * 0.07, W * 0.17, W * 0.19]
+    items_rows = [[
+        Paragraph(_t("hash_col",    lang), cell_hdr),
+        Paragraph(_t("service_col", lang), cell_hdr),
+        Paragraph(_t("qty_col",     lang), cell_hdr),
+        Paragraph(_t("unit_col",    lang), cell_hdr),
+        Paragraph(_t("total_col",   lang), cell_hdr),
+    ]]
+    for idx, item in enumerate(sorted(order.items, key=lambda x: x.sort_order or 0), 1):
+        service_name_raw = item.description or "–"
+        driver_type_raw   = item.driver_name or ""
+        vehicle_desc      = item.vehicle_description or ""
+        ref_note_val      = item.ref_note or ""
+        cat_name_raw      = (item.category.name if item.category else "") or ""
+
+        service_name_disp = _translate_service(service_name_raw, lang, cat_name_raw)
+        cat_name_disp     = _translate_vehicle(cat_name_raw, lang)
+        driver_disp       = _translate_driver(driver_type_raw, lang)
+
+        main_parts = []
+        if ref_note_val:
+            main_parts.append(ref_note_val)
+        main_parts.append(service_name_disp)
+        main_label = " – ".join(main_parts)
+
+        sub_parts = []
+        if driver_disp:
+            sub_parts.append(driver_disp)
+        if cat_name_disp:
+            sub_parts.append(cat_name_disp)
+        sub_label = " – ".join(sub_parts)
+
+        vehicle_model = _get_vehicle_model(cat_name_raw, lang) or vehicle_desc
+        if vehicle_model and sub_label:
+            sub_label = f'{sub_label} ({vehicle_model})'
+
+        date_prefix = ''
+        if item.service_date:
+            date_prefix = item.service_date.strftime('%m/%d' if lang == 'en' else '%d/%m')
+            if item.service_time:
+                h = item.service_time.hour
+                m = item.service_time.minute
+                ampm = 'AM' if h < 12 else 'PM'
+                h12 = h if 1 <= h <= 12 else (h - 12 if h > 12 else 12)
+                date_prefix += f' {h12}:{m:02d} {ampm}'
+        if date_prefix:
+            main_label = f'{date_prefix} – {main_label}'
+
+        svc_lines = [f"<b>{main_label}</b>"]
+        if sub_label:
+            svc_lines.append(f'<font color="#334155" size="7.5">{sub_label}</font>')
+        svc_para = Paragraph("<br/>".join(svc_lines), cell_body)
+
+        total = item.total_price or round((item.unit_price or 0) * (item.quantity or 1), 2)
+
+        items_rows.append([
+            Paragraph(str(idx),                        cell_body_c),
+            svc_para,
+            Paragraph(str(item.quantity or 1),         cell_body_c),
+            Paragraph(_fmt_brl(item.unit_price or 0),  cell_body_r),
+            Paragraph(_fmt_brl(total),                 cell_body_r),
+        ])
+
+    item_data_end = len(items_rows)
+    _adj_style_cmds = []
+    if disc_amt:
+        r = len(items_rows)
+        items_rows.append([
+            Paragraph(f"<i>{_t('subtotal', lang)}:</i>", cell_body_r),
+            "", "", "",
+            Paragraph(_fmt_brl(subtotal_v), cell_body_r),
+        ])
+        _adj_style_cmds += [
+            ("SPAN",          (0, r), (3, r)),
+            ("ALIGN",         (0, r), (-1, r), "RIGHT"),
+            ("TOPPADDING",    (0, r), (-1, r), 5),
+            ("BOTTOMPADDING", (0, r), (-1, r), 2),
+        ]
+        r = len(items_rows)
+        items_rows.append([
+            Paragraph(f"<i>{disc_row_lbl}:</i>", cell_body_r),
+            "", "", "",
+            Paragraph(f'<font color="#c62828">- {_fmt_brl(disc_amt)}</font>', cell_body_r),
+        ])
+        _adj_style_cmds += [
+            ("SPAN",          (0, r), (3, r)),
+            ("BACKGROUND",    (0, r), (-1, r), colors.HexColor("#fff8e1")),
+            ("ALIGN",         (0, r), (-1, r), "RIGHT"),
+            ("TOPPADDING",    (0, r), (-1, r), 4),
+            ("BOTTOMPADDING", (0, r), (-1, r), 4),
+        ]
+    if other_costs_v:
+        r = len(items_rows)
+        cost_lbl = other_costs_lbl_v or _t("other_costs", lang)
+        items_rows.append([
+            Paragraph(f"<i>{cost_lbl}:</i>", cell_body_r),
+            "", "", "",
+            Paragraph(_fmt_brl(other_costs_v), cell_body_r),
+        ])
+        _adj_style_cmds += [
+            ("SPAN",          (0, r), (3, r)),
+            ("BACKGROUND",    (0, r), (-1, r), colors.HexColor("#fff8e1")),
+            ("ALIGN",         (0, r), (-1, r), "RIGHT"),
+            ("TOPPADDING",    (0, r), (-1, r), 4),
+            ("BOTTOMPADDING", (0, r), (-1, r), 4),
+        ]
+
+    items_tbl = Table(items_rows, colWidths=i_col_w, repeatRows=1)
+    items_style = TableStyle([
+        ("BACKGROUND",    (0, 0), (-1, 0),  BRAND_DARK),
+        ("BOX",           (0, 0), (-1, -1), 1.5, BRAND_GOLD),
+        ("INNERGRID",     (0, 0), (-1, -1), 0.5, BRAND_GOLD),
+        ("TOPPADDING",    (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
         ("LEFTPADDING",   (0, 0), (-1, -1), 5),
         ("RIGHTPADDING",  (0, 0), (-1, -1), 5),
-        ("VALIGN",        (0, 0), (-1, -1), "TOP"),
-    ]))
-    story.append(svc_tbl)
+        ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+        ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
+        ("VALIGN",        (1, 1), (1, -1),  "TOP"),
+        ("ALIGN",         (1, 0), (1, -1),  "LEFT"),
+    ])
+    for row_idx in range(1, item_data_end):
+        bg = BRAND_LIGHT if row_idx % 2 == 1 else colors.white
+        items_style.add("BACKGROUND", (0, row_idx), (-1, row_idx), bg)
+    for cmd in _adj_style_cmds:
+        items_style.add(*cmd)
+    items_tbl.setStyle(items_style)
+    story.append(items_tbl)
     story.append(Spacer(1, 4 * mm))
 
     # ── PAYMENT SUMMARY (destaque) ──────────────────────────────────────────
