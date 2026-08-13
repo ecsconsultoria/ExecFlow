@@ -408,6 +408,28 @@ def test_pdf_is_one_page(testing_app):
 # Read-only financeiro
 # ─────────────────────────────────────────────────────────────────────────────
 
+def test_auto_fit_single_page_with_many_items(testing_app):
+    # SO com muitos itens estouraria 1 página na escala normal — o gerador
+    # deve recompactar (0.9/0.8) e entregar o PDF em uma única página.
+    oid, pids = _seed_order(testing_app, status="concluido", installments=2, paid=2)
+    with testing_app.app_context():
+        order = db.session.get(Order, oid)
+        for i in range(14):
+            db.session.add(OrderItem(
+                order_id=order.id, description=f"Executive Transportation #{i}",
+                vehicle_description="", driver_name="Bilingual Driver",
+                quantity=1, unit_price=100.0, total_price=100.0,
+                service_date=date.today(),
+            ))
+        db.session.commit()
+        order = db.session.get(Order, oid)
+        pmt = db.session.get(OrderPayment, pids[1])
+        buf = generate_receipt_pdf(order, pmt, "REC-260813-999", lang="en")
+        data = buf.getvalue()
+    assert data[:5] == b"%PDF-"
+    assert len(re.findall(rb"/Type\s*/Page(?!s)", data)) == 1
+
+
 def test_generation_does_not_mutate_financials(testing_app):
     oid, pids = _seed_order(testing_app, status="concluido", installments=2, paid=2)
     c = _login(testing_app)

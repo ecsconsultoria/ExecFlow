@@ -263,43 +263,98 @@ def build_receipt_context(order, payment, lang: str = "pt") -> dict:
     }
 
 
+class _PageCounter:
+    """canvasmaker que conta páginas — usado no auto-ajuste para 1 página."""
+
+    last_pages = 0
+
+    def __init__(self, *args, **kwargs):
+        from reportlab.pdfgen import canvas as _canvas
+        self._inner = _canvas.Canvas(*args, **kwargs)
+        self.pages = 0
+
+    def showPage(self):
+        self.pages += 1
+        self._inner.showPage()
+
+    def save(self):
+        type(self).last_pages = self.pages
+        self._inner.save()
+
+    def __getattr__(self, name):
+        return getattr(self._inner, name)
+
+
+_FIT_SCALES = (1.0, 0.9, 0.8, 0.72)
+
+
 def generate_receipt_pdf(order, payment, receipt_number: str, lang: str = "pt",
                          canvasmaker=None) -> io.BytesIO:
-    """Return a BytesIO containing the Payment Receipt PDF (1 página A4)."""
+    """Return a BytesIO containing the Payment Receipt PDF (1 página A4).
+
+    Se o conteúdo estourar para 2 páginas, regenera com fontes/espaçamentos
+    reduzidos (0.9 e depois 0.8) até caber em uma única página.
+    """
+    chosen = _FIT_SCALES[-1]
+    for scale in _FIT_SCALES:
+        _build_receipt_pdf(order, payment, receipt_number, lang, scale,
+                           canvasmaker=_PageCounter)
+        if _PageCounter.last_pages <= 1:
+            chosen = scale
+            break
+    return _build_receipt_pdf(order, payment, receipt_number, lang, chosen,
+                              canvasmaker=canvasmaker)
+
+
+def _build_receipt_pdf(order, payment, receipt_number: str, lang: str,
+                       scale: float = 1.0, canvasmaker=None) -> io.BytesIO:
+    """Monta o PDF com fator de escala `scale` (fontes, paddings, espaçadores)."""
+    S = scale
+
+    def _fs(v: float) -> float:
+        """Font size / leading escalado."""
+        return round(v * S, 1)
+
+    def _pd(v: float) -> float:
+        """Padding vertical escalado."""
+        return max(2.0, round(v * S, 1))
+
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
         pagesize=A4,
         leftMargin=15 * mm,
         rightMargin=15 * mm,
-        topMargin=15 * mm,
+        topMargin=max(8, 15 * S) * mm,
         bottomMargin=20 * mm,
         title=f"{_t('receipt_title', lang)} {receipt_number}",
     )
 
     W = A4[0] - 30 * mm
 
-    # ── Styles (mesma família do SO) ────────────────────────────────────────
-    title_st    = ParagraphStyle("ts", fontSize=13, fontName="Helvetica-Bold",
+    # ── Styles (mesma família do SO, escaláveis para caber em 1 página) ──────
+    title_st    = ParagraphStyle("ts", fontSize=_fs(13), fontName="Helvetica-Bold",
                                  textColor=BRAND_DARK, alignment=TA_CENTER, spaceAfter=1)
-    normal      = ParagraphStyle("ns", fontSize=9, textColor=BRAND_DARK, leading=13)
-    small       = ParagraphStyle("sm", fontSize=8, textColor=colors.HexColor("#666"), leading=11)
-    sec_hdr     = ParagraphStyle("sh", fontSize=9, fontName="Helvetica-Bold",
-                                 textColor=BRAND_DARK, leading=12, spaceBefore=3, spaceAfter=3)
-    cell_hdr    = ParagraphStyle("ch", fontSize=7, fontName="Helvetica-Bold",
-                                 textColor=colors.white, leading=10, alignment=TA_CENTER)
-    cell_body   = ParagraphStyle("cb", fontSize=8, textColor=BRAND_DARK, leading=11)
+    normal      = ParagraphStyle("ns", fontSize=_fs(9), textColor=BRAND_DARK, leading=_fs(13))
+    small       = ParagraphStyle("sm", fontSize=_fs(8), textColor=colors.HexColor("#666"),
+                                 leading=_fs(11))
+    sec_hdr     = ParagraphStyle("sh", fontSize=_fs(9), fontName="Helvetica-Bold",
+                                 textColor=BRAND_DARK, leading=_fs(12),
+                                 spaceBefore=3 * S, spaceAfter=3 * S)
+    cell_hdr    = ParagraphStyle("ch", fontSize=_fs(7), fontName="Helvetica-Bold",
+                                 textColor=colors.white, leading=_fs(10), alignment=TA_CENTER)
+    cell_body   = ParagraphStyle("cb", fontSize=_fs(8), textColor=BRAND_DARK, leading=_fs(11))
     cell_body_c = ParagraphStyle("cbc", parent=cell_body, alignment=TA_CENTER)
     cell_body_r = ParagraphStyle("cbr", parent=cell_body, alignment=TA_RIGHT)
-    cell_bold_r = ParagraphStyle("cbr2", fontSize=9, fontName="Helvetica-Bold",
-                                 textColor=BRAND_DARK, alignment=TA_RIGHT, leading=11)
-    lbl_st      = ParagraphStyle("lbl", fontSize=8, fontName="Helvetica-Bold",
-                                 textColor=colors.HexColor("#64748b"), leading=11)
-    val_st      = ParagraphStyle("val", fontSize=8, textColor=BRAND_DARK, leading=11)
-    status_st   = ParagraphStyle("sst", fontSize=11, fontName="Helvetica-Bold",
-                                 textColor=colors.white, alignment=TA_CENTER, leading=14)
-    conf_st     = ParagraphStyle("cfs", fontSize=8, textColor=BRAND_GREEN,
-                                 alignment=TA_CENTER, leading=11)
+    cell_bold_r = ParagraphStyle("cbr2", fontSize=_fs(9), fontName="Helvetica-Bold",
+                                 textColor=BRAND_DARK, alignment=TA_RIGHT, leading=_fs(11))
+    lbl_st      = ParagraphStyle("lbl", fontSize=_fs(8), fontName="Helvetica-Bold",
+                                 textColor=colors.HexColor("#64748b"), leading=_fs(11))
+    val_st      = ParagraphStyle("val", fontSize=_fs(8), textColor=BRAND_DARK, leading=_fs(11))
+    status_st   = ParagraphStyle("sst", fontSize=_fs(11), fontName="Helvetica-Bold",
+                                 textColor=colors.white, alignment=TA_CENTER, leading=_fs(14))
+    conf_st     = ParagraphStyle("cfs", fontSize=_fs(8), textColor=BRAND_GREEN,
+                                 alignment=TA_CENTER, leading=_fs(11))
 
     ctx = build_receipt_context(order, payment, lang)
     ctx["receipt_number"] = receipt_number
@@ -340,30 +395,30 @@ def generate_receipt_pdf(order, payment, receipt_number: str, lang: str = "pt",
                     logo_path[len("/static/"):].lstrip("/")
                 )
             if os.path.isfile(logo_path):
-                logo_img = RLImage(logo_path, width=100 * mm, height=20 * mm, kind="proportional")
+                logo_img = RLImage(logo_path, width=100 * mm, height=20 * S * mm, kind="proportional")
         except Exception:
             logo_img = None
 
     left_cell = logo_img if logo_img else Paragraph(
         f"<b>{company_name.upper()}</b>",
-        ParagraphStyle("hc", fontSize=12, fontName="Helvetica-Bold",
+        ParagraphStyle("hc", fontSize=_fs(12), fontName="Helvetica-Bold",
                        textColor=BRAND_DARK, alignment=TA_LEFT))
     right_cell = Paragraph(
         f"<b>{_t('receipt_title', lang)}</b><br/>"
-        f"<font color='#b88b2d' size='9'><b>No. {receipt_number}</b></font>",
-        ParagraphStyle("hr", fontSize=13, fontName="Helvetica-Bold",
-                       textColor=BRAND_DARK, alignment=TA_RIGHT, leading=18))
+        f"<font color='#b88b2d' size='{_fs(9)}'><b>No. {receipt_number}</b></font>",
+        ParagraphStyle("hr", fontSize=_fs(13), fontName="Helvetica-Bold",
+                       textColor=BRAND_DARK, alignment=TA_RIGHT, leading=_fs(18)))
 
     hdr_tbl = Table([[left_cell, right_cell]], colWidths=[W * 0.55, W * 0.45])
     hdr_tbl.setStyle(TableStyle([
         ("VALIGN",        (0, 0), (-1, -1), "TOP"),
         ("TOPPADDING",    (0, 0), (-1, -1), 0),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), _pd(6)),
         ("LEFTPADDING",   (0, 0), (-1, -1), 0),
         ("RIGHTPADDING",  (0, 0), (-1, -1), 0),
     ]))
     story.append(hdr_tbl)
-    story.append(Spacer(1, 4 * mm))
+    story.append(Spacer(1, 4 * S * mm))
 
     # ── Meta do recibo (dark header + gold borders) ─────────────────────────
     status_hex = "#2e7d32" if ctx["status"]["key"] == "paid_in_full" else "#1565c0"
@@ -391,19 +446,19 @@ def generate_receipt_pdf(order, payment, receipt_number: str, lang: str = "pt",
         ("BACKGROUND",    (0, 1), (-1, 1), BRAND_LIGHT),
         ("BOX",           (0, 0), (-1, -1), 1.5, BRAND_GOLD),
         ("INNERGRID",     (0, 0), (-1, -1), 0.5, BRAND_GOLD),
-        ("TOPPADDING",    (0, 0), (-1, -1), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("TOPPADDING",    (0, 0), (-1, -1), _pd(5)),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), _pd(5)),
         ("LEFTPADDING",   (0, 0), (-1, -1), 4),
         ("RIGHTPADDING",  (0, 0), (-1, -1), 4),
         ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
         ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
     ]))
     story.append(meta_tbl)
-    story.append(Spacer(1, 4 * mm))
+    story.append(Spacer(1, 4 * S * mm))
 
     # ── CUSTOMER INFORMATION (mesma tabela de cliente do SO) ────────────────
     story.append(Paragraph(_t("customer_hdr", lang), sec_hdr))
-    story.append(HRFlowable(width=W, thickness=1, color=BRAND_GOLD, spaceAfter=3))
+    story.append(HRFlowable(width=W, thickness=1, color=BRAND_GOLD, spaceAfter=3 * S))
     client_tbl = Table(
         [[Paragraph(_t("company_col", lang), cell_hdr),
           Paragraph(_t("contact_col", lang), cell_hdr),
@@ -420,15 +475,15 @@ def generate_receipt_pdf(order, payment, receipt_number: str, lang: str = "pt",
         ("BACKGROUND",    (0, 1), (-1, 1), BRAND_LIGHT),
         ("BOX",           (0, 0), (-1, -1), 1.5, BRAND_GOLD),
         ("INNERGRID",     (0, 0), (-1, -1), 0.5, BRAND_GOLD),
-        ("TOPPADDING",    (0, 0), (-1, -1), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("TOPPADDING",    (0, 0), (-1, -1), _pd(5)),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), _pd(5)),
         ("LEFTPADDING",   (0, 0), (-1, -1), 6),
         ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
         ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
         ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
     ]))
     story.append(client_tbl)
-    story.append(Spacer(1, 4 * mm))
+    story.append(Spacer(1, 4 * S * mm))
 
     # ── PAYMENT INFORMATION (label/valor) ───────────────────────────────────
     story.append(Paragraph(_t("payment_info_hdr", lang), sec_hdr))
@@ -460,15 +515,15 @@ def generate_receipt_pdf(order, payment, receipt_number: str, lang: str = "pt",
         ("BACKGROUND",    (0, 0), (-1, -1), colors.white),
         ("BOX",           (0, 0), (-1, -1), 1.5, BRAND_GOLD),
         ("INNERGRID",     (0, 0), (-1, -1), 0.5, BRAND_GOLD),
-        ("TOPPADDING",    (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("TOPPADDING",    (0, 0), (-1, -1), _pd(4)),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), _pd(4)),
         ("LEFTPADDING",   (0, 0), (-1, -1), 6),
         ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
         ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
         ("ALIGN",         (0, 0), (0, -1), "LEFT"),
     ]))
     story.append(pay_tbl)
-    story.append(Spacer(1, 4 * mm))
+    story.append(Spacer(1, 4 * S * mm))
 
     # ── SERVICE INFORMATION — mesmos serviços do SO (colunas, linhas, valores) ─
     story.append(Paragraph(_t("service_hdr", lang), sec_hdr))
@@ -536,7 +591,7 @@ def generate_receipt_pdf(order, payment, receipt_number: str, lang: str = "pt",
 
         svc_lines = [f"<b>{main_label}</b>"]
         if sub_label:
-            svc_lines.append(f'<font color="#334155" size="7.5">{sub_label}</font>')
+            svc_lines.append(f'<font color="#334155" size="{_fs(7.5)}">{sub_label}</font>')
         svc_para = Paragraph("<br/>".join(svc_lines), cell_body)
 
         total = item.total_price or round((item.unit_price or 0) * (item.quantity or 1), 2)
@@ -561,8 +616,8 @@ def generate_receipt_pdf(order, payment, receipt_number: str, lang: str = "pt",
         _adj_style_cmds += [
             ("SPAN",          (0, r), (3, r)),
             ("ALIGN",         (0, r), (-1, r), "RIGHT"),
-            ("TOPPADDING",    (0, r), (-1, r), 5),
-            ("BOTTOMPADDING", (0, r), (-1, r), 2),
+            ("TOPPADDING",    (0, r), (-1, r), _pd(5)),
+            ("BOTTOMPADDING", (0, r), (-1, r), _pd(2)),
         ]
         r = len(items_rows)
         items_rows.append([
@@ -574,8 +629,8 @@ def generate_receipt_pdf(order, payment, receipt_number: str, lang: str = "pt",
             ("SPAN",          (0, r), (3, r)),
             ("BACKGROUND",    (0, r), (-1, r), colors.HexColor("#fff8e1")),
             ("ALIGN",         (0, r), (-1, r), "RIGHT"),
-            ("TOPPADDING",    (0, r), (-1, r), 4),
-            ("BOTTOMPADDING", (0, r), (-1, r), 4),
+            ("TOPPADDING",    (0, r), (-1, r), _pd(4)),
+            ("BOTTOMPADDING", (0, r), (-1, r), _pd(4)),
         ]
     if other_costs_v:
         r = len(items_rows)
@@ -589,8 +644,8 @@ def generate_receipt_pdf(order, payment, receipt_number: str, lang: str = "pt",
             ("SPAN",          (0, r), (3, r)),
             ("BACKGROUND",    (0, r), (-1, r), colors.HexColor("#fff8e1")),
             ("ALIGN",         (0, r), (-1, r), "RIGHT"),
-            ("TOPPADDING",    (0, r), (-1, r), 4),
-            ("BOTTOMPADDING", (0, r), (-1, r), 4),
+            ("TOPPADDING",    (0, r), (-1, r), _pd(4)),
+            ("BOTTOMPADDING", (0, r), (-1, r), _pd(4)),
         ]
 
     items_tbl = Table(items_rows, colWidths=i_col_w, repeatRows=1)
@@ -598,8 +653,8 @@ def generate_receipt_pdf(order, payment, receipt_number: str, lang: str = "pt",
         ("BACKGROUND",    (0, 0), (-1, 0),  BRAND_DARK),
         ("BOX",           (0, 0), (-1, -1), 1.5, BRAND_GOLD),
         ("INNERGRID",     (0, 0), (-1, -1), 0.5, BRAND_GOLD),
-        ("TOPPADDING",    (0, 0), (-1, -1), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("TOPPADDING",    (0, 0), (-1, -1), _pd(5)),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), _pd(5)),
         ("LEFTPADDING",   (0, 0), (-1, -1), 5),
         ("RIGHTPADDING",  (0, 0), (-1, -1), 5),
         ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
@@ -614,7 +669,7 @@ def generate_receipt_pdf(order, payment, receipt_number: str, lang: str = "pt",
         items_style.add(*cmd)
     items_tbl.setStyle(items_style)
     story.append(items_tbl)
-    story.append(Spacer(1, 4 * mm))
+    story.append(Spacer(1, 4 * S * mm))
 
     # ── PAYMENT SUMMARY (destaque) ──────────────────────────────────────────
     story.append(Paragraph(_t("summary_hdr", lang), sec_hdr))
@@ -639,29 +694,29 @@ def generate_receipt_pdf(order, payment, receipt_number: str, lang: str = "pt",
         ("BACKGROUND",    (2, 1), (2, 1), colors.HexColor("#fff8e1")),
         ("BOX",           (0, 0), (-1, -1), 1.5, BRAND_GOLD),
         ("INNERGRID",     (0, 0), (-1, -1), 0.5, BRAND_GOLD),
-        ("TOPPADDING",    (0, 0), (-1, -1), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("TOPPADDING",    (0, 0), (-1, -1), _pd(5)),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), _pd(5)),
         ("LEFTPADDING",   (0, 0), (-1, -1), 6),
         ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
         ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
         ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
     ]))
     story.append(sum_tbl)
-    story.append(Spacer(1, 4 * mm))
+    story.append(Spacer(1, 4 * S * mm))
 
     # ── PAYMENT STATUS (faixa de destaque) ──────────────────────────────────
     status_tbl = Table([[Paragraph(ctx["status"]["label"], status_st)]], colWidths=[W])
     status_tbl.setStyle(TableStyle([
         ("BACKGROUND",    (0, 0), (-1, -1), BRAND_DARK),
         ("BOX",           (0, 0), (-1, -1), 1.5, BRAND_GOLD),
-        ("TOPPADDING",    (0, 0), (-1, -1), 6),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("TOPPADDING",    (0, 0), (-1, -1), _pd(6)),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), _pd(6)),
         ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
         ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
     ]))
     story.append(status_tbl)
     if s["is_final"]:
-        story.append(Spacer(1, 2 * mm))
+        story.append(Spacer(1, 2 * S * mm))
         story.append(Paragraph(_t("confirmation", lang), conf_st))
 
     # ── Footer as page callback (padrão do SO, em 3 linhas curtas) ───────────
