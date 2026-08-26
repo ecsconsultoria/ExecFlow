@@ -66,7 +66,9 @@
         <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Nº RFQ</th>
         <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Cliente</th>
         <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Data</th>
-        <th class="px-5 py-3.5 text-right text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider hidden md:table-cell">Total</th>
+        <th class="px-5 py-3.5 text-right text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider hidden md:table-cell">Valor Total</th>
+        <th class="px-5 py-3.5 text-right text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider hidden md:table-cell">Pagto Parcial</th>
+        <th class="px-5 py-3.5 text-right text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider hidden md:table-cell">Saldo Pendente</th>
         <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider hidden md:table-cell">Status</th>
         <th class="px-5 py-3.5 text-right text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Ações</th>
       </tr>
@@ -76,6 +78,7 @@
       <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-700/30 transition-colors">
         <td class="px-3 py-3.5">
           {% if o.status == 'aberto' %}<input type="checkbox" class="bulk-check rounded" value="{{ o.id }}" onchange="updateBulkBar()">{% endif %}
+          {% if o.status == 'faturado' %}<input type="checkbox" class="bulk-check-concluir rounded" value="{{ o.id }}" onchange="updateBulkBar()">{% endif %}
         </td>
         <td class="px-5 py-3.5">
           <a href="{{ url_for('orders.detail', oid=o.id) }}"
@@ -94,6 +97,8 @@
         <td class="px-5 py-3.5 font-medium text-slate-700 dark:text-slate-200">{{ o.client_name or '–' }}</td>
         <td class="px-5 py-3.5 text-slate-500 dark:text-slate-400 whitespace-nowrap">{{ o.created_at|fdate }}</td>
         <td class="px-5 py-3.5 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap hidden md:table-cell">{{ o.computed_total|currency }}</td>
+        <td class="px-5 py-3.5 text-right font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap hidden md:table-cell">{{ o.total_paid()|currency }}</td>
+        <td class="px-5 py-3.5 text-right font-semibold whitespace-nowrap hidden md:table-cell {% if o.total_pending() > 0 %}text-red-500{% else %}text-emerald-600 dark:text-emerald-400{% endif %}">{{ o.total_pending()|currency }}</td>
         <td class="px-5 py-3.5 hidden md:table-cell">
           <span style="{{ o.status|status_badge_style }}"><span style="width:6px;height:6px;border-radius:50%;background:{{ o.status|status_dot_color }};flex-shrink:0;display:inline-block"></span> {{ o.status_label }}</span>
         </td>
@@ -109,7 +114,7 @@
       </tr>
       {% else %}
       <tr>
-        <td colspan="8" class="px-5 py-16 text-center">
+        <td colspan="10" class="px-5 py-16 text-center">
           <div class="flex flex-col items-center gap-3">
             <div class="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
               <i class="fa-solid fa-bag-shopping text-2xl text-slate-300 dark:text-slate-500"></i>
@@ -129,6 +134,12 @@
           <span class="font-bold text-xs text-slate-500 uppercase">Total</span>
           <span class="font-bold font-mono text-slate-700 dark:text-slate-200 ml-2">{{ total_filtered|currency }}</span>
         </td>
+        <td class="px-5 py-2 text-right whitespace-nowrap hidden md:table-cell">
+          <span class="font-bold font-mono text-emerald-600 dark:text-emerald-400">{{ total_paid_filtered|currency }}</span>
+        </td>
+        <td class="px-5 py-2 text-right whitespace-nowrap hidden md:table-cell">
+          <span class="font-bold font-mono {% if total_pending_filtered > 0 %}text-red-500{% else %}text-emerald-600 dark:text-emerald-400{% endif %}">{{ total_pending_filtered|currency }}</span>
+        </td>
         <td class="hidden md:table-cell"></td><td></td>
       </tr>
     </tfoot>
@@ -145,9 +156,13 @@
     pedido(s) selecionado(s)
   </span>
   <div class="flex items-center gap-2 shrink-0">
-    <button type="button" onclick="bulkFaturar()"
+    <button type="button" id="bulk-faturar-btn" onclick="bulkFaturar()" style="display:none"
             class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 rounded-lg whitespace-nowrap">
       <i class="fa-solid fa-file-invoice mr-1"></i>Faturar
+    </button>
+    <button type="button" id="bulk-concluir-btn" onclick="bulkConcluir()" style="display:none"
+            class="bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold px-4 py-2 rounded-lg whitespace-nowrap">
+      <i class="fa-solid fa-circle-check mr-1"></i>Concluir
     </button>
     <button type="button" onclick="clearBulk()" class="text-slate-400 hover:text-white text-sm whitespace-nowrap px-2 py-2">
       <i class="fa-solid fa-xmark mr-1"></i>Cancelar
@@ -157,17 +172,20 @@
 
 <script>
 function toggleAll(el) {
-  document.querySelectorAll('.bulk-check').forEach(cb => { cb.checked = el.checked; });
+  document.querySelectorAll('.bulk-check, .bulk-check-concluir').forEach(cb => { cb.checked = el.checked; });
   updateBulkBar();
 }
 function updateBulkBar() {
-  const checked = document.querySelectorAll('.bulk-check:checked');
-  const count = checked.length;
+  const checkedF = document.querySelectorAll('.bulk-check:checked');
+  const checkedC = document.querySelectorAll('.bulk-check-concluir:checked');
+  const count = checkedF.length + checkedC.length;
   document.getElementById('bulk-count').textContent = count;
+  document.getElementById('bulk-faturar-btn').style.display = checkedF.length > 0 ? '' : 'none';
+  document.getElementById('bulk-concluir-btn').style.display = checkedC.length > 0 ? '' : 'none';
   document.getElementById('bulk-bar').style.transform = count > 0 ? 'translateY(0)' : 'translateY(calc(100% + 24px))';
 }
 function clearBulk() {
-  document.querySelectorAll('.bulk-check').forEach(cb => { cb.checked = false; });
+  document.querySelectorAll('.bulk-check, .bulk-check-concluir').forEach(cb => { cb.checked = false; });
   document.getElementById('bulk-select-all').checked = false;
   updateBulkBar();
 }
@@ -194,6 +212,36 @@ async function bulkFaturar() {
       return;
     }
     let msg = d.faturados + ' faturado(s) com sucesso.';
+    if (d.falhas > 0) msg += '\n' + d.falhas + ' falha(s):\n' + (d.erros||[]).join('\n');
+    alert(msg);
+    location.reload();
+  } catch(e) {
+    alert('Erro de comunicação: ' + e.message);
+  }
+}
+async function bulkConcluir() {
+  const ids = Array.from(document.querySelectorAll('.bulk-check-concluir:checked')).map(cb => cb.value);
+  if (!ids.length) return;
+  if (!confirm('Concluir ' + ids.length + ' pedido(s)? As parcelas pendentes serão baixadas com a data de hoje.')) return;
+  try {
+    const resp = await fetch('{{ url_for("orders.bulk_concluir") }}', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}'},
+      body: JSON.stringify({ids: ids}),
+    });
+    const ctype = resp.headers.get('content-type') || '';
+    if (!ctype.includes('application/json')) {
+      const text = await resp.text();
+      console.error('Resposta inesperada do servidor:', resp.status, text.slice(0, 500));
+      alert('Erro do servidor (HTTP ' + resp.status + '). Veja o console para detalhes.');
+      return;
+    }
+    const d = await resp.json();
+    if (!resp.ok || d.ok === false) {
+      alert('Erro: ' + (d.error || 'Falha ao concluir.'));
+      return;
+    }
+    let msg = d.concluidos + ' concluído(s) com sucesso.';
     if (d.falhas > 0) msg += '\n' + d.falhas + ' falha(s):\n' + (d.erros||[]).join('\n');
     alert(msg);
     location.reload();

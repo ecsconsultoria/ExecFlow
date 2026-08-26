@@ -46,6 +46,7 @@ def index():
                   joinedload(PurchaseOrder.supplier).lazyload('*'),
                   joinedload(PurchaseOrder.order).lazyload('*'),
                   selectinload(PurchaseOrder.items),
+                  # payments é lazy="dynamic" — não suporta eager load
               )
               .filter_by(company_id=cid)
               .filter(PurchaseOrder.deleted_at.is_(None)))
@@ -69,13 +70,17 @@ def index():
 
     # Soma dos totais filtrados (todos os registros, sem paginação)
     all_filtered = query.order_by(None).all()
-    total_filtered = sum(p.computed_total or 0 for p in all_filtered)
+    total_filtered         = sum(p.computed_total or 0 for p in all_filtered)
+    total_paid_filtered    = sum(p.total_paid() or 0 for p in all_filtered)
+    total_pending_filtered = sum(p.total_pending() or 0 for p in all_filtered)
 
     return render_template("purchase_orders/index.html",
                            po_list=po_list, pagination=pagination,
                            status=status, q=q,
                            PO_STATUSES=PO_STATUSES,
-                           total_filtered=total_filtered)
+                           total_filtered=total_filtered,
+                           total_paid_filtered=total_paid_filtered,
+                           total_pending_filtered=total_pending_filtered)
 
 
 @purchase_orders_bp.route("/bulk-faturar", methods=["POST"])
@@ -119,6 +124,63 @@ def bulk_faturar():
 
 
 csrf.exempt(bulk_faturar)
+
+
+@purchase_orders_bp.route("/bulk-concluir", methods=["POST"])
+@login_required
+def bulk_concluir():
+    """Conclui várias POs faturadas simultaneamente.
+
+    Dá baixa nas parcelas pendentes assumindo a data do dia como data de
+    pagamento e conclui a PO (faturado → pago, rótulo "Concluído").
+    """
+    try:
+        if not current_user.has_permission("financial.manage"):
+            return jsonify({"ok": False, "error": "Permissão negada"}), 403
+        data = request.get_json(force=True, silent=True) or {}
+        ids = data.get("ids", [])
+        if not ids:
+            return jsonify({"ok": False, "error": "Nenhuma PO selecionada"}), 400
+        today = now_br().date()
+        results = {"ok": True, "concluidos": 0, "falhas": 0, "erros": []}
+        for pid in ids:
+            try:
+                po = PurchaseOrder.query.filter_by(id=int(pid), company_id=current_user.company_id).filter(
+                    PurchaseOrder.deleted_at.is_(None)
+                ).first()
+                if not po:
+                    results["falhas"] += 1
+                    results["erros"].append(f"PO {pid} não encontrada")
+                    continue
+                if po.status != "faturado":
+                    results["falhas"] += 1
+                    results["erros"].append(f"{po.number} não está faturada (status: {po.status_label})")
+                    continue
+                payments = list(po.payments)
+                if not payments:
+                    results["falhas"] += 1
+                    results["erros"].append(f"{po.number} sem parcelas geradas")
+                    continue
+                # Baixa das parcelas pendentes com a data do dia
+                for pmt in payments:
+                    if not pmt.is_paid:
+                        pos.baixa(pmt, pmt.balance, current_user.id, paid_date=today)
+                # A baixa avança para 'pago' quando tudo está quitado; senão força
+                if po.status == "faturado":
+                    po.status = "pago"
+                    po.paid_at = now_br()
+                log_activity("po", po.id, po.company_id, "Concluída (bulk)", current_user.id)
+                results["concluidos"] += 1
+            except Exception as e:
+                results["falhas"] += 1
+                results["erros"].append(f"Erro na PO {pid}: {str(e)}")
+        db.session.commit()
+        return jsonify(results)
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+csrf.exempt(bulk_concluir)
 
 
 @purchase_orders_bp.route("/export")

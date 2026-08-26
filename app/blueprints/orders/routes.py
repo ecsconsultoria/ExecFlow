@@ -56,6 +56,7 @@ def index():
               .options(
                   lazyload('*'),
                   joinedload(Order.quote).lazyload('*'),
+                  selectinload(Order.payments),
               )
               .filter_by(company_id=current_user.company_id, deleted_at=None))
     if status:
@@ -72,11 +73,15 @@ def index():
 
     # Soma dos totais filtrados (todos os registros, sem paginação)
     all_filtered = query.order_by(None).all()  # remove order_by para performance
-    total_filtered = sum(o.computed_total or 0 for o in all_filtered)
+    total_filtered         = sum(o.computed_total or 0 for o in all_filtered)
+    total_paid_filtered    = sum(o.total_paid() or 0 for o in all_filtered)
+    total_pending_filtered = sum(o.total_pending() or 0 for o in all_filtered)
 
     return render_template("orders/index.html", orders=orders, pagination=pagination,
                            status=status, q=q, ORDER_STATUSES=ORDER_STATUSES,
-                           total_filtered=total_filtered)
+                           total_filtered=total_filtered,
+                           total_paid_filtered=total_paid_filtered,
+                           total_pending_filtered=total_pending_filtered)
 
 
 @orders_bp.route("/bulk-faturar", methods=["POST"])
@@ -120,6 +125,62 @@ def bulk_faturar():
 
 
 csrf.exempt(bulk_faturar)
+
+
+@orders_bp.route("/bulk-concluir", methods=["POST"])
+@login_required
+def bulk_concluir():
+    """Conclui vários pedidos faturados simultaneamente.
+
+    Dá baixa nas parcelas pendentes assumindo a data do dia como data de
+    pagamento e conclui o pedido (faturado → concluído).
+    """
+    try:
+        if not current_user.has_permission("financial.manage"):
+            return jsonify({"ok": False, "error": "Permissão negada"}), 403
+        data = request.get_json(force=True, silent=True) or {}
+        ids = data.get("ids", [])
+        if not ids:
+            return jsonify({"ok": False, "error": "Nenhum pedido selecionado"}), 400
+        today = now_br().date()
+        results = {"ok": True, "concluidos": 0, "falhas": 0, "erros": []}
+        for oid in ids:
+            try:
+                order = Order.query.filter_by(id=int(oid), company_id=current_user.company_id, deleted_at=None).first()
+                if not order:
+                    results["falhas"] += 1
+                    results["erros"].append(f"Pedido {oid} não encontrado")
+                    continue
+                if order.status != "faturado":
+                    results["falhas"] += 1
+                    results["erros"].append(f"{order.number} não está faturado (status: {order.status_label})")
+                    continue
+                payments = list(order.payments)
+                if not payments:
+                    results["falhas"] += 1
+                    results["erros"].append(f"{order.number} sem parcelas geradas")
+                    continue
+                # Baixa das parcelas pendentes com a data do dia
+                for pmt in payments:
+                    if not pmt.is_paid:
+                        order_service.baixa(pmt, pmt.balance, current_user.id, paid_date=today)
+                # A baixa auto-conclui quando tudo está pago; senão fecha explicitamente
+                if order.status == "faturado":
+                    order_service.fechar(order, current_user.id)
+                elif order.closed_by is None:
+                    order.closed_by = current_user.id
+                log_activity("order", order.id, order.company_id, "Concluído (bulk)", current_user.id)
+                results["concluidos"] += 1
+            except Exception as e:
+                results["falhas"] += 1
+                results["erros"].append(f"Erro no pedido {oid}: {str(e)}")
+        db.session.commit()
+        return jsonify(results)
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+csrf.exempt(bulk_concluir)
 
 
 @orders_bp.route("/export")
