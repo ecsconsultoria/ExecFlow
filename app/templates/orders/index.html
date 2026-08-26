@@ -66,9 +66,9 @@
         <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Nº RFQ</th>
         <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Cliente</th>
         <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Data</th>
-        <th class="px-5 py-3.5 text-right text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider hidden md:table-cell">Valor Total</th>
-        <th class="px-5 py-3.5 text-right text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider hidden md:table-cell">Pagto Parcial</th>
-        <th class="px-5 py-3.5 text-right text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider hidden md:table-cell">Saldo Pendente</th>
+        <th class="px-5 py-3.5 text-center text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider hidden md:table-cell">Valor Total</th>
+        <th class="px-5 py-3.5 text-center text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider hidden md:table-cell">Pagto Parcial</th>
+        <th class="px-5 py-3.5 text-center text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider hidden md:table-cell">Saldo Pendente</th>
         <th class="px-5 py-3.5 text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider hidden md:table-cell">Status</th>
         <th class="px-5 py-3.5 text-right text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Ações</th>
       </tr>
@@ -96,9 +96,9 @@
         </td>
         <td class="px-5 py-3.5 font-medium text-slate-700 dark:text-slate-200">{{ o.client_name or '–' }}</td>
         <td class="px-5 py-3.5 text-slate-500 dark:text-slate-400 whitespace-nowrap">{{ o.created_at|fdate }}</td>
-        <td class="px-5 py-3.5 text-right font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap hidden md:table-cell">{{ o.computed_total|currency }}</td>
-        <td class="px-5 py-3.5 text-right font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap hidden md:table-cell">{{ o.total_paid()|currency }}</td>
-        <td class="px-5 py-3.5 text-right font-semibold whitespace-nowrap hidden md:table-cell {% if o.total_pending() > 0 %}text-red-500{% else %}text-emerald-600 dark:text-emerald-400{% endif %}">{{ o.total_pending()|currency }}</td>
+        <td class="px-5 py-3.5 text-center font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap hidden md:table-cell">{{ o.computed_total|currency }}</td>
+        <td class="px-5 py-3.5 text-center font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap hidden md:table-cell">{{ o.total_paid()|currency }}</td>
+        <td class="px-5 py-3.5 text-center font-semibold whitespace-nowrap hidden md:table-cell {% if o.total_pending() > 0 %}text-red-500{% else %}text-emerald-600 dark:text-emerald-400{% endif %}">{{ o.total_pending()|currency }}</td>
         <td class="px-5 py-3.5 hidden md:table-cell">
           <span style="{{ o.status|status_badge_style }}"><span style="width:6px;height:6px;border-radius:50%;background:{{ o.status|status_dot_color }};flex-shrink:0;display:inline-block"></span> {{ o.status_label }}</span>
         </td>
@@ -130,14 +130,14 @@
     <tfoot>
       <tr class="border-t-2 border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50">
         <td></td><td class="hidden md:table-cell"></td><td class="hidden md:table-cell"></td><td class="hidden md:table-cell"></td><td class="hidden md:table-cell"></td>
-        <td class="px-5 py-2 text-right whitespace-nowrap hidden md:table-cell">
+        <td class="px-5 py-2 text-center whitespace-nowrap hidden md:table-cell">
           <span class="font-bold text-xs text-slate-500 uppercase">Total</span>
           <span class="font-bold font-mono text-slate-700 dark:text-slate-200 ml-2">{{ total_filtered|currency }}</span>
         </td>
-        <td class="px-5 py-2 text-right whitespace-nowrap hidden md:table-cell">
+        <td class="px-5 py-2 text-center whitespace-nowrap hidden md:table-cell">
           <span class="font-bold font-mono text-emerald-600 dark:text-emerald-400">{{ total_paid_filtered|currency }}</span>
         </td>
-        <td class="px-5 py-2 text-right whitespace-nowrap hidden md:table-cell">
+        <td class="px-5 py-2 text-center whitespace-nowrap hidden md:table-cell">
           <span class="font-bold font-mono {% if total_pending_filtered > 0 %}text-red-500{% else %}text-emerald-600 dark:text-emerald-400{% endif %}">{{ total_pending_filtered|currency }}</span>
         </td>
         <td class="hidden md:table-cell"></td><td></td>
