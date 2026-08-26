@@ -83,77 +83,45 @@ def _period_bounds(period: str, today):
 
 
 def _so_revenue(cid, start, end):
-    """Revenue = SUM(computed_total) for faturado/concluido SOs invoiced in period.
+    """Receita = SUM(computed_total) dos SOs no período.
 
-    Replicates Order.computed_total @property in SQL:
-        total_amount
-        - discount_amount  (= total_amount * pct/100  if discount_type=="%",  else flat value)
-        + freight_amount
-        + other_costs_amount
+    Mesma fórmula e escopo da listagem de Pedidos ("todos os status"):
+    todos os status exceto excluído, usando o próprio Order.computed_total.
+    Data de referência: emission_date; sem data de emissão, cai para a
+    data de criação do pedido.
     """
-    import sqlalchemy as sa
-    from sqlalchemy import case, func
-    from datetime import datetime
-
-    disc_amt = case(
-        (Order.discount_type == "%",
-         func.coalesce(Order.total_amount, 0) * (func.coalesce(Order.discount_value, 0) / 100.0)),
-        else_=func.coalesce(Order.discount_value, 0),
-    )
-    computed_total_expr = (
-        func.coalesce(Order.total_amount, 0)
-        - disc_amt
-        + func.coalesce(Order.freight_amount, 0)
-        + func.coalesce(Order.other_costs_amount, 0)
-    )
-    return (
-        db.session.query(func.sum(computed_total_expr))
-        .filter(
-            Order.company_id == cid,
-            Order.deleted_at.is_(None),
-            Order.status.in_(["faturado", "concluido"]),
-            Order.emission_date >= start,
-            Order.emission_date <= end,
-        )
-        .scalar() or 0.0
-    )
+    orders = (Order.query
+              .filter_by(company_id=cid, deleted_at=None)
+              .filter(Order.status != "excluido")
+              .all())
+    total = 0.0
+    for o in orders:
+        d = o.emission_date or (o.created_at.date() if o.created_at else None)
+        if d and start <= d <= end:
+            total += float(o.computed_total or 0.0)
+    return round(total, 2)
 
 
 def _po_cost(cid, start, end):
-    """Cost = SUM of POItem costs for faturado/pago POs emitted in period.
-    Uses PO.created_at as the emission/accounting reference date."""
-    import sqlalchemy as sa
-    from ...models.purchase_order import POItem
+    """Custo = SUM(computed_total) das POs no período.
+
+    Mesma fórmula e escopo da listagem de POs ("todos os status"):
+    todos os status exceto rascunho/excluído, usando o próprio
+    PurchaseOrder.computed_total (itens + frete + custos extras − desconto).
+    Data de referência: created_at da PO.
+    """
     from datetime import datetime
-    dt_start = datetime.combine(start, __import__("datetime").datetime.min.time())
-    dt_end   = datetime.combine(end,   __import__("datetime").datetime.max.time())
-
-    # Prefer item-level cost (more accurate, handles discounts)
-    item_total = (
-        db.session.query(sa.func.sum(POItem.unit_cost * POItem.quantity))
-        .join(PurchaseOrder, POItem.po_id == PurchaseOrder.id)
-        .filter(
-            PurchaseOrder.company_id == cid,
-            PurchaseOrder.deleted_at.is_(None),
-            PurchaseOrder.status.in_(["concluido", "faturado", "pago"]),
-            PurchaseOrder.created_at.between(dt_start, dt_end),
-        )
-        .scalar()
-    )
-    if item_total is not None:
-        return float(item_total)
-
-    # Fallback to PO.amount
-    return (
-        db.session.query(sa.func.sum(PurchaseOrder.amount))
-        .filter(
-            PurchaseOrder.company_id == cid,
-            PurchaseOrder.deleted_at.is_(None),
-            PurchaseOrder.status.in_(["concluido", "faturado", "pago"]),
-            PurchaseOrder.created_at.between(dt_start, dt_end),
-        )
-        .scalar() or 0.0
-    )
+    from sqlalchemy.orm import selectinload
+    dt_start = datetime.combine(start, datetime.min.time())
+    dt_end   = datetime.combine(end,   datetime.max.time())
+    pos = (PurchaseOrder.query
+           .options(selectinload(PurchaseOrder.items))
+           .filter_by(company_id=cid)
+           .filter(PurchaseOrder.deleted_at.is_(None))
+           .filter(PurchaseOrder.status.notin_(["excluido", "rascunho"]))
+           .filter(PurchaseOrder.created_at.between(dt_start, dt_end))
+           .all())
+    return round(sum(float(p.computed_total or 0.0) for p in pos), 2)
 
 
 @dashboard_bp.route("/")
