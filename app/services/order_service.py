@@ -96,7 +96,7 @@ def create_from_quote(quote, user_id: int) -> Order:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def update_header(order: Order, data: dict) -> None:
-    """Atualiza campos do cabeçalho: emissão, entrega, forma, prazo."""
+    """Atualiza campos do cabeçalho: emissão, entrega, forma, prazo, faturamento."""
     if data.get("emission_date"):
         try:
             order.emission_date = date.fromisoformat(str(data["emission_date"]))
@@ -109,6 +109,10 @@ def update_header(order: Order, data: dict) -> None:
             pass
     else:
         order.delivery_datetime = None
+    if data.get("billing_type"):
+        bt = str(data["billing_type"]).strip()
+        if bt in ("recibo", "nf", "cartao", "nf_cartao"):
+            order.billing_type = bt
     for field in ("payment_method", "payment_terms", "obs", "celular"):
         if field in data:
             setattr(order, field, data[field] or "")
