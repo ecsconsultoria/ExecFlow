@@ -104,3 +104,37 @@ def test_save_all_keeps_billing_when_invalid(testing_app):
     with testing_app.app_context():
         # Valor inválido é ignorado — o cadastro anterior permanece
         assert db.session.get(Order, oid).billing_type == "recibo"
+
+
+def test_inline_client_creation_saves_celular_to_whatsapp(testing_app):
+    # O campo "Celular" do modal de novo cliente grava em Client.whatsapp
+    c = _login(testing_app)
+    r = c.post("/clients/api/new", json={
+        "name": "Cliente Inline", "contact": "Fulana",
+        "whatsapp": "+55 11 99999-0000", "email": "fulana@example.com",
+    })
+    assert r.status_code == 200
+    d = r.get_json()
+    assert d["ok"] is True
+    assert d["whatsapp"] == "+55 11 99999-0000"
+    assert d["contact"] == "Fulana"
+    assert d["email"] == "fulana@example.com"
+    with testing_app.app_context():
+        cli = Client.query.filter_by(name="Cliente Inline").first()
+        assert cli is not None
+        assert cli.whatsapp == "+55 11 99999-0000"  # celular no campo móvel
+        assert cli.phone is None
+
+
+def test_inline_client_creation_legacy_phone_field(testing_app):
+    # Compatibilidade: "phone" antigo ainda cai no whatsapp
+    c = _login(testing_app)
+    r = c.post("/clients/api/new", json={
+        "name": "Cliente Legacy", "phone": "+55 11 98888-1111",
+    })
+    assert r.status_code == 200
+    d = r.get_json()
+    assert d["ok"] is True and d["whatsapp"] == "+55 11 98888-1111"
+    with testing_app.app_context():
+        cli = Client.query.filter_by(name="Cliente Legacy").first()
+        assert cli.whatsapp == "+55 11 98888-1111"

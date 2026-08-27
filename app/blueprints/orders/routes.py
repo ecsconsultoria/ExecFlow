@@ -365,11 +365,12 @@ def open_order(oid):
         from ...models.client import Client
         c = Client.query.filter_by(id=cid, company_id=current_user.company_id, deleted_at=None).first()
         if c:
-            order.client_id   = c.id
-            order.client_name = c.name
-            order.email       = c.email or ""
-            order.phone       = c.phone or ""
-            order.celular     = c.whatsapp or c.phone or ""
+            order.client_id    = c.id
+            order.client_name  = c.name
+            order.contact_name = c.contact or ""
+            order.email        = c.email or ""
+            order.phone        = c.phone or ""
+            order.celular      = c.whatsapp or c.phone or ""
     try:
         order_service.open_order(order, current_user.id)
         log_activity("order", order.id, order.company_id, "Aberto", current_user.id)
@@ -739,11 +740,12 @@ def save_all(oid):
             from ...models.client import Client
             c = Client.query.filter_by(id=int(cid_str), company_id=current_user.company_id, deleted_at=None).first()
             if c:
-                order.client_id   = c.id
-                order.client_name = c.name
-                order.email       = c.email or ""
-                order.phone       = c.phone or ""
-                order.celular     = c.whatsapp or c.phone or ""
+                order.client_id    = c.id
+                order.client_name  = c.name
+                order.contact_name = c.contact or ""
+                order.email        = c.email or ""
+                order.phone        = c.phone or ""
+                order.celular      = c.whatsapp or c.phone or ""
         except (ValueError, TypeError):
             pass
     # Contact fields (manual override via form)

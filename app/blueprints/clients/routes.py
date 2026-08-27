@@ -90,16 +90,21 @@ def delete(cid):
 @login_required
 @require_permission("clients.edit")
 def api_new():
-    """Criação inline de cliente via AJAX (usado na SO detail)."""
+    """Criação inline de cliente via AJAX (usado na SO detail).
+
+    O campo "Celular" do modal é gravado em Client.whatsapp (o campo móvel
+    do cadastro de cliente). Aceita "phone" por compatibilidade.
+    """
     data = request.get_json(silent=True) or {}
     name = (data.get("name") or "").strip()
     if not name:
         return jsonify({"ok": False, "error": "Nome é obrigatório."}), 400
+    whatsapp = (data.get("whatsapp") or data.get("phone") or "").strip() or None
     client = Client(
         company_id = current_user.company_id,
         name       = name,
         contact    = data.get("contact") or None,
-        phone      = data.get("phone") or None,
+        whatsapp   = whatsapp,
         email      = data.get("email") or None,
         document   = data.get("document") or None,
     )
@@ -107,7 +112,10 @@ def api_new():
     db.session.commit()
     log_activity("client", client.id, current_user.company_id, f"Cliente {client.name!r} criado inline", current_user.id)
     return jsonify({"ok": True, "id": client.id, "name": client.name,
-                    "email": client.email or "", "phone": client.phone or ""})
+                    "email": client.email or "",
+                    "whatsapp": client.whatsapp or "",
+                    "phone": client.phone or "",
+                    "contact": client.contact or ""})
 
 
 @clients_bp.route("/search")

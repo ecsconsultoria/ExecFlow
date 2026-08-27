@@ -483,7 +483,8 @@
           {% for c in clients %}
           <option value="{{ c.id }}"
                   data-email="{{ c.email or '' }}"
-                  data-phone="{{ c.phone or '' }}"
+                  data-phone="{{ c.whatsapp or c.phone or '' }}"
+                  data-contact="{{ c.contact or '' }}"
                   {{ 'selected' if order.client_id == c.id }}>{{ c.name }}</option>
           {% endfor %}
         </select>
@@ -517,7 +518,7 @@
 
       <div class="f-cnpj">
         <label class="lbl">Contato</label>
-        <p class="fi-ro">{{ order.client.contact if order.client and order.client.contact else (order.contact_name or '–') }}</p>
+        <p class="fi-ro" id="client-contact-display">{{ order.client.contact if order.client and order.client.contact else (order.contact_name or '–') }}</p>
       </div>
 
       <div class="f-cnpj">
@@ -1637,7 +1638,7 @@
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="lbl">Telefone</label>
+            <label class="lbl">Celular</label>
             <input type="text" id="nc-phone" class="fi" placeholder="+55 11 …">
           </div>
           <div>
@@ -1733,6 +1734,14 @@ function selectClient(clientId) {
   const sel = document.getElementById('client-select');
   if (!sel) return;
   sel.value = clientId;
+  const opt = sel.options[sel.selectedIndex];
+  if (!opt) return;
+  const emailInput  = document.querySelector('input[name="email"]');
+  const celInput    = document.querySelector('input[name="celular"]');
+  const contactEl   = document.getElementById('client-contact-display');
+  if (emailInput && opt.dataset.email !== undefined) emailInput.value = opt.dataset.email;
+  if (celInput   && opt.dataset.phone !== undefined) celInput.value   = opt.dataset.phone;
+  if (contactEl  && opt.dataset.contact !== undefined) contactEl.textContent = opt.dataset.contact || '–';
 }
 
 function createClientInline() {
@@ -1746,7 +1755,7 @@ function createClientInline() {
   const payload = {
     name:     name,
     contact:  (document.getElementById('nc-contact')?.value || '').trim() || null,
-    phone:    (document.getElementById('nc-phone')?.value   || '').trim() || null,
+    whatsapp: (document.getElementById('nc-phone')?.value   || '').trim() || null,
     email:    (document.getElementById('nc-email')?.value   || '').trim() || null,
     document: (document.getElementById('nc-document')?.value|| '').trim() || null,
   };
@@ -1764,16 +1773,19 @@ function createClientInline() {
       if (errDiv) { errDiv.textContent = d.error || 'Erro ao criar cliente.'; errDiv.classList.remove('hidden'); }
       return;
     }
-    // Adiciona option ao select e seleciona
+    // Adiciona option ao select e seleciona (com todos os dados do cliente)
     const sel = document.getElementById('client-select');
     if (sel) {
       const opt = document.createElement('option');
       opt.value = d.id;
       opt.text  = d.name;
-      opt.dataset.email = d.email || '';
-      opt.dataset.phone = d.phone || '';
+      opt.dataset.email   = d.email || '';
+      opt.dataset.phone   = d.whatsapp || d.phone || '';
+      opt.dataset.contact = d.contact || '';
       opt.selected = true;
       sel.appendChild(opt);
+      // Preenche imediatamente Email / Celular / Contato no pedido
+      selectClient(String(d.id));
     }
     // Limpa campos do modal
     ['nc-name','nc-contact','nc-phone','nc-email','nc-document'].forEach(id => {
