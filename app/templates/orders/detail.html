@@ -549,7 +549,7 @@
       <button type="button" @click="showAddItemModal=true"
               class="flex items-center gap-1 text-xs bg-teal-50 hover:bg-teal-100 text-teal-700
                      dark:bg-teal-900/30 dark:text-teal-300 font-semibold px-3 py-1.5 rounded-lg transition-colors">
-        <i class="fa-solid fa-plus"></i> Adicionar Item
+        <i class="fa-solid fa-plus"></i> Item
       </button>
       {% endif %}
     </div>
@@ -578,6 +578,7 @@
         <td class="px-3 py-2 text-slate-400 text-center so-item-pos">{{ loop.index }}</td>
         <td class="px-3 py-2">
           <p class="font-semibold text-slate-700 dark:text-slate-200 leading-tight">
+            {% if item.service_date %}<span class="text-slate-400 font-medium mr-1 whitespace-nowrap">{{ item.service_date.strftime('%d/%m') }}{% if item.service_time %} {{ '%02d:%02d'|format(12 if item.service_time.hour % 12 == 0 else item.service_time.hour % 12, item.service_time.minute) }} {{ 'AM' if item.service_time.hour < 12 else 'PM' }}{% endif %} –</span>{% endif %}
             {% if item.ref_note %}<span class="text-slate-400 font-normal mr-1">[{{ item.ref_note }}]</span>{% endif %}
             {{ item.service.name if item.service else item.description or '–' }}
           </p>

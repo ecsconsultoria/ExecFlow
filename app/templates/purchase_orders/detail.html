@@ -579,6 +579,7 @@
         <td class="px-3 py-2 text-center text-slate-400 po-item-pos">{{ loop.index }}</td>
         <td class="px-3 py-2">
           <p class="font-medium text-slate-700 dark:text-slate-200">
+            {% if item.service_date %}<span class="text-slate-400 font-medium mr-1 whitespace-nowrap">{{ item.service_date.strftime('%d/%m') }}{% if item.service_time %} {{ '%02d:%02d'|format(12 if item.service_time.hour % 12 == 0 else item.service_time.hour % 12, item.service_time.minute) }} {{ 'AM' if item.service_time.hour < 12 else 'PM' }}{% endif %} –</span>{% endif %}
             {{ item.description or (item.service.name if item.service else '–') }}
           </p>
         </td>
