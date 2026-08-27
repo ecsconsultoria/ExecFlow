@@ -60,7 +60,10 @@ def index():
               )
               .filter_by(company_id=current_user.company_id, deleted_at=None))
     if status:
-        query = query.filter_by(status=status)
+        if status == "aberto_faturado":
+            query = query.filter(Order.status.in_(["aberto", "faturado"]))
+        else:
+            query = query.filter_by(status=status)
     else:
         query = query.filter(Order.status != "excluido")
     if q:
@@ -197,7 +200,10 @@ def export_csv():
               )
               .filter_by(company_id=current_user.company_id, deleted_at=None))
     if status:
-        query = query.filter_by(status=status)
+        if status == "aberto_faturado":
+            query = query.filter(Order.status.in_(["aberto", "faturado"]))
+        else:
+            query = query.filter_by(status=status)
     else:
         query = query.filter(Order.status != "excluido")
     if q:

@@ -21,6 +21,7 @@
         <select name="status" onchange="this.form.submit()"
                 class="border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 min-w-[160px]">
           <option value="">Todos os status</option>
+          <option value="aberto_faturado" {% if status == 'aberto_faturado' %}selected{% endif %}>Aberto/Faturado</option>
           {% for s in ORDER_STATUSES %}
           <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s|title }}</option>
           {% endfor %}

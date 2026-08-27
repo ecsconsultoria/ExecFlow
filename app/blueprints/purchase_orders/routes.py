@@ -51,7 +51,10 @@ def index():
               .filter_by(company_id=cid)
               .filter(PurchaseOrder.deleted_at.is_(None)))
     if status:
-        query = query.filter_by(status=status)
+        if status == "aberto_faturado":
+            query = query.filter(PurchaseOrder.status.in_(["aberto", "faturado"]))
+        else:
+            query = query.filter_by(status=status)
     else:
         # Exclui rascunhos não salvos e POs excluídas da listagem padrão
         query = query.filter(PurchaseOrder.status.notin_(["excluido", "rascunho"]))
@@ -201,7 +204,10 @@ def export_csv():
               .filter_by(company_id=cid)
               .filter(PurchaseOrder.deleted_at.is_(None)))
     if status:
-        query = query.filter_by(status=status)
+        if status == "aberto_faturado":
+            query = query.filter(PurchaseOrder.status.in_(["aberto", "faturado"]))
+        else:
+            query = query.filter_by(status=status)
     else:
         query = query.filter(PurchaseOrder.status.notin_(["excluido", "rascunho"]))
     if q:
