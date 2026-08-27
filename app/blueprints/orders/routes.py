@@ -80,11 +80,17 @@ def index():
     total_paid_filtered    = sum(o.total_paid() or 0 for o in all_filtered)
     total_pending_filtered = sum(o.total_pending() or 0 for o in all_filtered)
 
-    return render_template("orders/index.html", orders=orders, pagination=pagination,
-                           status=status, q=q, ORDER_STATUSES=ORDER_STATUSES,
-                           total_filtered=total_filtered,
-                           total_paid_filtered=total_paid_filtered,
-                           total_pending_filtered=total_pending_filtered)
+    resp = make_response(render_template(
+        "orders/index.html", orders=orders, pagination=pagination,
+        status=status, q=q, ORDER_STATUSES=ORDER_STATUSES,
+        total_filtered=total_filtered,
+        total_paid_filtered=total_paid_filtered,
+        total_pending_filtered=total_pending_filtered,
+    ))
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
 
 
 @orders_bp.route("/bulk-faturar", methods=["POST"])

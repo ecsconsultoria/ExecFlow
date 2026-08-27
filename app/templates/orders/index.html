@@ -2,6 +2,10 @@
 {% block title %}Sales Orders{% endblock %}
 {% block page_title %}<i class="fa-solid fa-bag-shopping mr-2 text-teal-500"></i>Sales Orders (SO) <span class="text-xs text-slate-400 font-normal hidden sm:inline">· Gerencie e acompanhe todos os pedidos de venda</span>{% endblock %}
 
+{% block extra_head %}
+{% include "components/status_badge_style.html" %}
+{% endblock %}
+
 {% block content %}
 
 {# ── Filtros ── #}
@@ -101,7 +105,8 @@
         <td class="px-5 py-3.5 text-center font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap hidden md:table-cell">{{ o.total_paid()|currency }}</td>
         <td class="px-5 py-3.5 text-center font-semibold whitespace-nowrap hidden md:table-cell {% if o.total_pending() > 0 %}text-red-500{% else %}text-emerald-600 dark:text-emerald-400{% endif %}">{{ o.total_pending()|currency }}</td>
         <td class="px-5 py-3.5 hidden md:table-cell">
-          <span style="{{ o.status|status_badge_style }}"><span style="width:6px;height:6px;border-radius:50%;background:{{ o.status|status_dot_color }};flex-shrink:0;display:inline-block"></span> {{ o.status_label }}</span>
+          {% set _stv = {'novo':'pending','aberto':'open','faturado':'invoiced','concluido':'completed','cancelado':'cancelled','excluido':'cancelled'}.get(o.status, 'pending') %}
+          <span class="status-badge status-badge--{{ _stv }}"><span class="status-badge__dot"></span>{{ o.status_label }}</span>
         </td>
         <td class="px-5 py-3.5">
           <div class="flex items-center justify-end gap-1.5">
