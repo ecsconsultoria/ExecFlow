@@ -236,7 +236,10 @@ def test_no_duplicate_financial_record_on_rebaixa(testing_app):
     with testing_app.app_context():
         pmt = db.session.get(OrderPayment, pid)
         order_service.baixa(pmt, 500.0, admin)
-        order_service.baixa(pmt, 500.0, admin)   # re-baixa idempotente
+        # Etapa 10D: re-baixa de parcela quitada é BLOQUEADA (não duplica)
+        with pytest.raises(ValueError):
+            order_service.baixa(pmt, 500.0, admin)
+        db.session.rollback()
         frs = FinancialRecord.query.filter_by(reference=f"order_payment:{pid}").all()
         assert len(frs) == 1
 

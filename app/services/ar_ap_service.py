@@ -83,12 +83,15 @@ def _today():
 # ─────────────────────────────────────────────────────────────────────────────
 
 def receivable_rows(cid, start, end):
-    """Parcelas de SO a receber com vencimento no período."""
+    """Parcelas de SO a receber com vencimento no período.
+
+    Etapa 10D: inclui parcelas PARCIALMENTE recebidas (saldo > 0) e o valor
+    exibido é o SALDO restante (balance), nunca o total original.
+    """
     pmts = (OrderPayment.query
             .join(Order, OrderPayment.order_id == Order.id)
             .filter(Order.company_id == cid, Order.deleted_at.is_(None))
             .filter(Order.status.notin_(["cancelado", "excluido"]))
-            .filter(OrderPayment.paid_at.is_(None))
             .filter(OrderPayment.amount > 0)
             .filter(OrderPayment.due_date.isnot(None))
             .filter(OrderPayment.due_date.between(start, end))
@@ -96,12 +99,15 @@ def receivable_rows(cid, start, end):
             .all())
     rows = []
     for p in pmts:
+        balance = round((p.amount or 0) - (p.paid_amount or 0), 2)
+        if balance <= 0:
+            continue  # quitada — fora do A Receber
         o = p.order
         rows.append(ReceivableRow(
             origem="SO",
             description=f"{o.number} — parcela {p.installment_no}",
             due_date=p.due_date,
-            amount=float(p.amount or 0),
+            amount=balance,
             so_number=o.number,
             client_name=o.client_name or "",
             payment=p,

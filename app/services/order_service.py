@@ -468,16 +468,30 @@ def delete_payment(payment: OrderPayment) -> None:
 
 
 def baixa(payment: OrderPayment, paid_amount: float, user_id: int, paid_date: date | None = None) -> None:
-    """Liquida uma parcela de Order.
+    """Liquida (parcial ou total) uma parcela de Order — Etapa 10D.
+
+    SEMÂNTICA INCREMENTAL: `paid_amount` é SOMADO ao já recebido
+    (nunca sobrescreve). Ex.: parcela 1.300 → baixa 500 → saldo 800 →
+    baixa 800 → total 1.300 (pago). Baixa acima do saldo restante é
+    rejeitada; parcela já quitada é rejeitada (idempotência/retry).
 
     Toda a operação é atômica: o pagamento, o espelho financeiro,
     o recálculo de margem e o sync de parcelas pendentes são commitados
     juntos. Se qualquer etapa falhar, nada persiste.
     """
+    if paid_amount <= 0:
+        raise ValueError("Valor do recebimento deve ser maior que zero.")
+    if payment.is_paid:
+        raise ValueError("Parcela já quitada — recebimento não registrado.")
+    new_total = round((payment.paid_amount or 0.0) + float(paid_amount), 2)
+    if new_total > round(payment.amount or 0.0, 2) + 0.005:
+        saldo = round((payment.amount or 0.0) - (payment.paid_amount or 0.0), 2)
+        raise ValueError(f"Valor excede o saldo restante da parcela (R$ {saldo:.2f}).")
+
     _paid_date = paid_date if paid_date else now_br().date()
     _now = now_br()
     _paid_at = _now.replace(year=_paid_date.year, month=_paid_date.month, day=_paid_date.day)
-    payment.paid_amount = paid_amount
+    payment.paid_amount = new_total  # acumulado — nunca sobrescreve
     payment.paid_at     = _paid_at
     payment.paid_by     = user_id
 
@@ -493,8 +507,10 @@ def baixa(payment: OrderPayment, paid_amount: float, user_id: int, paid_date: da
             order.status    = "concluido"
             order.closed_at = now_br()
 
-    # Espelho financeiro — criado ANTES do commit para atomicidade
-    _sync_payment_financial_record(payment, order, _paid_date, paid_amount)
+    # Espelho financeiro — criado ANTES do commit para atomicidade.
+    # FR por parcela reflete o TOTAL acumulado recebido (histórico de cada
+    # recebimento fica no audit_log).
+    _sync_payment_financial_record(payment, order, _paid_date, new_total)
     _sync_order_pending_financials(order)
 
     db.session.commit()

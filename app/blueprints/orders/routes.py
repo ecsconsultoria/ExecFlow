@@ -628,12 +628,15 @@ def baixa(pid):
         return redirect(url_for("orders.detail", oid=order.id))
     try:
         raw         = request.form.get("paid_amount", "")
-        paid_amount = float(str(raw).replace(",", ".")) if raw else (pmt.amount or 0)
+        # Etapa 10D: sem valor informado, recebe o SALDO restante (nunca o total);
+        # valor informado é SOMADO ao já recebido (baixa incremental no service).
+        paid_amount = float(str(raw).replace(",", ".")) if raw else pmt.balance
         paid_date_str = request.form.get("paid_date", "")
         from datetime import date as _date_type
         paid_date = _date_type.fromisoformat(paid_date_str) if paid_date_str else None
         order_service.baixa(pmt, paid_amount, current_user.id, paid_date=paid_date)
-        log_activity("order", order.id, order.company_id, f"Parcela {pmt.installment_no} baixada", current_user.id)
+        log_activity("order", order.id, order.company_id,
+                     f"Parcela {pmt.installment_no} baixada R$ {paid_amount:.2f}", current_user.id)
         db.session.commit()
 
         # Se saldo total está zerado e SO está em status permitido, concluir

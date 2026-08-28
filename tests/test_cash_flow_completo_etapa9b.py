@@ -148,7 +148,7 @@ def test_realized_forecast_balances(testing_app):
     cid = _cid(testing_app)
     due_next = NEXT_M + timedelta(days=5)
     _so_parcel(testing_app, cid, due=due_next, amount=10000.0)      # previsto
-    _so_parcel(testing_app, cid, due=due_next, amount=500.0, paid=True)  # será realizado
+    _so_parcel(testing_app, cid, due=due_next, amount=500.0)        # será realizado
 
     with testing_app.app_context():
         from app.models.company import Company
@@ -156,9 +156,9 @@ def test_realized_forecast_balances(testing_app):
         set_initial_balance(company, 2000.0, date(2026, 8, 1), 1)
         db.session.commit()
 
-        # baixa cria o FR pago (realizado)
+        # baixa cria o FR pago (realizado) — Etapa 10D: baixa incremental
         from app.services.order_service import baixa
-        paid_pmt = (OrderPayment.query.filter(OrderPayment.paid_at.isnot(None)).first())
+        paid_pmt = (OrderPayment.query.filter(OrderPayment.amount == 500.0).first())
         baixa(paid_pmt, 500.0, 1, paid_date=NEXT_M + timedelta(days=1))
 
         m_start, m_end = NEXT_M.replace(day=1), (NEXT_M + timedelta(days=32)).replace(day=1) - timedelta(days=1)
