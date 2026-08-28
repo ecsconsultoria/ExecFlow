@@ -6,6 +6,9 @@
 
 <div class="mb-4 flex flex-wrap items-center gap-2">
   <a href="{{ url_for('financial.index') }}" class="text-sm text-slate-500 hover:text-blue-500 mr-1"><i class="fa-solid fa-arrow-left mr-1"></i>Financeiro</a>
+  {% if has_perm('financial.manage') %}
+  <a href="{{ url_for('financial.cash_flow_settings') }}" class="text-sm px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-blue-400"><i class="fa-solid fa-gear mr-1"></i>Saldo Inicial</a>
+  {% endif %}
 </div>
 
 <form method="get" class="mb-5 bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm flex flex-wrap items-end gap-3">
@@ -30,40 +33,56 @@
   </div>
   {% endif %}
   <button type="submit" class="px-4 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-200">Filtrar</button>
+  <p class="text-xs text-slate-400 w-full mt-1">
+    Realizado: <b>paid_date</b> · Previsto: <b>due_date</b> · Saldo inicial: <b>{{ initial_balance_date.strftime('%d/%m/%Y') if initial_balance_date else 'não configurado' }}</b>
+  </p>
 </form>
 
-{# ── CAIXA REALIZADO ─────────────────────────────────────────────────────── #}
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-2">
-  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 border-emerald-500">
-    <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Total de Entradas</p>
-    <p class="text-xl font-bold text-emerald-600 font-mono">{{ total_in|currency }}</p>
-  </div>
-  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 border-red-500">
-    <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Total de Saídas</p>
-    <p class="text-xl font-bold text-red-600 font-mono">{{ total_out|currency }}</p>
-  </div>
-  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 {% if period_balance >= 0 %}border-blue-500{% else %}border-orange-500{% endif %}">
-    <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Saldo do Período</p>
-    <p class="text-xl font-bold {% if period_balance >= 0 %}text-blue-600{% else %}text-orange-600{% endif %} font-mono">{{ period_balance|currency }}</p>
-  </div>
-  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 border-slate-400">
-    <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Saldo Final</p>
-    <p class="text-xl font-bold text-slate-700 dark:text-slate-200 font-mono">{{ final_balance|currency }}</p>
+{# ── SALDO INICIAL ───────────────────────────────────────────────────────── #}
+<div class="mb-3">
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 border-slate-400 flex items-center justify-between">
+    <div>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">SALDO INICIAL
+        {% if initial_balance_date %}<span class="text-slate-400">· {{ initial_balance_date.strftime('%d/%m/%Y') }}</span>{% endif %}</p>
+      <p class="text-xl font-bold text-slate-700 dark:text-slate-200 font-mono">{{ initial_balance|currency }}</p>
+    </div>
     {% if not initial_configured %}
-    <p class="text-[11px] text-slate-400 mt-1"><i class="fa-solid fa-circle-info mr-0.5"></i>Saldo inicial não configurado — resultado líquido do período.</p>
+    <p class="text-[11px] text-amber-600 dark:text-amber-400 max-w-[260px] text-right"><i class="fa-solid fa-circle-info mr-0.5"></i>Saldo inicial não configurado — configure em "Saldo Inicial" (nunca é calculado automaticamente).</p>
     {% endif %}
   </div>
 </div>
 
-{# ── Previsto (informativo — NÃO é caixa realizado) ───────────────────────── #}
-<div class="mb-5 grid grid-cols-2 gap-3">
-  <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl px-4 py-3 border border-amber-200 dark:border-amber-900">
-    <p class="text-xs text-amber-700 dark:text-amber-300 mb-0.5"><i class="fa-solid fa-hourglass-half mr-1"></i>PREVISTO · A receber (não realizado)</p>
-    <p class="text-sm font-bold text-amber-800 dark:text-amber-200 font-mono">{{ to_receive|currency }}</p>
+{# ── REALIZADO ───────────────────────────────────────────────────────────── #}
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-2">
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 border-emerald-500">
+    <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">ENTRADAS REALIZADAS</p>
+    <p class="text-xl font-bold text-emerald-600 font-mono">{{ total_in|currency }}</p>
   </div>
-  <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl px-4 py-3 border border-amber-200 dark:border-amber-900">
-    <p class="text-xs text-amber-700 dark:text-amber-300 mb-0.5"><i class="fa-solid fa-hourglass-half mr-1"></i>PREVISTO · A pagar (não realizado)</p>
-    <p class="text-sm font-bold text-amber-800 dark:text-amber-200 font-mono">{{ to_pay|currency }}</p>
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 border-red-500">
+    <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">SAÍDAS REALIZADAS</p>
+    <p class="text-xl font-bold text-red-600 font-mono">{{ total_out|currency }}</p>
+  </div>
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 border-blue-500">
+    <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">SALDO REALIZADO</p>
+    <p class="text-xl font-bold {% if realized_balance >= 0 %}text-blue-600{% else %}text-orange-600{% endif %} font-mono">{{ realized_balance|currency }}</p>
+    <p class="text-[11px] text-slate-400 mt-1">Inicial + entradas − saídas</p>
+  </div>
+</div>
+
+{# ── PREVISTO ────────────────────────────────────────────────────────────── #}
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+  <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-200 dark:border-emerald-900">
+    <p class="text-xs text-emerald-700 dark:text-emerald-300 mb-1">ENTRADAS PREVISTAS <span class="text-[10px] uppercase">(due_date)</span></p>
+    <p class="text-xl font-bold text-emerald-700 dark:text-emerald-300 font-mono">{{ total_in_forecast|currency }}</p>
+  </div>
+  <div class="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 border border-red-200 dark:border-red-900">
+    <p class="text-xs text-red-700 dark:text-red-300 mb-1">SAÍDAS PREVISTAS <span class="text-[10px] uppercase">(due_date)</span></p>
+    <p class="text-xl font-bold text-red-700 dark:text-red-300 font-mono">{{ total_out_forecast|currency }}</p>
+  </div>
+  <div class="bg-sky-50 dark:bg-sky-900/20 rounded-xl p-4 border border-sky-200 dark:border-sky-900">
+    <p class="text-xs text-sky-700 dark:text-sky-300 mb-1">SALDO PROJETADO</p>
+    <p class="text-xl font-bold {% if projected_balance >= 0 %}text-sky-700 dark:text-sky-300{% else %}text-orange-600{% endif %} font-mono">{{ projected_balance|currency }}</p>
+    <p class="text-[11px] text-sky-600/70 dark:text-sky-400/70 mt-1">Realizado + previstas − previstas (projeção, não é saldo bancário)</p>
   </div>
 </div>
 
@@ -71,13 +90,14 @@
 <div class="grid lg:grid-cols-2 gap-5">
   {# Entradas #}
   <div>
-    <h3 class="text-sm font-semibold text-emerald-700 dark:text-emerald-400 mb-2 uppercase tracking-wide">Entradas (recebimentos)</h3>
+    <h3 class="text-sm font-semibold text-emerald-700 dark:text-emerald-400 mb-2 uppercase tracking-wide">Entradas</h3>
     <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden mb-4">
       {% for row in inflow_rows %}
       <details class="group border-b border-slate-100 dark:border-slate-700 last:border-0">
         <summary class="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/30 list-none">
           <span class="text-sm text-slate-700 dark:text-slate-200 font-medium truncate pr-2">{{ row.entry.description or row.so_number or 'Recebimento' }}</span>
           <span class="flex items-center gap-3 shrink-0">
+            <span class="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">REALIZADO</span>
             <span class="text-xs text-slate-400">{{ row.entry.paid_date.strftime('%d/%m/%Y') }}</span>
             <span class="text-sm font-mono font-bold text-emerald-600">+{{ row.entry.amount|currency }}</span>
           </span>
@@ -91,15 +111,27 @@
           <p><span class="text-xs text-slate-400 uppercase">Referência:</span> {{ row.entry.reference or '—' }}</p>
         </div>
       </details>
-      {% else %}
-      <p class="px-4 py-6 text-center text-sm text-slate-400">Nenhum recebimento no período.</p>
       {% endfor %}
+      {# Entradas previstas #}
+      {% for r in forecast_in %}
+      <div class="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 dark:border-slate-700 last:border-0">
+        <span class="text-sm text-slate-600 dark:text-slate-300 font-medium truncate pr-2">{{ r.description }}</span>
+        <span class="flex items-center gap-3 shrink-0">
+          <span class="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">PREVISTO</span>
+          <span class="text-xs text-slate-400">{{ r.due_date.strftime('%d/%m/%Y') }}</span>
+          <span class="text-sm font-mono text-emerald-500">+{{ r.amount|currency }}</span>
+        </span>
+      </div>
+      {% endfor %}
+      {% if not inflow_rows and not forecast_in %}
+      <p class="px-4 py-6 text-center text-sm text-slate-400">Nenhuma entrada no período.</p>
+      {% endif %}
     </div>
   </div>
 
-  {# Saídas agrupadas #}
+  {# Saídas #}
   <div>
-    <h3 class="text-sm font-semibold text-red-700 dark:text-red-400 mb-2 uppercase tracking-wide">Saídas (pagamentos)</h3>
+    <h3 class="text-sm font-semibold text-red-700 dark:text-red-400 mb-2 uppercase tracking-wide">Saídas</h3>
     {% for group, rows in outflow_groups.items() %}
     <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 mt-2">{{ group }}</p>
     <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden mb-4">
@@ -108,6 +140,7 @@
         <summary class="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/30 list-none">
           <span class="text-sm text-slate-700 dark:text-slate-200 font-medium truncate pr-2">{{ row.entry.description or row.po_number or 'Pagamento' }}</span>
           <span class="flex items-center gap-3 shrink-0">
+            <span class="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">REALIZADO</span>
             <span class="text-xs text-slate-400">{{ row.entry.paid_date.strftime('%d/%m/%Y') }}</span>
             <span class="text-sm font-mono font-bold text-red-600">−{{ row.entry.amount|currency }}</span>
           </span>
@@ -123,9 +156,28 @@
       </details>
       {% endfor %}
     </div>
-    {% else %}
-    <p class="px-4 py-6 text-center text-sm text-slate-400">Nenhum pagamento no período.</p>
     {% endfor %}
+    {# Saídas previstas #}
+    {% if forecast_out %}
+    <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 mt-2">Previstas</p>
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden mb-4">
+      {% for r in forecast_out %}
+      <div class="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 dark:border-slate-700 last:border-0">
+        <span class="text-sm text-slate-600 dark:text-slate-300 font-medium truncate pr-2">
+          {% if r.origem == 'DESPESA' %}<span class="text-amber-500 text-[10px] font-bold mr-1">[DESPESA]</span>{% endif %}{{ r.description }}
+        </span>
+        <span class="flex items-center gap-3 shrink-0">
+          <span class="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">PREVISTO</span>
+          <span class="text-xs text-slate-400">{{ r.due_date.strftime('%d/%m/%Y') }}</span>
+          <span class="text-sm font-mono text-red-500">−{{ r.amount|currency }}</span>
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% if not outflow_groups and not forecast_out %}
+    <p class="px-4 py-6 text-center text-sm text-slate-400">Nenhuma saída no período.</p>
+    {% endif %}
   </div>
 </div>
 

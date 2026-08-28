@@ -1328,60 +1328,68 @@ def cancel_expense(eid):
 
 _CASH_PERIOD_LABELS = {
     "today":        "Hoje",
-    "this_week":    "Esta semana",
-    "this_month":   "Este mês",
-    "last_month":   "Mês anterior",
+    "last_7":       "7 dias",
+    "last_30":      "30 dias",
+    "this_month":   "Mês atual",
+    "next_month":   "Mês seguinte",
+    "this_quarter": "Trimestre",
+    "this_year":    "Ano",
     "custom":       "Personalizado...",
 }
+
+
+def _cash_period_bounds(period, date_from_str, date_to_str, today):
+    """Período do Caixa: realizado por paid_date; previsto por due_date."""
+    if period == "next_month":
+        first = today.replace(day=1)
+        if first.month == 12:
+            first = date(first.year + 1, 1, 1)
+        else:
+            first = date(first.year, first.month + 1, 1)
+        from calendar import monthrange as _mr2
+        last = date(first.year, first.month, _mr2(first.year, first.month)[1])
+        return first, last
+    return _financial_period_bounds(period, date_from_str, date_to_str, today)
 
 
 @financial_bp.route("/cash-flow")
 @login_required
 def cash_flow():
     from ...services.cash_flow_service import (
-        realized_entries, split_movements, movement_info, pending_forecast,
+        realized_entries, split_movements, movement_info,
+        initial_balance, forecast_entries,
     )
     cid   = current_user.company_id
     today = now_br().date()
     period = request.args.get("period", "this_month")
 
-    if period == "this_week":
-        # Segunda-feira da semana atual até domingo
-        first = today - timedelta(days=today.weekday())
-        last  = first + timedelta(days=6)
-    else:
-        first, last = _financial_period_bounds(
-            period, request.args.get("date_from"), request.args.get("date_to"), today)
+    first, last = _cash_period_bounds(
+        period, request.args.get("date_from"), request.args.get("date_to"), today)
 
+    # ── REALIZADO (Etapa 4 preservada): FR pago por paid_date ──
     entries = realized_entries(cid, first, last)
     inflows, outflows = split_movements(entries)
-
     total_in = round(sum(float(e.amount or 0) for e in inflows), 2)
     total_out = round(sum(float(e.amount or 0) for e in outflows), 2)
-    period_balance = round(total_in - total_out, 2)
 
-    # Saldo inicial: NÃO inventado. Sem configuração, saldo final = resultado
-    # líquido do período (rotulado como tal, nunca como saldo bancário real).
-    initial_configured = False
-    initial_balance = 0.0
-    final_balance = round(initial_balance + period_balance, 2)
+    # ── SALDO INICIAL (Etapa 9B): configurado pelo usuário, nunca inferido ──
+    company = current_user.company
+    initial_balance_value, initial_balance_date = initial_balance(company)
+    initial_configured = initial_balance_date is not None or initial_balance_value != 0.0
 
-    # Previsto (informativo, separado do realizado)
-    to_receive, to_pay = pending_forecast(cid)
+    # ── PREVISTO (Etapa 9B): obrigações por due_date via ar_ap_service ──
+    forecast_in, forecast_out = forecast_entries(cid, first, last)
+    total_in_forecast = round(sum(r.amount for r in forecast_in), 2)
+    total_out_forecast = round(sum(r.amount for r in forecast_out), 2)
 
-    # Monta linhas com detalhes resolvidos
+    # ── SALDOS ──
+    realized_balance = round(initial_balance_value + total_in - total_out, 2)
+    projected_balance = round(realized_balance + total_in_forecast - total_out_forecast, 2)
+
     def _rows(entries_list):
-        rows = []
-        for e in entries_list:
-            info = movement_info(e)
-            rows.append({
-                "entry": e,
-                **info,
-            })
-        return rows
+        return [{"entry": e, **movement_info(e)} for e in entries_list]
 
     inflow_rows = _rows(inflows)
-    # Saídas agrupadas pela categoria-raiz (Custos Diretos, Despesas Operacionais, ...)
     outflow_groups = {}
     for row in _rows(outflows):
         outflow_groups.setdefault(row["group"], []).append(row)
@@ -1394,13 +1402,56 @@ def cash_flow():
         p_start=first, p_end=last,
         period_labels=_CASH_PERIOD_LABELS,
         total_in=total_in, total_out=total_out,
-        period_balance=period_balance,
-        initial_configured=initial_configured, initial_balance=initial_balance,
-        final_balance=final_balance,
-        to_receive=to_receive, to_pay=to_pay,
+        realized_balance=realized_balance,
+        initial_configured=initial_configured,
+        initial_balance=initial_balance_value,
+        initial_balance_date=initial_balance_date,
+        total_in_forecast=total_in_forecast, total_out_forecast=total_out_forecast,
+        projected_balance=projected_balance,
+        forecast_in=forecast_in, forecast_out=forecast_out,
         inflow_rows=inflow_rows, outflow_groups=outflow_groups,
         today=today,
     )
+
+
+@financial_bp.route("/cash-flow/settings", methods=["GET", "POST"])
+@login_required
+@require_permission("financial.manage")
+def cash_flow_settings():
+    """Configuração do saldo inicial (companies.settings — sem migration)."""
+    from ...services.cash_flow_service import initial_balance, set_initial_balance
+    company = current_user.company
+    today = now_br().date()
+
+    if request.method == "POST":
+        try:
+            raw = (request.form.get("cash_initial_balance", "") or "").strip()
+            if raw == "":
+                raise ValueError("Informe o saldo inicial.")
+            value = parse_brl(raw)
+            if value < 0:
+                raise ValueError("Saldo inicial não pode ser negativo.")
+            date_str = request.form.get("cash_initial_balance_date", "") or ""
+            if not date_str:
+                raise ValueError("Informe a data de referência.")
+            ref_date = date.fromisoformat(date_str)
+
+            old_value, old_date = initial_balance(company)
+            set_initial_balance(company, value, ref_date, current_user.id)
+            log_activity("financial", company.id, current_user.company_id,
+                         f"Saldo inicial ALTERADO: R$ {old_value:.2f} "
+                         f"({old_date or 'sem data'}) -> R$ {value:.2f} "
+                         f"({ref_date})", current_user.id)
+            db.session.commit()
+            flash("Saldo inicial salvo.", "success")
+            return redirect(url_for("financial.cash_flow"))
+        except ValueError as e:
+            db.session.rollback()
+            flash(f"Erro: {e}", "danger")
+
+    value, ref_date = initial_balance(company)
+    return render_template("financial/cash_flow_settings.html",
+                           value=value, ref_date=ref_date, today=today)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
