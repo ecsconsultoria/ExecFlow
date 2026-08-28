@@ -23,6 +23,11 @@ PO_STATUSES = (
     "excluido",      # Excluído (soft-delete — preserva histórico)
 )
 
+# ÚNICA fonte de verdade para "PO que NÃO é custo realizado" (Etapa 2):
+# rascunho não é custo realizado; cancelado/excluído também não.
+# Usado por margin_service e pelos indicadores do Dashboard — mesma regra.
+PO_INVALID_COST_STATUSES = frozenset({"rascunho", "cancelado", "excluido"})
+
 
 class PurchaseOrder(db.Model, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "purchase_orders"

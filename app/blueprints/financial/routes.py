@@ -163,11 +163,14 @@ def index():
     # Aliases para o template (compatibilidade + novos nomes)
     revenue = revenue_paid
     costs = costs_paid
+    # Etapa 2: cards "A Receber/A Pagar" agora respeitam o período selecionado
+    # (mesma data contábil ref_date dos totais pagos/pendentes).
     pending_revenue = (db.session.query(func.sum(FinancialRecord.amount))
                        .filter(FinancialRecord.company_id == cid,
                                FinancialRecord.type == "revenue",
                                FinancialRecord.deleted_at.is_(None),
                                FinancialRecord.status == "pendente",
+                               ref_date.between(first, last),
                                *_ref_filter)
                        .scalar() or 0)
     pending_costs = (db.session.query(func.sum(FinancialRecord.amount))
@@ -175,6 +178,7 @@ def index():
                              FinancialRecord.type == "cost",
                              FinancialRecord.deleted_at.is_(None),
                              FinancialRecord.status == "pendente",
+                             ref_date.between(first, last),
                              *_ref_filter)
                      .scalar() or 0)
 
@@ -496,17 +500,12 @@ def baixa_record(rid):
         r.amount = parse_brl(raw_amount)
     r.status = "pago"
 
-    # Commit do lançamento PRIMEIRO — garante que a receita fica salva mesmo que
-    # a sincronização com SO/PO falhe depois (mesmo padrão de order_service.baixa).
-    log_activity("financial", r.id, current_user.company_id,
-                 f"Baixa registrada R$ {r.amount:.2f} ({r.payment_method or '-'})", current_user.id)
-    db.session.commit()
-
+    # ── Etapa 2: baixa ATÔMICA — FR + parcela + status commitados juntos.
+    # Se qualquer etapa falhar, um único rollback desfaz tudo (nada fica
+    # "meio atualizado"), ao contrário do fluxo anterior em dois commits.
     _order_for_sync = None
-
-    # --- Sincroniza baixa com OrderPayment e Order (best-effort) ---
-    if r.type == "revenue" and r.reference and r.reference.startswith("order_payment:"):
-        try:
+    try:
+        if r.type == "revenue" and r.reference and r.reference.startswith("order_payment:"):
             from ...models.order import OrderPayment
             from ...services import margin_service
             op_id = int(r.reference.split(":", 1)[1])
@@ -524,16 +523,8 @@ def baixa_record(rid):
                 if order:
                     margin_service.recalculate_order(order)
                     _order_for_sync = order
-                db.session.commit()
-        except Exception:
-            db.session.rollback()   # limpa sessão inválida; FR já está committed acima
-            _order_for_sync = None
-            import logging
-            logging.exception("Erro ao sincronizar baixa financeira com SO/parcela")
 
-    # --- Sincroniza baixa com POPayment e PurchaseOrder (best-effort) ---
-    elif r.type == "cost" and r.reference and r.reference.startswith("po_payment:"):
-        try:
+        elif r.type == "cost" and r.reference and r.reference.startswith("po_payment:"):
             from ...models.purchase_order import POPayment
             pp_id = int(r.reference.split(":", 1)[1])
             pp = db.session.get(POPayment, pp_id)
@@ -550,17 +541,20 @@ def baixa_record(rid):
                     if total_amt > 0 and total_paid >= total_amt and po.status == "faturado":
                         po.status  = "pago"
                         po.paid_at = now_br()
-                db.session.commit()
-        except Exception:
-            db.session.rollback()   # limpa sessão inválida; FR já está committed acima
-            import logging
-            logging.exception("Erro ao sincronizar baixa financeira com PO/parcela")
 
-    # Sincroniza lançamentos pendentes do SO — fora do try, igual ao order_service.baixa
-    if _order_for_sync is not None:
-        from ...services.order_service import _sync_order_pending_financials
-        _sync_order_pending_financials(_order_for_sync)
+        if _order_for_sync is not None:
+            from ...services.order_service import _sync_order_pending_financials
+            _sync_order_pending_financials(_order_for_sync)
+
+        log_activity("financial", r.id, current_user.company_id,
+                     f"Baixa registrada R$ {r.amount:.2f} ({r.payment_method or '-'})", current_user.id)
         db.session.commit()
+    except Exception:
+        db.session.rollback()   # transação única — nada persiste parcialmente
+        import logging
+        logging.exception("Erro na baixa financeira — operação revertida")
+        flash("Erro ao registrar a baixa. Operação revertida — nada foi alterado.", "danger")
+        return redirect(url_for("financial.index"))
 
     flash("Baixa registrada com sucesso.", "success")
     return redirect(url_for("financial.index"))

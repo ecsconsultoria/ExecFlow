@@ -34,14 +34,18 @@ def index():
                 .filter(ServiceOrder.deleted_at.is_(None))
                 .group_by(ServiceOrder.status).all())
 
+    # Etapa 2: relatórios somam somente lançamentos efetivamente PAGOS no mês
+    # (caixa por paid_date) — antes não havia filtro de status.
     revenue = (db.session.query(func.sum(FinancialRecord.amount))
                .filter(FinancialRecord.company_id == cid, FinancialRecord.type == "revenue",
                        FinancialRecord.deleted_at.is_(None),
+                       FinancialRecord.status == "pago",
                        FinancialRecord.paid_date.between(first, last))
                .scalar() or 0)
     costs = (db.session.query(func.sum(FinancialRecord.amount))
              .filter(FinancialRecord.company_id == cid, FinancialRecord.type == "cost",
                      FinancialRecord.deleted_at.is_(None),
+                     FinancialRecord.status == "pago",
                      FinancialRecord.paid_date.between(first, last))
              .scalar() or 0)
 

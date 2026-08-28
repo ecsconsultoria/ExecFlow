@@ -83,32 +83,30 @@ def _period_bounds(period: str, today):
 
 
 def _so_revenue(cid, start, end):
-    """Receita = SUM(computed_total) dos SOs no período.
+    """Receita RECONHECIDA no período (regra única da Etapa 2).
 
-    Mesma fórmula e escopo da listagem de Pedidos ("todos os status"):
-    todos os status exceto excluído, usando o próprio Order.computed_total.
-    Data de referência: emission_date; sem data de emissão, cai para a
-    data de criação do pedido.
+    Somente SO efetivamente faturado: status faturado/concluido COM
+    invoiced_at preenchido. SO novo/aberto/cancelado/excluído ou concluído
+    sem faturamento NÃO é receita. Data de competência: invoiced_at.
     """
+    from datetime import datetime
+    dt_start = datetime.combine(start, datetime.min.time())
+    dt_end   = datetime.combine(end,   datetime.max.time())
     orders = (Order.query
               .filter_by(company_id=cid, deleted_at=None)
-              .filter(Order.status != "excluido")
+              .filter(Order.status.in_(["faturado", "concluido"]))
+              .filter(Order.invoiced_at.isnot(None))
+              .filter(Order.invoiced_at.between(dt_start, dt_end))
               .all())
-    total = 0.0
-    for o in orders:
-        d = o.emission_date or (o.created_at.date() if o.created_at else None)
-        if d and start <= d <= end:
-            total += float(o.computed_total or 0.0)
-    return round(total, 2)
+    return round(sum(float(o.computed_total or 0.0) for o in orders), 2)
 
 
 def _po_cost(cid, start, end):
-    """Custo = SUM(computed_total) das POs no período.
+    """Custo direto REALIZADO no período (regra única da Etapa 2).
 
-    Mesma fórmula e escopo da listagem de POs ("todos os status"):
-    todos os status exceto rascunho/excluído, usando o próprio
-    PurchaseOrder.computed_total (itens + frete + custos extras − desconto).
-    Data de referência: created_at da PO.
+    Somente POs válidas (status fora de rascunho/cancelado/excluído) e
+    efetivamente vinculadas a um SO não excluído — PO sem SO não é custo
+    direto de serviço (futura despesa geral). Data: created_at da PO.
     """
     from datetime import datetime
     from sqlalchemy.orm import selectinload
@@ -116,9 +114,12 @@ def _po_cost(cid, start, end):
     dt_end   = datetime.combine(end,   datetime.max.time())
     pos = (PurchaseOrder.query
            .options(selectinload(PurchaseOrder.items))
+           .join(Order, PurchaseOrder.order_id == Order.id)
            .filter_by(company_id=cid)
            .filter(PurchaseOrder.deleted_at.is_(None))
-           .filter(PurchaseOrder.status.notin_(["excluido", "rascunho"]))
+           .filter(PurchaseOrder.status.notin_(["rascunho", "cancelado", "excluido"]))
+           .filter(Order.deleted_at.is_(None))
+           .filter(Order.status != "excluido")
            .filter(PurchaseOrder.created_at.between(dt_start, dt_end))
            .all())
     return round(sum(float(p.computed_total or 0.0) for p in pos), 2)
@@ -194,14 +195,21 @@ def index():
     chart_data_json = json.dumps(chart_rows)
 
     # ── Pipeline funnel ───────────────────────────────────────────────────────
-    cutoff_30 = today - timedelta(days=30)
+    # Correção Etapa 2: conversão usava numerador histórico × denominador de 30
+    # dias (340%). Agora ambos usam o mesmo horizonte (todos os tempos) e os
+    # valores de SO usam computed_total (descontos aplicados), igual aos KPIs.
+    _disc = sa.case(
+        (Order.discount_type == "%", Order.total_amount * Order.discount_value / 100.0),
+        else_=sa.func.coalesce(Order.discount_value, 0.0),
+    )
+    _computed = (Order.total_amount - _disc
+                 + sa.func.coalesce(Order.freight_amount, 0.0)
+                 + sa.func.coalesce(Order.other_costs_amount, 0.0))
     funnel_sent_count = (Quote.query
                          .filter_by(company_id=cid, deleted_at=None)
-                         .filter(Quote.created_at >= datetime.combine(cutoff_30, datetime.min.time()))
                          .count())
     funnel_sent_val = (db.session.query(sa.func.sum(Quote.total_amount))
-                       .filter(Quote.company_id == cid, Quote.deleted_at.is_(None),
-                               Quote.created_at >= datetime.combine(cutoff_30, datetime.min.time()))
+                       .filter(Quote.company_id == cid, Quote.deleted_at.is_(None))
                        .scalar() or 0.0)
     funnel_appr_count = (Quote.query
                          .filter_by(company_id=cid, deleted_at=None)
@@ -215,7 +223,7 @@ def index():
                        .filter_by(company_id=cid, deleted_at=None)
                        .filter(Order.status.in_(["novo", "aberto", "faturado"]))
                        .count())
-    funnel_so_val = (db.session.query(sa.func.sum(Order.total_amount))
+    funnel_so_val = (db.session.query(sa.func.sum(_computed))
                      .filter(Order.company_id == cid, Order.deleted_at.is_(None),
                              Order.status.in_(["novo", "aberto", "faturado"]))
                      .scalar() or 0.0)
@@ -223,7 +231,7 @@ def index():
                            .filter_by(company_id=cid, deleted_at=None)
                            .filter(Order.status == "concluido")
                            .count())
-    funnel_closed_val = (db.session.query(sa.func.sum(Order.total_amount))
+    funnel_closed_val = (db.session.query(sa.func.sum(_computed))
                          .filter(Order.company_id == cid, Order.deleted_at.is_(None),
                                  Order.status == "concluido")
                          .scalar() or 0.0)
@@ -243,21 +251,28 @@ def index():
                    .order_by(ServiceOrder.pickup_datetime.asc())
                    .limit(30).all())
 
-    # ── Pending receivables (OrderPayment, unpaid, ordered by due_date) ──────
+    # ── Pending receivables (OrderPayment, unpaid, vencimento no período) ─────
+    # Etapa 2: cards respeitam o período selecionado (ancorados no vencimento).
     pending_receivables = (OrderPayment.query
                            .join(Order, OrderPayment.order_id == Order.id)
                            .filter(Order.company_id == cid, Order.deleted_at.is_(None))
                            .filter(Order.status.notin_(["cancelado", "excluido"]))
                            .filter(OrderPayment.paid_at.is_(None))
                            .filter(OrderPayment.amount > 0)
+                           .filter(OrderPayment.due_date.isnot(None))
+                           .filter(OrderPayment.due_date.between(p_start, p_end))
                            .order_by(OrderPayment.due_date.asc())
                            .limit(20).all())
 
-    # ── Pending payables (POPayment, unpaid, ordered by due_date) ────────────
+    # ── Pending payables (POPayment, unpaid, vencimento no período) ───────────
     pending_payables = (POPayment.query
                         .join(PurchaseOrder, POPayment.po_id == PurchaseOrder.id)
-                        .filter(PurchaseOrder.company_id == cid, PurchaseOrder.deleted_at.is_(None))                        .filter(PurchaseOrder.status.notin_(["cancelado", "excluido"]))                        .filter(POPayment.paid_at.is_(None))
+                        .filter(PurchaseOrder.company_id == cid, PurchaseOrder.deleted_at.is_(None))
+                        .filter(PurchaseOrder.status.notin_(["cancelado", "excluido"]))
+                        .filter(POPayment.paid_at.is_(None))
                         .filter(POPayment.amount > 0)
+                        .filter(POPayment.due_date.isnot(None))
+                        .filter(POPayment.due_date.between(p_start, p_end))
                         .order_by(POPayment.due_date.asc())
                         .limit(20).all())
 

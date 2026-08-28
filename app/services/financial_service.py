@@ -20,14 +20,18 @@ def _build_financial_refs(payments, prefix: str) -> list[str]:
 
 
 def void_payment_financial_records(payments, prefix: str) -> int:
-    """Soft-deleta todos os FinancialRecords vinculados a uma lista de pagamentos.
+    """Soft-deleta os FinancialRecords PENDENTES vinculados a pagamentos.
+
+    Regra da Etapa 2: lançamentos de pagamentos JÁ REALIZADOS (status "pago")
+    são histórico financeiro e NÃO podem ser apagados automaticamente pela
+    exclusão/cancelamento da origem (SO/PO). Somente pendentes são voidados.
 
     Args:
         payments: lista de OrderPayment ou POPayment
         prefix: "order_payment" ou "po_payment"
 
     Returns:
-        Número de registros soft-deletados.
+        Número de registros soft-deletados (exclui os preservados por estarem pagos).
     """
     refs = _build_financial_refs(payments, prefix)
     if not refs:
@@ -36,8 +40,12 @@ def void_payment_financial_records(payments, prefix: str) -> int:
         FinancialRecord.reference.in_(refs),
         FinancialRecord.deleted_at.is_(None),
     ).all()
+    voided = 0
     for r in recs:
+        if (r.status or "") == "pago":
+            continue  # histórico pago preservado (Etapa 2)
         r.soft_delete()
-    return len(recs)
+        voided += 1
+    return voided
 
 

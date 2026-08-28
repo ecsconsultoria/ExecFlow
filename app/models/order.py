@@ -74,11 +74,21 @@ class Order(db.Model, TimestampMixin, SoftDeleteMixin):
 
     @property
     def margin_pct(self) -> float:
-        """Percentual de margem sobre a receita."""
+        """Percentual de margem — cálculo AO VIVO com a regra única (Etapa 2).
+
+        Não lê mais o campo denormalizado total_po_cost: o custo é calculado
+        a partir das POs vinculadas, excluindo rascunho/cancelado/excluído
+        (mesma regra de margin_service / Dashboard).
+        """
+        from .purchase_order import PO_INVALID_COST_STATUSES
         revenue = self.computed_total or 0.0
         if not revenue:
             return 0.0
-        cost = self.total_po_cost or 0.0
+        cost = sum(
+            float(po.computed_total or 0.0)
+            for po in self.purchase_orders
+            if (po.status or "") not in PO_INVALID_COST_STATUSES
+        )
         return round((revenue - cost) / revenue * 100, 1)
 
     # Faturamento
