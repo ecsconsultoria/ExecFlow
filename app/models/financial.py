@@ -36,8 +36,17 @@ class FinancialRecord(db.Model, TimestampMixin, SoftDeleteMixin):
     financial_category_id = db.Column(db.Integer, db.ForeignKey("financial_categories.id"), nullable=True)
     cost_center_id        = db.Column(db.Integer, db.ForeignKey("cost_centers.id"),          nullable=True)
 
+    # Etapa 3B — vínculos opcionais do ledger (despesa geral não precisa de SO/PO;
+    # fornecedor é opcional). NULL em todos os registros históricos.
+    supplier_id       = db.Column(db.Integer, db.ForeignKey("suppliers.id"),       nullable=True)
+    order_id          = db.Column(db.Integer, db.ForeignKey("orders.id"),          nullable=True)
+    purchase_order_id = db.Column(db.Integer, db.ForeignKey("purchase_orders.id"), nullable=True)
+
     category_ref = db.relationship("FinancialCategory")
     cost_center  = db.relationship("CostCenter")
+    supplier     = db.relationship("Supplier")
+    order        = db.relationship("Order")
+    purchase_order = db.relationship("PurchaseOrder")
 
     def __repr__(self):
         return f"<FinancialRecord {self.type} R${self.amount:.2f}>"

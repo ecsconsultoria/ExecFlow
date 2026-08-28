@@ -174,6 +174,33 @@ def index():
             prev_mpct = round(prev_margin / prev_rev * 100, 1)
             delta_pct = round(margin_pct - prev_mpct, 1)
 
+    # ── Despesas Gerais (Etapa 3B) — separadas de Receita/Custo Direto ──────
+    from ...models.financial import FinancialRecord
+    _exp_base = [FinancialRecord.company_id == cid,
+                 FinancialRecord.type == "expense",
+                 FinancialRecord.deleted_at.is_(None)]
+    expense_period = (db.session.query(sa.func.sum(FinancialRecord.amount))
+                      .filter(*_exp_base,
+                              FinancialRecord.status != "cancelado",
+                              FinancialRecord.emission_date.isnot(None),
+                              FinancialRecord.emission_date.between(p_start, p_end))
+                      .scalar() or 0.0)
+    expense_pending = (db.session.query(sa.func.sum(FinancialRecord.amount))
+                       .filter(*_exp_base, FinancialRecord.status == "pendente",
+                               FinancialRecord.due_date.isnot(None),
+                               FinancialRecord.due_date <= p_end)
+                       .scalar() or 0.0)
+    expense_overdue = (db.session.query(sa.func.sum(FinancialRecord.amount))
+                       .filter(*_exp_base, FinancialRecord.status == "pendente",
+                               FinancialRecord.due_date.isnot(None),
+                               FinancialRecord.due_date < today)
+                       .scalar() or 0.0)
+    expense_paid = (db.session.query(sa.func.sum(FinancialRecord.amount))
+                    .filter(*_exp_base, FinancialRecord.status == "pago",
+                            FinancialRecord.paid_date.isnot(None),
+                            FinancialRecord.paid_date.between(p_start, p_end))
+                    .scalar() or 0.0)
+
     # ── 12-month rolling chart data ────────────────────────────────────────
     chart_rows = []
     for i in range(11, -1, -1):
@@ -335,6 +362,11 @@ def index():
         margin_pct=margin_pct,
         delta_revenue=delta_revenue,
         delta_pct=delta_pct,
+        # despesas gerais (Etapa 3B)
+        expense_period=expense_period,
+        expense_pending=expense_pending,
+        expense_overdue=expense_overdue,
+        expense_paid=expense_paid,
         # chart
         chart_data_json=chart_data_json,
         # pipeline

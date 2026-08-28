@@ -436,6 +436,10 @@ def new_record():
 @require_permission("financial.manage")
 def edit_record(rid):
     r = FinancialRecord.query.filter_by(id=rid, company_id=current_user.company_id).filter(FinancialRecord.deleted_at.is_(None)).first_or_404()
+    if r.type == "expense":
+        # Etapa 3B: despesas são editadas somente pela tela própria (com restrições)
+        flash("Despesas são editadas pela tela Financeiro → Despesas.", "info")
+        return redirect(url_for("financial.expenses"))
     if request.method == "POST":
         _save_record(r, request.form)
         log_activity("financial", r.id, current_user.company_id, "Lançamento editado", current_user.id)
@@ -452,6 +456,10 @@ def edit_record(rid):
 @require_permission("financial.manage")
 def delete_record(rid):
     r = FinancialRecord.query.filter_by(id=rid, company_id=current_user.company_id).filter(FinancialRecord.deleted_at.is_(None)).first_or_404()
+    if r.type == "expense":
+        # Etapa 3B: despesa usa cancelamento, nunca soft-delete (histórico preservado)
+        flash("Despesas não são excluídas — use Cancelar (despesa pendente).", "info")
+        return redirect(url_for("financial.expenses"))
     r.soft_delete()
 
     # Cascade: lançamento vinculado a parcela de SO → exclui o SO e limpa registros associados
@@ -1062,3 +1070,274 @@ def toggle_cost_center(cid):
     db.session.commit()
     flash("Centro de custo " + ("ativado." if center.active else "desativado."), "success")
     return redirect(url_for("financial.cost_centers"))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Etapa 3B — Despesas Gerais
+# A despesa É o próprio FinancialRecord (type='expense', reference='expense:{id}').
+# Não existe tabela própria: description/amount/datas/status vivem no ledger.
+# SO/PO e fornecedor são opcionais; categoria (type=expense) e centro de custo
+# são obrigatórios e sempre isolados por company_id.
+# ─────────────────────────────────────────────────────────────────────────────
+
+_EXPENSE_STATUS_LABELS = {
+    "pendente":  "Pendente",
+    "pago":      "Paga",
+    "cancelado": "Cancelada",
+}
+
+
+def _expense_base_query():
+    return (FinancialRecord.query
+            .filter_by(company_id=current_user.company_id, type="expense")
+            .filter(FinancialRecord.deleted_at.is_(None)))
+
+
+@financial_bp.route("/expenses")
+@login_required
+def expenses():
+    cid   = current_user.company_id
+    today = now_br().date()
+    first, last = _financial_period_bounds(
+        request.args.get("period", "this_month"),
+        request.args.get("date_from"), request.args.get("date_to"), today)
+
+    q = _expense_base_query()
+    fstatus = request.args.get("status", "")
+    if fstatus:
+        q = q.filter(FinancialRecord.status == fstatus)
+    if request.args.get("category"):
+        q = q.filter(FinancialRecord.financial_category_id == int(request.args["category"]))
+    if request.args.get("cost_center"):
+        q = q.filter(FinancialRecord.cost_center_id == int(request.args["cost_center"]))
+    if request.args.get("supplier"):
+        q = q.filter(FinancialRecord.supplier_id == int(request.args["supplier"]))
+    records = q.order_by(FinancialRecord.due_date.desc()).limit(500).all()
+
+    def _sum(cond, extra=()):
+        return (db.session.query(func.sum(FinancialRecord.amount))
+                .filter(FinancialRecord.company_id == cid,
+                        FinancialRecord.type == "expense",
+                        FinancialRecord.deleted_at.is_(None),
+                        cond, *extra)
+                .scalar() or 0.0)
+
+    total_period = _sum(FinancialRecord.status != "cancelado",
+                        (FinancialRecord.emission_date.isnot(None),
+                         FinancialRecord.emission_date.between(first, last)))
+    pending_total = _sum(FinancialRecord.status == "pendente")
+    overdue_total = _sum(FinancialRecord.status == "pendente",
+                         (FinancialRecord.due_date.isnot(None),
+                          FinancialRecord.due_date < today))
+    paid_total = _sum(FinancialRecord.status == "pago",
+                      (FinancialRecord.paid_date.isnot(None),
+                       FinancialRecord.paid_date.between(first, last)))
+
+    categories = (FinancialCategory.query
+                  .filter_by(company_id=cid, type="expense", active=True)
+                  .order_by(FinancialCategory.name).all())
+    centers = (CostCenter.query
+               .filter_by(company_id=cid, active=True)
+               .order_by(CostCenter.name).all())
+    from ...models.supplier import Supplier
+    suppliers = (Supplier.query
+                 .filter_by(company_id=cid, deleted_at=None)
+                 .order_by(Supplier.name).all())
+
+    return render_template(
+        "financial/expenses.html",
+        records=records, today=today,
+        total_period=total_period, pending_total=pending_total,
+        overdue_total=overdue_total, paid_total=paid_total,
+        categories=categories, centers=centers, suppliers=suppliers,
+        fstatus=fstatus,
+        status_labels=_EXPENSE_STATUS_LABELS,
+        period=request.args.get("period", "this_month"),
+        date_from=request.args.get("date_from", ""),
+        date_to=request.args.get("date_to", ""),
+        period_labels=_PERIOD_LABELS,
+    )
+
+
+def _expense_form_context():
+    cid = current_user.company_id
+    categories = (FinancialCategory.query
+                  .filter_by(company_id=cid, type="expense", active=True)
+                  .order_by(FinancialCategory.name).all())
+    centers = (CostCenter.query
+               .filter_by(company_id=cid, active=True)
+               .order_by(CostCenter.name).all())
+    from ...models.supplier import Supplier
+    suppliers = (Supplier.query
+                 .filter_by(company_id=cid, deleted_at=None)
+                 .order_by(Supplier.name).all())
+    from ...models.order import Order
+    from ...models.purchase_order import PurchaseOrder
+    orders = (Order.query.filter_by(company_id=cid, deleted_at=None)
+              .filter(Order.status.notin_(["excluido", "cancelado"]))
+              .order_by(Order.number).all())
+    pos = (PurchaseOrder.query.filter_by(company_id=cid, deleted_at=None)
+           .filter(PurchaseOrder.status.notin_(["excluido", "cancelado"]))
+           .order_by(PurchaseOrder.number).all())
+    return categories, centers, suppliers, orders, pos
+
+
+def _apply_expense_form(r, form, *, edit: bool = False):
+    """Valida e aplica o formulário na FinancialRecord de despesa.
+
+    Regras: categoria obrigatória com type='expense'; centro de custo
+    obrigatório; ambos da MESMA company; fornecedor/SO/PO opcionais (da
+    mesma company); emissão e vencimento obrigatórios; valor > 0.
+    """
+    cid = current_user.company_id
+
+    def _cid_int(field):
+        raw = (form.get(field) or "").strip()
+        return int(raw) if raw.isdigit() else None
+
+    cat_id = _cid_int("financial_category_id")
+    cc_id  = _cid_int("cost_center_id")
+    sup_id = _cid_int("supplier_id")
+    o_id   = _cid_int("order_id")
+    po_id  = _cid_int("purchase_order_id")
+
+    if cat_id is None:
+        raise ValueError("Categoria é obrigatória")
+    cat = (FinancialCategory.query
+           .filter_by(id=cat_id, company_id=cid).first())
+    if cat is None or cat.type != "expense":
+        raise ValueError("A categoria deve ser do tipo Despesa (expense) da sua empresa")
+
+    if cc_id is None:
+        raise ValueError("Centro de custo é obrigatório")
+    if CostCenter.query.filter_by(id=cc_id, company_id=cid).first() is None:
+        raise ValueError("Centro de custo inválido (outra empresa)")
+
+    if sup_id is not None:
+        from ...models.supplier import Supplier
+        if Supplier.query.filter_by(id=sup_id, company_id=cid, deleted_at=None).first() is None:
+            raise ValueError("Fornecedor inválido (outra empresa)")
+
+    def _optional_doc(model, doc_id, label):
+        if doc_id is None:
+            return None
+        obj = (model.query.filter_by(id=doc_id, company_id=cid, deleted_at=None)
+               .filter(model.status.notin_(["excluido", "cancelado"])).first())
+        if obj is None:
+            raise ValueError(f"{label} inválido (outra empresa ou excluído)")
+        return doc_id
+
+    from ...models.order import Order
+    from ...models.purchase_order import PurchaseOrder
+    o_id  = _optional_doc(Order, o_id, "SO")
+    po_id = _optional_doc(PurchaseOrder, po_id, "PO")
+
+    name = (form.get("description", "") or "").strip()
+    if not name:
+        raise ValueError("Descrição é obrigatória")
+    try:
+        amount = parse_brl(form.get("amount", ""))
+    except ValueError:
+        raise ValueError("Valor inválido")
+    if amount <= 0:
+        raise ValueError("Valor deve ser maior que zero")
+
+    emission = None
+    if form.get("emission_date"):
+        try:
+            emission = date.fromisoformat(form["emission_date"])
+        except ValueError:
+            raise ValueError("Data de emissão inválida")
+    if emission is None:
+        raise ValueError("Data de emissão é obrigatória")
+
+    due = None
+    if form.get("due_date"):
+        try:
+            due = date.fromisoformat(form["due_date"])
+        except ValueError:
+            raise ValueError("Data de vencimento inválida")
+    if due is None:
+        raise ValueError("Vencimento é obrigatório")
+
+    r.description           = name
+    r.amount                = amount
+    r.financial_category_id = cat_id
+    r.cost_center_id        = cc_id
+    r.supplier_id           = sup_id
+    r.order_id              = o_id
+    r.purchase_order_id     = po_id
+    r.emission_date         = emission
+    r.due_date              = due
+    r.notes                 = (form.get("notes", "") or "").strip() or None
+    if not edit:
+        r.type    = "expense"
+        r.category = "outro"   # classificação legada; o vínculo real é financial_category_id
+        r.status  = "pendente"
+
+
+@financial_bp.route("/expenses/new", methods=["GET", "POST"])
+@login_required
+@require_permission("financial.manage")
+def new_expense():
+    categories, centers, suppliers, orders, pos = _expense_form_context()
+    if request.method == "POST":
+        try:
+            r = FinancialRecord(company_id=current_user.company_id)
+            _apply_expense_form(r, request.form)
+            db.session.add(r)
+            db.session.flush()
+            r.reference = f"expense:{r.id}"   # convenção única de despesa
+            log_activity("financial", r.id, current_user.company_id,
+                         f"Despesa '{r.description}' R$ {r.amount:.2f} criada", current_user.id)
+            db.session.commit()
+            flash("Despesa criada.", "success")
+            return redirect(url_for("financial.expenses"))
+        except ValueError as e:
+            db.session.rollback()
+            flash(f"Erro: {e}", "danger")
+    return render_template("financial/expense_form.html", r=None,
+                           categories=categories, centers=centers,
+                           suppliers=suppliers, orders=orders, pos=pos)
+
+
+@financial_bp.route("/expenses/<int:eid>/edit", methods=["GET", "POST"])
+@login_required
+@require_permission("financial.manage")
+def edit_expense(eid):
+    r = _expense_base_query().filter(FinancialRecord.id == eid).first_or_404()
+    if r.status == "pago":
+        flash("Despesa paga não pode ser editada livremente (valor/categoria/centro/"
+              "datas de pagamento). Use estorno/ajuste futuro se necessário.", "warning")
+        return redirect(url_for("financial.expenses"))
+    categories, centers, suppliers, orders, pos = _expense_form_context()
+    if request.method == "POST":
+        try:
+            _apply_expense_form(r, request.form, edit=True)
+            log_activity("financial", r.id, current_user.company_id,
+                         "Despesa editada", current_user.id)
+            db.session.commit()
+            flash("Despesa atualizada.", "success")
+            return redirect(url_for("financial.expenses"))
+        except ValueError as e:
+            db.session.rollback()
+            flash(f"Erro: {e}", "danger")
+    return render_template("financial/expense_form.html", r=r,
+                           categories=categories, centers=centers,
+                           suppliers=suppliers, orders=orders, pos=pos)
+
+
+@financial_bp.route("/expenses/<int:eid>/cancel", methods=["POST"])
+@login_required
+@require_permission("financial.manage")
+def cancel_expense(eid):
+    r = _expense_base_query().filter(FinancialRecord.id == eid).first_or_404()
+    if r.status == "pago":
+        flash("Despesa paga não pode ser cancelada — o histórico financeiro é preservado.", "danger")
+        return redirect(url_for("financial.expenses"))
+    r.status = "cancelado"
+    log_activity("financial", r.id, current_user.company_id,
+                 "Despesa cancelada", current_user.id)
+    db.session.commit()
+    flash("Despesa cancelada.", "success")
+    return redirect(url_for("financial.expenses"))

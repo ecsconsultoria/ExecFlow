@@ -122,6 +122,32 @@
 
 </div>
 
+{# ── Despesas Gerais (Etapa 3B) — separadas de Receita/Custo Direto ──────── #}
+<div class="mb-5">
+  <div class="flex items-center justify-between mb-2">
+    <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Despesas Gerais</p>
+    <a href="{{ url_for('financial.expenses') }}" class="text-xs text-blue-500 hover:text-blue-700">Financeiro → Despesas <i class="fa-solid fa-arrow-right ml-0.5"></i></a>
+  </div>
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <div class="bg-white dark:bg-slate-800 rounded-xl px-4 py-3 shadow-sm border-l-4 border-slate-400">
+      <p class="text-xs text-slate-500 dark:text-slate-400 mb-0.5">No Período</p>
+      <p class="text-sm font-bold text-slate-700 dark:text-slate-200 font-mono">{{ expense_period|currency }}</p>
+    </div>
+    <div class="bg-white dark:bg-slate-800 rounded-xl px-4 py-3 shadow-sm border-l-4 border-amber-400">
+      <p class="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Pendentes</p>
+      <p class="text-sm font-bold text-amber-600 font-mono">{{ expense_pending|currency }}</p>
+    </div>
+    <div class="bg-white dark:bg-slate-800 rounded-xl px-4 py-3 shadow-sm border-l-4 border-red-500">
+      <p class="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Vencidas</p>
+      <p class="text-sm font-bold text-red-600 font-mono">{{ expense_overdue|currency }}</p>
+    </div>
+    <div class="bg-white dark:bg-slate-800 rounded-xl px-4 py-3 shadow-sm border-l-4 border-emerald-500">
+      <p class="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Pagas no Período</p>
+      <p class="text-sm font-bold text-emerald-600 font-mono">{{ expense_paid|currency }}</p>
+    </div>
+  </div>
+</div>
+
 {# ── ROW B — Chart + Pipeline + Dispatch ─────────────────────────────────── #}
 <div class="grid lg:grid-cols-3 gap-5 mb-5">
 

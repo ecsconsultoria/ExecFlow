@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if r else 'Nova' }} Despesa{% endblock %}
+{% block page_title %}
+  <a href="{{ url_for('financial.expenses') }}" class="text-slate-400 hover:text-blue-500 mr-2 text-sm"><i class="fa-solid fa-arrow-left"></i></a>
+  {{ 'Editar' if r else 'Nova' }} Despesa
+{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto bg-white dark:bg-slate-800 rounded-xl shadow-sm p-6">
+  <form method="post"
+        action="{{ url_for('financial.edit_expense', eid=r.id) if r else url_for('financial.new_expense') }}"
+        class="space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Descrição *</label>
+      <input type="text" name="description" required value="{{ r.description if r else '' }}"
+             placeholder="Ex: Honorários contábeis"
+             class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Valor (R$) *</label>
+        <input type="number" name="amount" step="0.01" min="0.01" required
+               value="{{ '%.2f'|format(r.amount) if r else '' }}"
+               placeholder="0,00"
+               class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Emissão *</label>
+        <input type="date" name="emission_date" required
+               value="{{ r.emission_date.isoformat() if r and r.emission_date else '' }}"
+               class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Categoria * <span class="text-xs text-slate-400">(somente Despesas)</span></label>
+      <select name="financial_category_id" required
+              class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <option value="">– Selecione –</option>
+        {% for cat in categories %}
+        <option value="{{ cat.id }}" {{ 'selected' if r and r.financial_category_id == cat.id }}>
+          {{ cat.parent.name ~ ' → ' if cat.parent else '' }}{{ cat.name }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Centro de Custo *</label>
+      <select name="cost_center_id" required
+              class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <option value="">– Selecione –</option>
+        {% for cc in centers %}
+        <option value="{{ cc.id }}" {{ 'selected' if r and r.cost_center_id == cc.id }}>{{ cc.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Fornecedor <span class="text-xs text-slate-400">(opcional)</span></label>
+        <select name="supplier_id"
+                class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">– Sem fornecedor –</option>
+          {% for s in suppliers %}
+          <option value="{{ s.id }}" {{ 'selected' if r and r.supplier_id == s.id }}>{{ s.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Vencimento *</label>
+        <input type="date" name="due_date" required
+               value="{{ r.due_date.isoformat() if r and r.due_date else '' }}"
+               class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">SO <span class="text-xs text-slate-400">(opcional)</span></label>
+        <select name="order_id"
+                class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">– Sem SO –</option>
+          {% for o in orders %}
+          <option value="{{ o.id }}" {{ 'selected' if r and r.order_id == o.id }}>{{ o.number }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">PO <span class="text-xs text-slate-400">(opcional)</span></label>
+        <select name="purchase_order_id"
+                class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">– Sem PO –</option>
+          {% for p in pos %}
+          <option value="{{ p.id }}" {{ 'selected' if r and r.purchase_order_id == p.id }}>{{ p.number }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Observação</label>
+      <textarea name="notes" rows="2"
+                class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">{{ r.notes if r and r.notes else '' }}</textarea>
+    </div>
+
+    <div class="flex justify-end gap-2 pt-2">
+      <a href="{{ url_for('financial.expenses') }}"
+         class="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">Cancelar</a>
+      <button type="submit" class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700">Salvar</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
