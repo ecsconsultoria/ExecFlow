@@ -1341,3 +1341,85 @@ def cancel_expense(eid):
     db.session.commit()
     flash("Despesa cancelada.", "success")
     return redirect(url_for("financial.expenses"))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Etapa 4 — Fluxo de Caixa REALIZADO (fonte oficial: FinancialRecord)
+# Tela SOMENTE LEITURA: nenhuma rota de mutação aqui.
+# ─────────────────────────────────────────────────────────────────────────────
+
+_CASH_PERIOD_LABELS = {
+    "today":        "Hoje",
+    "this_week":    "Esta semana",
+    "this_month":   "Este mês",
+    "last_month":   "Mês anterior",
+    "custom":       "Personalizado...",
+}
+
+
+@financial_bp.route("/cash-flow")
+@login_required
+def cash_flow():
+    from ...services.cash_flow_service import (
+        realized_entries, split_movements, movement_info, pending_forecast,
+    )
+    cid   = current_user.company_id
+    today = now_br().date()
+    period = request.args.get("period", "this_month")
+
+    if period == "this_week":
+        # Segunda-feira da semana atual até domingo
+        first = today - timedelta(days=today.weekday())
+        last  = first + timedelta(days=6)
+    else:
+        first, last = _financial_period_bounds(
+            period, request.args.get("date_from"), request.args.get("date_to"), today)
+
+    entries = realized_entries(cid, first, last)
+    inflows, outflows = split_movements(entries)
+
+    total_in = round(sum(float(e.amount or 0) for e in inflows), 2)
+    total_out = round(sum(float(e.amount or 0) for e in outflows), 2)
+    period_balance = round(total_in - total_out, 2)
+
+    # Saldo inicial: NÃO inventado. Sem configuração, saldo final = resultado
+    # líquido do período (rotulado como tal, nunca como saldo bancário real).
+    initial_configured = False
+    initial_balance = 0.0
+    final_balance = round(initial_balance + period_balance, 2)
+
+    # Previsto (informativo, separado do realizado)
+    to_receive, to_pay = pending_forecast(cid)
+
+    # Monta linhas com detalhes resolvidos
+    def _rows(entries_list):
+        rows = []
+        for e in entries_list:
+            info = movement_info(e)
+            rows.append({
+                "entry": e,
+                **info,
+            })
+        return rows
+
+    inflow_rows = _rows(inflows)
+    # Saídas agrupadas pela categoria-raiz (Custos Diretos, Despesas Operacionais, ...)
+    outflow_groups = {}
+    for row in _rows(outflows):
+        outflow_groups.setdefault(row["group"], []).append(row)
+
+    return render_template(
+        "financial/cash_flow.html",
+        period=period,
+        date_from=request.args.get("date_from", ""),
+        date_to=request.args.get("date_to", ""),
+        p_start=first, p_end=last,
+        period_labels=_CASH_PERIOD_LABELS,
+        total_in=total_in, total_out=total_out,
+        period_balance=period_balance,
+        initial_configured=initial_configured, initial_balance=initial_balance,
+        final_balance=final_balance,
+        to_receive=to_receive, to_pay=to_pay,
+        inflow_rows=inflow_rows, outflow_groups=outflow_groups,
+        today=today,
+    )

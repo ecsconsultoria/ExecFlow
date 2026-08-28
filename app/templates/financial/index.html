@@ -7,6 +7,7 @@
 {# ── Etapas 3A/3B: despesas e administração do catálogo financeiro ──────── #}
 <div class="mb-4 flex flex-wrap items-center gap-2">
   <a href="{{ url_for('financial.expenses') }}" class="text-sm px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-blue-400"><i class="fa-solid fa-receipt mr-1"></i>Despesas</a>
+  <a href="{{ url_for('financial.cash_flow') }}" class="text-sm px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-blue-400"><i class="fa-solid fa-money-bill-trend-up mr-1"></i>Fluxo de Caixa</a>
   {% if has_perm('financial.manage') %}
   <a href="{{ url_for('financial.categories') }}" class="text-sm px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-blue-400"><i class="fa-solid fa-tags mr-1"></i>Categorias Financeiras</a>
   <a href="{{ url_for('financial.cost_centers') }}" class="text-sm px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-blue-400"><i class="fa-solid fa-building mr-1"></i>Centros de Custo</a>
