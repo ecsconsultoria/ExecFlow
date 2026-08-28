@@ -31,6 +31,13 @@ class FinancialRecord(db.Model, TimestampMixin, SoftDeleteMixin):
     payment_method = db.Column(db.String(50))
     reference      = db.Column(db.String(200))
     notes          = db.Column(db.Text)
+    # Etapa 3A — vínculos opcionais com a nova fundação (NULL nos registros históricos;
+    # nenhum backfill: somente lançamentos futuros preencherão).
+    financial_category_id = db.Column(db.Integer, db.ForeignKey("financial_categories.id"), nullable=True)
+    cost_center_id        = db.Column(db.Integer, db.ForeignKey("cost_centers.id"),          nullable=True)
+
+    category_ref = db.relationship("FinancialCategory")
+    cost_center  = db.relationship("CostCenter")
 
     def __repr__(self):
         return f"<FinancialRecord {self.type} R${self.amount:.2f}>"

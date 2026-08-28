@@ -9,6 +9,10 @@ from ...utils.helpers import parse_brl
 from ...services.financial_service import void_payment_financial_records
 from ...utils.decorators import require_permission
 from ...models.financial import FinancialRecord, AccountReceivable, FINANCIAL_CATEGORIES
+from ...models.financial_catalog import (
+    FinancialCategory, CostCenter,
+    FINANCIAL_CATEGORY_TYPES, FINANCIAL_CATEGORY_TYPE_LABELS,
+)
 from ...extensions import db
 from ...utils.audit import log_activity
 
@@ -860,3 +864,201 @@ def receivables():
         payment_methods=_PAYMENT_METHODS,
         clients=clients, fclient=fclient,
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Etapa 3A — Categorias financeiras e Centros de custo (administração)
+# RBAC: mesmas permissões do módulo financeiro (financial.manage).
+# ─────────────────────────────────────────────────────────────────────────────
+
+@financial_bp.route("/categories")
+@login_required
+@require_permission("financial.manage")
+def categories():
+    cats = (FinancialCategory.query
+            .filter_by(company_id=current_user.company_id)
+            .order_by(FinancialCategory.type, FinancialCategory.id)
+            .all())
+    by_parent = {}
+    for c in cats:
+        by_parent.setdefault(c.parent_id, []).append(c)
+
+    def _walk(pid, depth, acc):
+        for child in by_parent.get(pid, []):
+            acc.append({"cat": child, "depth": depth})
+            _walk(child.id, depth + 1, acc)
+
+    items = []
+    for root in [c for c in cats if c.parent_id is None]:
+        items.append({"cat": root, "depth": 0})
+        _walk(root.id, 1, items)
+    return render_template("financial/categories.html", items=items,
+                           labels=FINANCIAL_CATEGORY_TYPE_LABELS)
+
+
+@financial_bp.route("/categories/new", methods=["GET", "POST"])
+@login_required
+@require_permission("financial.manage")
+def new_category():
+    parents = (FinancialCategory.query
+               .filter_by(company_id=current_user.company_id, active=True)
+               .order_by(FinancialCategory.type, FinancialCategory.name).all())
+    if request.method == "POST":
+        try:
+            ctype = request.form.get("type", "expense")
+            if ctype not in FINANCIAL_CATEGORY_TYPES:
+                raise ValueError("Tipo inválido")
+            parent_id = request.form.get("parent_id")
+            parent = None
+            if parent_id:
+                parent = (FinancialCategory.query
+                          .filter_by(id=int(parent_id), company_id=current_user.company_id)
+                          .first_or_404())
+                if parent.type != ctype:
+                    raise ValueError("O pai deve ter o mesmo tipo da categoria")
+            cat = FinancialCategory(
+                company_id=current_user.company_id,
+                name=(request.form.get("name", "") or "").strip(),
+                description=(request.form.get("description", "") or "").strip() or None,
+                type=ctype,
+                parent_id=parent.id if parent else None,
+                active=True,
+            )
+            if not cat.name:
+                raise ValueError("Nome é obrigatório")
+            db.session.add(cat)
+            db.session.commit()
+            flash("Categoria criada.", "success")
+            return redirect(url_for("financial.categories"))
+        except ValueError as e:
+            db.session.rollback()
+            flash(f"Erro: {e}", "danger")
+    return render_template("financial/category_form.html", cat=None,
+                           parents=parents, types=FINANCIAL_CATEGORY_TYPES,
+                           labels=FINANCIAL_CATEGORY_TYPE_LABELS)
+
+
+@financial_bp.route("/categories/<int:cid>/edit", methods=["GET", "POST"])
+@login_required
+@require_permission("financial.manage")
+def edit_category(cid):
+    cat = (FinancialCategory.query
+           .filter_by(id=cid, company_id=current_user.company_id)
+           .first_or_404())
+    parents = (FinancialCategory.query
+               .filter_by(company_id=current_user.company_id, active=True)
+               .filter(FinancialCategory.id != cat.id)
+               .order_by(FinancialCategory.type, FinancialCategory.name).all())
+    if request.method == "POST":
+        try:
+            ctype = request.form.get("type", cat.type)
+            if ctype not in FINANCIAL_CATEGORY_TYPES:
+                raise ValueError("Tipo inválido")
+            parent_id = request.form.get("parent_id")
+            parent = None
+            if parent_id:
+                parent = (FinancialCategory.query
+                          .filter_by(id=int(parent_id), company_id=current_user.company_id)
+                          .first_or_404())
+                if parent.type != ctype:
+                    raise ValueError("O pai deve ter o mesmo tipo da categoria")
+                if parent.id == cat.id:
+                    raise ValueError("A categoria não pode ser pai dela mesma")
+            cat.name = (request.form.get("name", "") or "").strip()
+            if not cat.name:
+                raise ValueError("Nome é obrigatório")
+            cat.description = (request.form.get("description", "") or "").strip() or None
+            cat.type = ctype
+            cat.parent_id = parent.id if parent else None
+            db.session.commit()
+            flash("Categoria atualizada.", "success")
+            return redirect(url_for("financial.categories"))
+        except ValueError as e:
+            db.session.rollback()
+            flash(f"Erro: {e}", "danger")
+    return render_template("financial/category_form.html", cat=cat,
+                           parents=parents, types=FINANCIAL_CATEGORY_TYPES,
+                           labels=FINANCIAL_CATEGORY_TYPE_LABELS)
+
+
+@financial_bp.route("/categories/<int:cid>/toggle", methods=["POST"])
+@login_required
+@require_permission("financial.manage")
+def toggle_category(cid):
+    cat = (FinancialCategory.query
+           .filter_by(id=cid, company_id=current_user.company_id)
+           .first_or_404())
+    cat.active = not cat.active
+    db.session.commit()
+    flash("Categoria " + ("ativada." if cat.active else "desativada."), "success")
+    return redirect(url_for("financial.categories"))
+
+
+@financial_bp.route("/cost-centers")
+@login_required
+@require_permission("financial.manage")
+def cost_centers():
+    centers = (CostCenter.query
+               .filter_by(company_id=current_user.company_id)
+               .order_by(CostCenter.name).all())
+    return render_template("financial/cost_centers.html", centers=centers)
+
+
+@financial_bp.route("/cost-centers/new", methods=["GET", "POST"])
+@login_required
+@require_permission("financial.manage")
+def new_cost_center():
+    if request.method == "POST":
+        try:
+            name = (request.form.get("name", "") or "").strip()
+            if not name:
+                raise ValueError("Nome é obrigatório")
+            db.session.add(CostCenter(
+                company_id=current_user.company_id,
+                name=name,
+                description=(request.form.get("description", "") or "").strip() or None,
+                active=True,
+            ))
+            db.session.commit()
+            flash("Centro de custo criado.", "success")
+            return redirect(url_for("financial.cost_centers"))
+        except ValueError as e:
+            db.session.rollback()
+            flash(f"Erro: {e}", "danger")
+    return render_template("financial/cost_center_form.html", center=None)
+
+
+@financial_bp.route("/cost-centers/<int:cid>/edit", methods=["GET", "POST"])
+@login_required
+@require_permission("financial.manage")
+def edit_cost_center(cid):
+    center = (CostCenter.query
+              .filter_by(id=cid, company_id=current_user.company_id)
+              .first_or_404())
+    if request.method == "POST":
+        try:
+            name = (request.form.get("name", "") or "").strip()
+            if not name:
+                raise ValueError("Nome é obrigatório")
+            center.name = name
+            center.description = (request.form.get("description", "") or "").strip() or None
+            db.session.commit()
+            flash("Centro de custo atualizado.", "success")
+            return redirect(url_for("financial.cost_centers"))
+        except ValueError as e:
+            db.session.rollback()
+            flash(f"Erro: {e}", "danger")
+    return render_template("financial/cost_center_form.html", center=center)
+
+
+@financial_bp.route("/cost-centers/<int:cid>/toggle", methods=["POST"])
+@login_required
+@require_permission("financial.manage")
+def toggle_cost_center(cid):
+    center = (CostCenter.query
+              .filter_by(id=cid, company_id=current_user.company_id)
+              .first_or_404())
+    center.active = not center.active
+    db.session.commit()
+    flash("Centro de custo " + ("ativado." if center.active else "desativado."), "success")
+    return redirect(url_for("financial.cost_centers"))

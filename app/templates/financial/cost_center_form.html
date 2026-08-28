@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if center else 'Novo' }} Centro de Custo{% endblock %}
+{% block page_title %}
+  <a href="{{ url_for('financial.cost_centers') }}" class="text-slate-400 hover:text-blue-500 mr-2 text-sm"><i class="fa-solid fa-arrow-left"></i></a>
+  {{ 'Editar' if center else 'Novo' }} Centro de Custo
+{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto bg-white dark:bg-slate-800 rounded-xl shadow-sm p-6">
+  <form method="post"
+        action="{{ url_for('financial.edit_cost_center', cid=center.id) if center else url_for('financial.new_cost_center') }}"
+        class="space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nome *</label>
+      <input type="text" name="name" required value="{{ center.name if center else '' }}"
+             placeholder="Ex: Operação"
+             class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Descrição</label>
+      <input type="text" name="description" value="{{ center.description if center and center.description else '' }}"
+             placeholder="Opcional"
+             class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <div class="flex justify-end gap-2 pt-2">
+      <a href="{{ url_for('financial.cost_centers') }}"
+         class="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">Cancelar</a>
+      <button type="submit" class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700">Salvar</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

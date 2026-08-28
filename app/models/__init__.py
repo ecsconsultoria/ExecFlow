@@ -12,6 +12,7 @@ from .vehicle      import VehicleCategory, Vehicle
 from .service      import State, Service, ServicePricing
 from .quote        import Quote, QuoteItem, BILLING_TYPES, QUOTE_STATUSES
 from .financial    import FinancialRecord, AccountReceivable
+from .financial_catalog import FinancialCategory, CostCenter, FINANCIAL_CATEGORY_TYPES, FINANCIAL_CATEGORY_TYPE_LABELS
 
 # V4 — novos modelos operacionais
 from .service_order            import ServiceOrder, OS_STATUSES
@@ -38,6 +39,7 @@ __all__ = [
     "State", "Service", "ServicePricing",
     "Quote", "QuoteItem", "BILLING_TYPES", "QUOTE_STATUSES",
     "FinancialRecord", "AccountReceivable",
+    "FinancialCategory", "CostCenter", "FINANCIAL_CATEGORY_TYPES", "FINANCIAL_CATEGORY_TYPE_LABELS",
     # V4 operational
     "ServiceOrder", "OS_STATUSES",
     "ServiceOrderAssignment", "ASSIGNMENT_TYPES",
