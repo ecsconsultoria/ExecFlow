@@ -38,7 +38,7 @@
 {# ── Cards para Receitas (apenas 3: Receitas, A Receber, Margem) ── #}
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
   <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 border-emerald-500">
-    <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Receitas</p>
+    <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Receitas Pagas</p>
     <p class="text-xl font-bold text-emerald-600">{{ revenue_paid|currency }}</p>
     <p class="text-xs text-slate-400 mt-1">{{ period_label }}</p>
   </div>
@@ -63,7 +63,7 @@
 {# ── Cards para Despesas (apenas 3: Custos, A Pagar, Margem) ── #}
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
   <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 border-red-400">
-    <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Pago no Período</p>
+    <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Custos Pagos no Período</p>
     <p class="text-xl font-bold text-red-500">{{ costs_paid|currency }}</p>
     <p class="text-xs text-slate-400 mt-1">{{ period_label }}</p>
   </div>
@@ -88,12 +88,12 @@
 {# ── Cards para visão geral / todos (5 cards) ── #}
 <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
   <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 border-emerald-500">
-    <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Receita</p>
+    <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Receitas Pagas</p>
     <p class="text-xl font-bold text-emerald-600">{{ revenue|currency }}</p>
     <p class="text-xs text-slate-400 mt-1">{{ period_label }}</p>
   </div>
   <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 border-red-400">
-    <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Custos</p>
+    <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Custos Pagos</p>
     <p class="text-xl font-bold text-red-500">{{ costs|currency }}</p>
     <p class="text-xs text-slate-400 mt-1">{{ period_label }}</p>
   </div>
@@ -105,7 +105,7 @@
   <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 border-red-500">
     <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">A Pagar</p>
     <p class="text-xl font-bold text-red-600">{{ pending_costs|currency }}</p>
-    <p class="text-xs text-slate-400 mt-1">Custos pendentes</p>
+    <p class="text-xs text-slate-400 mt-1">Custos + Despesas pendentes</p>
   </div>
   <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-l-4 {% if profit >= 0 %}border-blue-500{% else %}border-orange-500{% endif %}">
     <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">Margem (mês)</p>

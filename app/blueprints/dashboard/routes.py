@@ -83,46 +83,23 @@ def _period_bounds(period: str, today):
 
 
 def _so_revenue(cid, start, end):
-    """Receita RECONHECIDA no período (regra única da Etapa 2).
+    """Receita RECONHECIDA no período — delega à fonte única da DRE.
 
-    Somente SO efetivamente faturado: status faturado/concluido COM
-    invoiced_at preenchido. SO novo/aberto/cancelado/excluído ou concluído
-    sem faturamento NÃO é receita. Data de competência: invoiced_at.
+    Regra (Etapas 2/5/10B): SO efetivamente faturado, competência = invoiced_at.
     """
-    from datetime import datetime
-    dt_start = datetime.combine(start, datetime.min.time())
-    dt_end   = datetime.combine(end,   datetime.max.time())
-    orders = (Order.query
-              .filter_by(company_id=cid, deleted_at=None)
-              .filter(Order.status.in_(["faturado", "concluido"]))
-              .filter(Order.invoiced_at.isnot(None))
-              .filter(Order.invoiced_at.between(dt_start, dt_end))
-              .all())
-    return round(sum(float(o.computed_total or 0.0) for o in orders), 2)
+    from ...services import dre_service
+    return dre_service.recognized_revenue(cid, start, end)
 
 
 def _po_cost(cid, start, end):
-    """Custo direto REALIZADO no período (regra única da Etapa 2).
+    """Custo direto no período — MESMA regra de competência da DRE (Etapa 10B).
 
-    Somente POs válidas (status fora de rascunho/cancelado/excluído) e
-    efetivamente vinculadas a um SO não excluído — PO sem SO não é custo
-    direto de serviço (futura despesa geral). Data: created_at da PO.
+    Prioridade: service_date dos itens → delivery_date → created_at (fallback
+    sinalizado). PO válida vinculada a SO não excluído; rascunho/cancelado/
+    excluído fora; PO sem SO fora (não classificada). Delega ao dre_service.
     """
-    from datetime import datetime
-    from sqlalchemy.orm import selectinload
-    dt_start = datetime.combine(start, datetime.min.time())
-    dt_end   = datetime.combine(end,   datetime.max.time())
-    pos = (PurchaseOrder.query
-           .options(selectinload(PurchaseOrder.items))
-           .join(Order, PurchaseOrder.order_id == Order.id)
-           .filter_by(company_id=cid)
-           .filter(PurchaseOrder.deleted_at.is_(None))
-           .filter(PurchaseOrder.status.notin_(["rascunho", "cancelado", "excluido"]))
-           .filter(Order.deleted_at.is_(None))
-           .filter(Order.status != "excluido")
-           .filter(PurchaseOrder.created_at.between(dt_start, dt_end))
-           .all())
-    return round(sum(float(p.computed_total or 0.0) for p in pos), 2)
+    from ...services import dre_service
+    return dre_service.direct_costs(cid, start, end)
 
 
 @dashboard_bp.route("/")
@@ -157,17 +134,18 @@ def index():
     pending_rfq_count = Quote.query.filter_by(company_id=cid, status="pendente", deleted_at=None).count()
 
     # ── KPI: financials (current period) ─────────────────────────────────────
-    so_revenue = _so_revenue(cid, p_start, p_end)
-    po_cost    = _po_cost(cid, p_start, p_end)
-    margin_val = so_revenue - po_cost
+    # Etapa 10B: fonte única — dre_service (Dashboard = DRE no mesmo período).
+    from ...services import dre_service as _dre
+    so_revenue = _dre.recognized_revenue(cid, p_start, p_end)
+    po_cost    = _dre.direct_costs(cid, p_start, p_end)
+    margin_val = _dre.gross_margin(cid, p_start, p_end)  # receita total − custos diretos
     margin_pct = round(margin_val / so_revenue * 100, 1) if so_revenue else 0.0
 
     # Prior period for delta
     delta_revenue = delta_pct = None
     if pp_start and pp_end:
-        prev_rev   = _so_revenue(cid, pp_start, pp_end)
-        prev_cost  = _po_cost(cid, pp_start, pp_end)
-        prev_margin = prev_rev - prev_cost
+        prev_rev   = _dre.recognized_revenue(cid, pp_start, pp_end)
+        prev_margin = _dre.gross_margin(cid, pp_start, pp_end)
         if prev_rev:
             delta_revenue = round((so_revenue - prev_rev) / prev_rev * 100, 1)
         if prev_rev:
