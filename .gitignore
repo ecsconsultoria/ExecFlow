@@ -42,5 +42,8 @@ htmlcov/
 
 # Tailwind CLI binary (40 MB)
 tools/tailwindcss.exe
+
+# Backups locais (Etapa 0 pre-evolucao financeira)
+backup/
 teste_placa*.pdf
 Logo.png
