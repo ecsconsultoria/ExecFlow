@@ -36,7 +36,7 @@
 | `DB_V2_pre-financeiro-20260828.db` | 507.904 | `1b1c5ed820be4aa5e631c89e91522c4054b507a682140f623bad23933b5bcbdd` |
 | `DB_V2_pre-financeiro-20260828.db-wal` (cópia preservada) | 1.095.952 | (não calculado — arquivo auxiliar, cópia byte a byte) |
 | `DB_V2_pre-financeiro-20260828.db-shm` (cópia preservada) | 32.768 | (não calculado — arquivo auxiliar, cópia byte a byte) |
-| `execflow_v3_pre-financeiro.bundle` (git bundle `--all`) | 3.420.769 | `1673133f0d7f577cec92a6e30468476f36f1d651be5dafb44b342ca144867eff` |
+| `execflow_v3_pre-financeiro.bundle` (git bundle `--all`, inclui a tag e o commit de checkpoint) | 3.438.527 | `f9399706b36ef5a3ae404ee1b5b12038b02b1932b94d77884d10cf7442466539` |
 | `execflow_v3_pre-financeiro-20260828.zip` (código) | 5.456.042 | `1e1d5f28306d6377ad0948f5436ebd153cde849c081fa803f1a18983863f59fb` |
 
 ## Integridade
