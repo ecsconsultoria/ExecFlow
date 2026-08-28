@@ -377,12 +377,13 @@
       {% for p in pending_payables %}
       {% set overdue = p.due_date and p.due_date < today %}
       {% set due_today = p.due_date and p.due_date == today %}
-      <a href="{{ url_for('purchase_orders.detail', po_id=p.purchase_order.id) }}"
+      <a href="{{ url_for('financial.expenses') if p.origem == 'DESPESA' else url_for('purchase_orders.detail', po_id=p.purchase_order.id) }}"
          class="flex items-center justify-between px-5 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors
                 {% if overdue %}bg-red-50/60 dark:bg-red-900/10{% elif due_today %}bg-amber-50/60 dark:bg-amber-900/10{% endif %}">
         <div class="min-w-0">
           <p class="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">
-            {{ p.purchase_order.supplier.name if p.purchase_order and p.purchase_order.supplier else (p.purchase_order.number if p.purchase_order else '–') }}
+            {% if p.origem == 'DESPESA' %}<span class="text-amber-500">[Despesa]</span> {{ p.description }}
+            {% else %}{{ p.purchase_order.supplier.name if p.purchase_order and p.purchase_order.supplier else (p.purchase_order.number if p.purchase_order else '–') }}{% endif %}
           </p>
           <p class="text-xs {% if overdue %}text-red-500 font-semibold{% elif due_today %}text-amber-600 font-semibold{% else %}text-slate-400{% endif %}">
             Venc: {{ p.due_date.strftime('%d/%m/%Y') if p.due_date else 'sem data' }}

@@ -167,24 +167,13 @@ def index():
     # Aliases para o template (compatibilidade + novos nomes)
     revenue = revenue_paid
     costs = costs_paid
-    # Etapa 2: cards "A Receber/A Pagar" agora respeitam o período selecionado
-    # (mesma data contábil ref_date dos totais pagos/pendentes).
-    pending_revenue = (db.session.query(func.sum(FinancialRecord.amount))
-                       .filter(FinancialRecord.company_id == cid,
-                               FinancialRecord.type == "revenue",
-                               FinancialRecord.deleted_at.is_(None),
-                               FinancialRecord.status == "pendente",
-                               ref_date.between(first, last),
-                               *_ref_filter)
-                       .scalar() or 0)
-    pending_costs = (db.session.query(func.sum(FinancialRecord.amount))
-                     .filter(FinancialRecord.company_id == cid,
-                             FinancialRecord.type == "cost",
-                             FinancialRecord.deleted_at.is_(None),
-                             FinancialRecord.status == "pendente",
-                             ref_date.between(first, last),
-                             *_ref_filter)
-                     .scalar() or 0)
+    # Etapa 8B: cards "A Receber/A Pagar" usam a FONTE ÚNICA de obrigações
+    # (parcela/despesa por DUE_DATE) — mesma regra do Dashboard.
+    from ...services.ar_ap_service import receivable_totals, payable_totals
+    pending_revenue, _ = receivable_totals(cid, first, last)
+    _ap_totals = payable_totals(cid, first, last)
+    pending_costs = _ap_totals["total"]        # AP = custos de PO + despesas gerais
+    pending_expenses = _ap_totals["despesas"]   # quebra exibida no template
 
     # Registros filtrados pelo período + tipo + status
     q = (FinancialRecord.query
@@ -387,6 +376,7 @@ def index():
         records=records, pending_ar=pending_ar, record_refs=record_refs,
         revenue=revenue, costs=costs, profit=revenue_paid - costs_paid,
         pending_revenue=pending_revenue, pending_costs=pending_costs,
+        pending_expenses=pending_expenses,
         revenue_paid=revenue_paid, revenue_pending=revenue_pending,
         costs_paid=costs_paid, costs_pending=costs_pending,
         forecast_revenue=forecast_revenue, forecast_costs=forecast_costs,
@@ -611,40 +601,33 @@ def payables():
         func.date(FinancialRecord.created_at),
     )
 
-    # Base: custos do período
+    # Etapa 8B: AP unificado — obrigações por DUE_DATE (custos de PO + despesas),
+    # pago do período por PAID_DATE (caixa). Fonte única: ar_ap_service.
+    from ...services.ar_ap_service import payable_rows, paid_in_period as ap_paid_in_period
+    _ap_rows = payable_rows(cid, first, last)
+    if fsupplier:
+        from ...models.supplier import Supplier as _Sup
+        _sup_obj = _Sup.query.filter_by(
+            company_id=cid, id=int(fsupplier) if fsupplier.isdigit() else 0).first()
+        if _sup_obj:
+            _ap_rows = [r for r in _ap_rows
+                        if r.origem != "PO" or r.supplier_name == _sup_obj.name]
+
+    paid_in_period = ap_paid_in_period(cid, first, last)
+    pending_total = round(sum(r.amount for r in _ap_rows), 2)
+    pending_costs_total = round(sum(r.amount for r in _ap_rows if r.origem == "PO"), 2)
+    pending_expenses_total = round(sum(r.amount for r in _ap_rows if r.origem == "DESPESA"), 2)
+    overdue_total = round(sum(r.amount for r in _ap_rows if r.is_overdue), 2)
+    pending_count = len(_ap_rows)
+    overdue_count = sum(1 for r in _ap_rows if r.is_overdue)
+
+    # Base: custos/despesas do período (lista do extrato)
     _base = [
         FinancialRecord.company_id == cid,
-        FinancialRecord.type == "cost",
+        FinancialRecord.type.in_(["cost", "expense"]),
         FinancialRecord.deleted_at.is_(None),
     ]
     _ref_filter = [FinancialRecord.reference.in_(allowed_refs)] if allowed_refs is not None else []
-
-    # Totais do período
-    paid_in_period = (db.session.query(func.sum(FinancialRecord.amount))
-                      .filter(*_base, *_ref_filter, FinancialRecord.status == "pago",
-                              ref_date.between(first, last))
-                      .scalar() or 0)
-
-    pending_total = (db.session.query(func.sum(FinancialRecord.amount))
-                     .filter(*_base, *_ref_filter, FinancialRecord.status == "pendente")
-                     .scalar() or 0)
-
-    overdue_total = (db.session.query(func.sum(FinancialRecord.amount))
-                     .filter(*_base, *_ref_filter, FinancialRecord.status == "pendente",
-                             FinancialRecord.due_date.isnot(None),
-                             FinancialRecord.due_date < today)
-                     .scalar() or 0)
-
-    # Contagem
-    pending_count = (FinancialRecord.query
-                     .filter(*_base, *_ref_filter, FinancialRecord.status == "pendente")
-                     .count())
-
-    overdue_count = (FinancialRecord.query
-                     .filter(*_base, *_ref_filter, FinancialRecord.status == "pendente",
-                             FinancialRecord.due_date.isnot(None),
-                             FinancialRecord.due_date < today)
-                     .count())
 
     # Lista de registros do período
     records = (FinancialRecord.query
@@ -715,6 +698,8 @@ def payables():
         records=records, record_refs=record_refs,
         paid_in_period=paid_in_period,
         pending_total=pending_total,
+        pending_costs_total=pending_costs_total,
+        pending_expenses_total=pending_expenses_total,
         overdue_total=overdue_total,
         pending_count=pending_count,
         overdue_count=overdue_count,
@@ -775,30 +760,23 @@ def receivables():
     ]
     _ref_filter = [FinancialRecord.reference.in_(allowed_refs)] if allowed_refs is not None else []
 
-    # Totais do período
-    received_in_period = (db.session.query(func.sum(FinancialRecord.amount))
-                          .filter(*_base, *_ref_filter, FinancialRecord.status == "pago",
-                                  ref_date.between(first, last))
-                          .scalar() or 0)
+    # Etapa 8B: AR unificado — obrigação por DUE_DATE (parcela válida),
+    # recebido por PAID_DATE (caixa). Fonte única: ar_ap_service.
+    from ...services.ar_ap_service import receivable_rows, received_in_period as ar_received
+    _ar_rows = receivable_rows(cid, first, last)
+    if fclient:
+        from ...models.client import Client as _Cli
+        _cli_obj = _Cli.query.filter_by(
+            company_id=cid, id=int(fclient) if fclient.isdigit() else 0).first()
+        if _cli_obj:
+            _ar_rows = [r for r in _ar_rows
+                        if r.order is not None and r.order.client_id == _cli_obj.id]
 
-    pending_total = (db.session.query(func.sum(FinancialRecord.amount))
-                     .filter(*_base, *_ref_filter, FinancialRecord.status == "pendente")
-                     .scalar() or 0)
-
-    overdue_total = (db.session.query(func.sum(FinancialRecord.amount))
-                     .filter(*_base, *_ref_filter, FinancialRecord.status == "pendente",
-                             FinancialRecord.due_date.isnot(None),
-                             FinancialRecord.due_date < today)
-                     .scalar() or 0)
-
-    pending_count = (FinancialRecord.query
-                     .filter(*_base, *_ref_filter, FinancialRecord.status == "pendente")
-                     .count())
-    overdue_count = (FinancialRecord.query
-                     .filter(*_base, *_ref_filter, FinancialRecord.status == "pendente",
-                             FinancialRecord.due_date.isnot(None),
-                             FinancialRecord.due_date < today)
-                     .count())
+    received_in_period = ar_received(cid, first, last)
+    pending_total = round(sum(r.amount for r in _ar_rows), 2)
+    overdue_total = round(sum(r.amount for r in _ar_rows if r.is_overdue), 2)
+    pending_count = len(_ar_rows)
+    overdue_count = sum(1 for r in _ar_rows if r.is_overdue)
 
     records = (FinancialRecord.query
                .filter(*_base, *_ref_filter)

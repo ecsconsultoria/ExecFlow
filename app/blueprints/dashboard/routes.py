@@ -287,40 +287,14 @@ def index():
                    .order_by(ServiceOrder.pickup_datetime.asc())
                    .limit(30).all())
 
-    # ── Pending receivables (OrderPayment, unpaid, vencimento no período) ─────
-    # Etapa 2: cards respeitam o período selecionado (ancorados no vencimento).
-    pending_receivables = (OrderPayment.query
-                           .join(Order, OrderPayment.order_id == Order.id)
-                           .filter(Order.company_id == cid, Order.deleted_at.is_(None))
-                           .filter(Order.status.notin_(["cancelado", "excluido"]))
-                           .filter(OrderPayment.paid_at.is_(None))
-                           .filter(OrderPayment.amount > 0)
-                           .filter(OrderPayment.due_date.isnot(None))
-                           .filter(OrderPayment.due_date.between(p_start, p_end))
-                           .order_by(OrderPayment.due_date.asc())
-                           .limit(20).all())
-
-    # ── Pending payables (POPayment, unpaid, vencimento no período) ───────────
-    pending_payables = (POPayment.query
-                        .join(PurchaseOrder, POPayment.po_id == PurchaseOrder.id)
-                        .filter(PurchaseOrder.company_id == cid, PurchaseOrder.deleted_at.is_(None))
-                        .filter(PurchaseOrder.status.notin_(["cancelado", "excluido"]))
-                        .filter(POPayment.paid_at.is_(None))
-                        .filter(POPayment.amount > 0)
-                        .filter(POPayment.due_date.isnot(None))
-                        .filter(POPayment.due_date.between(p_start, p_end))
-                        .order_by(POPayment.due_date.asc())
-                        .limit(20).all())
+    # ── AR/AP (Etapa 8B) — fonte única: ar_ap_service (vencimento no período) ─
+    from ...services.ar_ap_service import receivable_rows, payable_rows
+    pending_receivables = receivable_rows(cid, p_start, p_end)[:20]
+    pending_payables = payable_rows(cid, p_start, p_end)[:20]
 
     # ── Alerts ────────────────────────────────────────────────────────────────
-    overdue_recv_count = sum(
-        1 for p in pending_receivables
-        if p.due_date and p.due_date < today
-    )
-    overdue_pay_count = sum(
-        1 for p in pending_payables
-        if p.due_date and p.due_date < today
-    )
+    overdue_recv_count = sum(1 for p in pending_receivables if p.is_overdue)
+    overdue_pay_count = sum(1 for p in pending_payables if p.is_overdue)
     expiring_rfq_count = (Quote.query
                           .filter_by(company_id=cid, deleted_at=None)
                           .filter(Quote.status == "pendente")
