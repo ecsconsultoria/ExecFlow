@@ -1423,3 +1423,163 @@ def cash_flow():
         inflow_rows=inflow_rows, outflow_groups=outflow_groups,
         today=today,
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Etapa 5 — DRE Gerencial por COMPETÊNCIA (somente leitura)
+# ─────────────────────────────────────────────────────────────────────────────
+
+_DRE_PERIOD_LABELS = {
+    "this_month":   "Este mês",
+    "last_month":   "Mês anterior",
+    "this_quarter": "Este trimestre",
+    "this_year":    "Este ano",
+    "custom":       "Personalizado...",
+}
+
+
+def _monthly_dre(cid, year):
+    """Linhas mensais da DRE (jan-dez do ano) — fetch único + bucket em Python."""
+    from calendar import monthrange
+    from datetime import datetime, date as _d
+    from ...services import dre_service
+    from ...models.purchase_order import PurchaseOrder
+
+    m_start = _d(year, 1, 1)
+    m_end = _d(year, 12, 31)
+
+    orders = dre_service.revenue_rows(cid, m_start, m_end)
+    pos = (PurchaseOrder.query
+           .filter_by(company_id=cid)
+           .filter(PurchaseOrder.deleted_at.is_(None))
+           .filter(PurchaseOrder.status.notin_(["rascunho", "cancelado", "excluido"]))
+           .filter(PurchaseOrder.order_id.isnot(None))
+           .all())
+    expenses = (FinancialRecord.query
+                .filter_by(company_id=cid, type="expense")
+                .filter(FinancialRecord.deleted_at.is_(None))
+                .filter(FinancialRecord.status != "cancelado")
+                .filter(FinancialRecord.emission_date.isnot(None))
+                .filter(FinancialRecord.emission_date.between(m_start, m_end))
+                .all())
+    other_rev = dre_service.other_revenue_rows(cid, m_start, m_end)
+
+    months = []
+    for m in range(1, 13):
+        months.append({
+            "label": f"{m:02d}/{str(year)[2:]}",
+            "start": _d(year, m, 1),
+            "end": _d(year, m, monthrange(year, m)[1]),
+            "revenue": 0.0, "direct": 0.0, "margin": 0.0,
+            "expenses": 0.0, "result": 0.0,
+        })
+    totals = {"revenue": 0.0, "direct": 0.0, "margin": 0.0,
+              "expenses": 0.0, "result": 0.0}
+
+    def _bucket(d, key):
+        if d is None:
+            return None
+        for row in months:
+            if row["start"] <= d <= row["end"]:
+                return row
+        return None
+
+    for o in orders:
+        row = _bucket(o.invoiced_at.date(), "revenue")
+        if row:
+            row["revenue"] = round(row["revenue"] + float(o.computed_total or 0), 2)
+    for fr in other_rev:
+        d = fr.emission_date or fr.paid_date or (fr.created_at.date() if fr.created_at else None)
+        row = _bucket(d, "revenue")
+        if row:
+            row["revenue"] = round(row["revenue"] + float(fr.amount or 0), 2)
+    for po in pos:
+        if po.order is None or po.order.status == "excluido" or po.order.deleted_at is not None:
+            continue
+        comp = dre_service.po_competence_date(po)
+        row = _bucket(comp, "direct")
+        if row:
+            row["direct"] = round(row["direct"] + float(po.computed_total or 0), 2)
+    for fr in expenses:
+        row = _bucket(fr.emission_date, "expenses")
+        if row:
+            row["expenses"] = round(row["expenses"] + float(fr.amount or 0), 2)
+
+    for row in months:
+        row["margin"] = round(row["revenue"] - row["direct"], 2)
+        row["result"] = round(row["margin"] - row["expenses"], 2)
+        for k in ("revenue", "direct", "margin", "expenses", "result"):
+            totals[k] = round(totals[k] + row[k], 2)
+    return months, totals
+
+
+@financial_bp.route("/dre")
+@login_required
+def dre():
+    from ...services import dre_service
+    cid   = current_user.company_id
+    today = now_br().date()
+    period = request.args.get("period", "this_month")
+    first, last = _financial_period_bounds(
+        period, request.args.get("date_from"), request.args.get("date_to"), today)
+
+    revenue = round(dre_service.recognized_revenue(cid, first, last)
+                    + dre_service.other_revenue(cid, first, last), 2)
+    direct = dre_service.direct_costs(cid, first, last)
+    margin = round(revenue - direct, 2)
+    exp_groups = dre_service.general_expenses_by_group(cid, first, last)
+    expenses = round(sum(exp_groups.values()), 2)
+    result = round(margin - expenses, 2)
+
+    # Detalhamento (somente leitura)
+    rev_detail = [{"number": o.number, "date": o.invoiced_at.date(),
+                   "value": float(o.computed_total or 0)} for o in
+                  dre_service.revenue_rows(cid, first, last)]
+    other_detail = [{"desc": fr.description, "date": fr.emission_date or fr.paid_date
+                     or (fr.created_at.date() if fr.created_at else None),
+                     "value": float(fr.amount or 0)} for fr in
+                    dre_service.other_revenue_rows(cid, first, last)]
+    cost_detail = []
+    fallback_detail = []
+    for po, comp, fallback in dre_service.direct_cost_rows(cid, first, last):
+        cost_detail.append({
+            "number": po.number, "so": po.order.number if po.order else None,
+            "date": comp, "value": float(po.computed_total or 0),
+            "supplier": po.supplier.name if po.supplier else "",
+        })
+        if fallback:
+            fallback_detail.append(po.number)
+    exp_detail = [{
+        "desc": fr.description, "date": fr.emission_date,
+        "category": fr.category_ref.name if fr.category_ref else (fr.category or "—"),
+        "center": fr.cost_center.name if fr.cost_center else None,
+        "supplier": fr.supplier.name if fr.supplier else "",
+        "value": float(fr.amount or 0),
+    } for fr in dre_service.expense_rows(cid, first, last)]
+
+    # Pendências (nada é alterado — apenas listado)
+    unclassified = [{"number": po.number, "value": float(po.computed_total or 0),
+                     "supplier": po.supplier.name if po.supplier else ""}
+                    for po in dre_service.unclassified_cost_rows(cid)]
+    indeterminate = [{"desc": fr.description, "value": float(fr.amount or 0)}
+                     for fr in dre_service.indeterminate_expense_rows(cid)]
+
+    months, totals = _monthly_dre(cid, today.year)
+
+    return render_template(
+        "financial/dre.html",
+        period=period,
+        date_from=request.args.get("date_from", ""),
+        date_to=request.args.get("date_to", ""),
+        p_start=first, p_end=last,
+        period_labels=_DRE_PERIOD_LABELS,
+        revenue=revenue, direct=direct, margin=margin,
+        exp_groups=exp_groups, expenses=expenses, result=result,
+        rev_detail=rev_detail, other_detail=other_detail,
+        cost_detail=cost_detail, exp_detail=exp_detail,
+        fallback_detail=fallback_detail,
+        unclassified=unclassified, indeterminate=indeterminate,
+        months=months, totals=totals,
+        year=today.year,
+        today=today,
+    )

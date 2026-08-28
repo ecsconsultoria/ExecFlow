@@ -148,6 +148,36 @@
   </div>
 </div>
 
+{# ── DRE resumida (Etapa 5) — por competência, mesmas funções da tela DRE ─── #}
+<div class="mb-5">
+  <div class="flex items-center justify-between mb-2">
+    <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">DRE (competência)</p>
+    <a href="{{ url_for('financial.dre') }}" class="text-xs text-blue-500 hover:text-blue-700">Financeiro → DRE <i class="fa-solid fa-arrow-right ml-0.5"></i></a>
+  </div>
+  <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+    <div class="bg-white dark:bg-slate-800 rounded-xl px-4 py-3 shadow-sm border-l-4 border-blue-400">
+      <p class="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Receita</p>
+      <p class="text-sm font-bold text-blue-600 font-mono">{{ dre_revenue|currency }}</p>
+    </div>
+    <div class="bg-white dark:bg-slate-800 rounded-xl px-4 py-3 shadow-sm border-l-4 border-rose-400">
+      <p class="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Custos Diretos</p>
+      <p class="text-sm font-bold text-rose-600 font-mono">{{ dre_costs|currency }}</p>
+    </div>
+    <div class="bg-white dark:bg-slate-800 rounded-xl px-4 py-3 shadow-sm border-l-4 {% if dre_gross >= 0 %}border-emerald-500{% else %}border-orange-500{% endif %}">
+      <p class="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Margem Bruta</p>
+      <p class="text-sm font-bold {% if dre_gross >= 0 %}text-emerald-600{% else %}text-orange-600{% endif %} font-mono">{{ dre_gross|currency }}</p>
+    </div>
+    <div class="bg-white dark:bg-slate-800 rounded-xl px-4 py-3 shadow-sm border-l-4 border-amber-400">
+      <p class="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Despesas Gerais</p>
+      <p class="text-sm font-bold text-amber-600 font-mono">{{ dre_expenses|currency }}</p>
+    </div>
+    <div class="bg-white dark:bg-slate-800 rounded-xl px-4 py-3 shadow-sm border-l-4 {% if dre_result >= 0 %}border-slate-400{% else %}border-orange-500{% endif %}">
+      <p class="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Resultado Operacional</p>
+      <p class="text-sm font-bold {% if dre_result >= 0 %}text-slate-700 dark:text-slate-200{% else %}text-orange-600{% endif %} font-mono">{{ dre_result|currency }}</p>
+    </div>
+  </div>
+</div>
+
 {# ── ROW B — Chart + Pipeline + Dispatch ─────────────────────────────────── #}
 <div class="grid lg:grid-cols-3 gap-5 mb-5">
 

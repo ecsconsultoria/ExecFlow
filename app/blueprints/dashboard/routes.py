@@ -201,6 +201,15 @@ def index():
                             FinancialRecord.paid_date.between(p_start, p_end))
                     .scalar() or 0.0)
 
+    # ── DRE resumida do período (Etapa 5) — mesmas funções centrais da tela DRE ──
+    from ...services import dre_service
+    dre_revenue = round(dre_service.recognized_revenue(cid, p_start, p_end)
+                        + dre_service.other_revenue(cid, p_start, p_end), 2)
+    dre_costs = dre_service.direct_costs(cid, p_start, p_end)
+    dre_gross = round(dre_revenue - dre_costs, 2)
+    dre_expenses = dre_service.general_expenses(cid, p_start, p_end)
+    dre_result = round(dre_gross - dre_expenses, 2)
+
     # ── 12-month rolling chart data ────────────────────────────────────────
     chart_rows = []
     for i in range(11, -1, -1):
@@ -367,6 +376,12 @@ def index():
         expense_pending=expense_pending,
         expense_overdue=expense_overdue,
         expense_paid=expense_paid,
+        # DRE resumida (Etapa 5)
+        dre_revenue=dre_revenue,
+        dre_costs=dre_costs,
+        dre_gross=dre_gross,
+        dre_expenses=dre_expenses,
+        dre_result=dre_result,
         # chart
         chart_data_json=chart_data_json,
         # pipeline

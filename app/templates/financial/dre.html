@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}DRE Gerencial{% endblock %}
+{% block page_title %}<i class="fa-solid fa-chart-pie mr-2 text-amber-500"></i>DRE Gerencial (Competência){% endblock %}
+
+{% block content %}
+
+<div class="mb-4 flex flex-wrap items-center gap-2">
+  <a href="{{ url_for('financial.index') }}" class="text-sm text-slate-500 hover:text-blue-500 mr-1"><i class="fa-solid fa-arrow-left mr-1"></i>Financeiro</a>
+  <a href="{{ url_for('financial.cash_flow') }}" class="text-sm px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-blue-400"><i class="fa-solid fa-money-bill-trend-up mr-1"></i>Fluxo de Caixa</a>
+</div>
+
+<form method="get" class="mb-5 bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm flex flex-wrap items-end gap-3">
+  <div>
+    <label class="block text-xs font-medium text-slate-500 mb-1">Período (competência)</label>
+    <select name="period" class="border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-2 py-1.5 text-sm">
+      {% for p, lbl in period_labels.items() %}
+      <option value="{{ p }}" {{ 'selected' if period == p }}>{{ lbl }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% if period == 'custom' %}
+  <div>
+    <label class="block text-xs font-medium text-slate-500 mb-1">De</label>
+    <input type="date" name="date_from" value="{{ date_from }}"
+           class="border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-2 py-1.5 text-sm">
+  </div>
+  <div>
+    <label class="block text-xs font-medium text-slate-500 mb-1">Até</label>
+    <input type="date" name="date_to" value="{{ date_to }}"
+           class="border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-2 py-1.5 text-sm">
+  </div>
+  {% endif %}
+  <button type="submit" class="px-4 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-200">Filtrar</button>
+</form>
+
+{# ── Demonstração ─────────────────────────────────────────────────────────── #}
+<div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden mb-5">
+  <div class="px-4 py-3 bg-slate-50 dark:bg-slate-700/50 text-xs text-slate-500 dark:text-slate-400 uppercase font-semibold">
+    {{ p_start.strftime('%d/%m/%Y') }} — {{ p_end.strftime('%d/%m/%Y') }} · por competência
+  </div>
+  <table class="w-full text-sm">
+    <tbody>
+      <tr class="border-b border-slate-100 dark:border-slate-700">
+        <td class="px-4 py-2.5 font-semibold text-slate-700 dark:text-slate-200">RECEITA DE SERVIÇOS</td>
+        <td class="px-4 py-2.5 text-right font-mono text-slate-700 dark:text-slate-200">{{ revenue|currency }}</td>
+      </tr>
+      <tr class="border-b border-slate-100 dark:border-slate-700">
+        <td class="px-4 py-2.5 font-semibold text-red-600 dark:text-red-400">(−) CUSTOS DIRETOS</td>
+        <td class="px-4 py-2.5 text-right font-mono text-red-600 dark:text-red-400">({{ direct|currency }})</td>
+      </tr>
+      <tr class="border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/30">
+        <td class="px-4 py-2.5 font-bold text-slate-800 dark:text-slate-100">MARGEM BRUTA</td>
+        <td class="px-4 py-2.5 text-right font-mono font-bold {% if margin >= 0 %}text-emerald-600{% else %}text-orange-600{% endif %}">{{ margin|currency }}</td>
+      </tr>
+      {% for g, v in exp_groups.items() %}
+      <tr class="border-b border-slate-100 dark:border-slate-700">
+        <td class="px-4 py-2.5 pl-8 text-slate-600 dark:text-slate-300">(−) {{ g }}</td>
+        <td class="px-4 py-2.5 text-right font-mono text-red-500 dark:text-red-400">({{ v|currency }})</td>
+      </tr>
+      {% endfor %}
+      <tr class="bg-slate-50 dark:bg-slate-700/30">
+        <td class="px-4 py-2.5 font-bold text-slate-800 dark:text-slate-100">RESULTADO OPERACIONAL</td>
+        <td class="px-4 py-2.5 text-right font-mono font-bold {% if result >= 0 %}text-blue-600{% else %}text-orange-600{% endif %}">{{ result|currency }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+{# ── Visão mensal ─────────────────────────────────────────────────────────── #}
+<h3 class="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wide">Visão mensal — {{ year }}</h3>
+<div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-x-auto mb-5">
+  <table class="w-full text-xs min-w-[900px]">
+    <thead class="bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 uppercase">
+      <tr>
+        <th class="text-left px-3 py-2">Linha</th>
+        {% for m in months %}<th class="text-right px-2 py-2">{{ m.label }}</th>{% endfor %}
+        <th class="text-right px-3 py-2 font-bold">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for key, label in [('revenue','Receita'), ('direct','Custos Diretos'),
+                            ('margin','Margem Bruta'), ('expenses','Despesas Gerais'),
+                            ('result','Resultado')] %}
+      <tr class="border-t border-slate-100 dark:border-slate-700">
+        <td class="px-3 py-1.5 font-medium text-slate-600 dark:text-slate-300">{{ label }}</td>
+        {% for m in months %}
+        <td class="px-2 py-1.5 text-right font-mono {% if m[key] < 0 %}text-orange-600{% else %}text-slate-700 dark:text-slate-200{% endif %}">{{ m[key]|currency }}</td>
+        {% endfor %}
+        <td class="px-3 py-1.5 text-right font-mono font-bold">{{ totals[key]|currency }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{# ── Detalhamento (somente leitura) ──────────────────────────────────────── #}
+<div class="grid lg:grid-cols-2 gap-5 mb-5">
+  <div>
+    <h3 class="text-sm font-semibold text-emerald-700 dark:text-emerald-400 mb-2 uppercase tracking-wide">Receita → SO</h3>
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden mb-4">
+      {% for d in rev_detail %}
+      <div class="flex justify-between px-4 py-2 border-b border-slate-100 dark:border-slate-700 last:border-0 text-sm">
+        <span class="text-slate-700 dark:text-slate-200">{{ d.number }} <span class="text-xs text-slate-400">· {{ d.date.strftime('%d/%m/%Y') }}</span></span>
+        <span class="font-mono text-emerald-600">{{ d.value|currency }}</span>
+      </div>
+      {% else %}<p class="px-4 py-4 text-sm text-slate-400">Sem receita reconhecida no período.</p>{% endfor %}
+      {% for d in other_detail %}
+      <div class="flex justify-between px-4 py-2 border-b border-slate-100 dark:border-slate-700 last:border-0 text-sm">
+        <span class="text-amber-700 dark:text-amber-400">{{ d.desc or 'Receita não classificada' }}</span>
+        <span class="font-mono text-amber-600">{{ d.value|currency }}</span>
+      </div>
+      {% endfor %}
+    </div>
+
+    <h3 class="text-sm font-semibold text-red-700 dark:text-red-400 mb-2 uppercase tracking-wide">Custos → PO</h3>
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
+      {% for d in cost_detail %}
+      <div class="flex justify-between px-4 py-2 border-b border-slate-100 dark:border-slate-700 last:border-0 text-sm">
+        <span class="text-slate-700 dark:text-slate-200">{{ d.number }} <span class="text-xs text-slate-400">· SO {{ d.so or '—' }} · {{ d.date.strftime('%d/%m/%Y') }} · {{ d.supplier }}</span></span>
+        <span class="font-mono text-red-600">({{ d.value|currency }})</span>
+      </div>
+      {% else %}<p class="px-4 py-4 text-sm text-slate-400">Sem custo direto no período.</p>{% endfor %}
+    </div>
+  </div>
+
+  <div>
+    <h3 class="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-2 uppercase tracking-wide">Despesas → categoria</h3>
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
+      {% for d in exp_detail %}
+      <div class="flex justify-between px-4 py-2 border-b border-slate-100 dark:border-slate-700 last:border-0 text-sm">
+        <span class="text-slate-700 dark:text-slate-200">{{ d.desc }}
+          <span class="text-xs text-slate-400">· {{ d.category }}{% if d.center %} · {{ d.center }}{% endif %}{% if d.supplier %} · {{ d.supplier }}{% endif %} · {{ d.date.strftime('%d/%m/%Y') if d.date else '—' }}</span></span>
+        <span class="font-mono text-red-500">({{ d.value|currency }})</span>
+      </div>
+      {% else %}<p class="px-4 py-4 text-sm text-slate-400">Sem despesas no período.</p>{% endfor %}
+    </div>
+  </div>
+</div>
+
+{# ── Pendências (nada é alterado — apenas transparência) ─────────────────── #}
+{% if unclassified or indeterminate or fallback_detail %}
+<div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900 rounded-xl p-4 mb-3 text-sm">
+  <p class="font-semibold text-amber-800 dark:text-amber-200 mb-2"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Pendências de classificação/competência</p>
+  {% if unclassified %}
+  <p class="text-amber-800 dark:text-amber-200">CUSTO NÃO CLASSIFICADO (PO válida sem SO — fora da margem bruta):
+    {% for u in unclassified %}{{ u.number }} ({{ u.value|currency }}{% if u.supplier %} · {{ u.supplier }}{% endif %}){% if not loop.last %}; {% endif %}{% endfor %}</p>
+  {% endif %}
+  {% if indeterminate %}
+  <p class="text-amber-800 dark:text-amber-200">COMPETÊNCIA INDETERMINADA (despesa sem emissão — fora da DRE):
+    {% for i in indeterminate %}{{ i.desc }} ({{ i.value|currency }}){% if not loop.last %}; {% endif %}{% endfor %}</p>
+  {% endif %}
+  {% if fallback_detail %}
+  <p class="text-amber-800 dark:text-amber-200">Competência por fallback (created_at — sem service_date/delivery_date): {{ fallback_detail|join(', ') }}</p>
+  {% endif %}
+</div>
+{% endif %}
+<p class="text-xs text-slate-400 mb-1"><i class="fa-solid fa-circle-info mr-0.5"></i>Os 27 FinancialRecords soft-deletados (histórico) permanecem fora da DRE — restauração é decisão de etapa futura.</p>
+<p class="text-xs text-slate-400"><i class="fa-solid fa-lock mr-1"></i>Visão somente leitura — os documentos de origem são geridos nas telas de SO, PO e Despesas.</p>
+{% endblock %}
