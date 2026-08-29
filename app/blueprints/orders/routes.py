@@ -339,6 +339,11 @@ def detail(oid):
     categories = VehicleCategory.query.filter_by(is_active=True).order_by(VehicleCategory.name).all()
     company    = Company.query.get(order.company_id)
     audit_logs = AuditLog.query.filter_by(entity="order", entity_id=order.id).order_by(AuditLog.created_at.asc()).all()
+
+    # Etapa 11B: timeline de baixas SOMENTE LEITURA (audit_logs) para exibição
+    from ...services.payment_history_service import build_baixa_history
+    payments_by_no = {p.installment_no: p for p in order.payments}
+    baixa_history = build_baixa_history(audit_logs, payments_by_no)
     clients    = Client.query.filter_by(company_id=current_user.company_id, deleted_at=None).order_by(Client.name).all()
 
     resp = make_response(render_template(
@@ -352,6 +357,7 @@ def detail(oid):
         categories=categories,
         company=company,
         audit_logs=audit_logs,
+        baixa_history=baixa_history,
         clients=clients,
     ))
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"

@@ -1,0 +1,46 @@
+{# timeline.html — Histórico de baixas (Etapa 11B).
+   Uso: {% from 'components/timeline.html' import baixa_timeline %}
+        {{ baixa_timeline(history) }}
+   history: dict do payment_history_service (por parcela) — somente leitura.
+   Pré-10D: eventos sem valor individual → aviso, NUNCA inventar valores. #}
+{% macro baixa_timeline(history) -%}
+{% if history %}
+  <div class="mt-2 border-t border-slate-100 dark:border-slate-700 pt-2">
+    <p class="text-[10px] uppercase tracking-wide text-slate-400 font-semibold mb-1.5">Histórico de baixas</p>
+    <ol class="space-y-1.5">
+      {% for e in history.entries %}
+      <li class="flex items-start gap-2 text-xs">
+        <span class="text-slate-400 shrink-0 mt-0.5">{{ e.at.strftime('%d/%m/%Y %H:%M') }}</span>
+        <span class="flex-1">
+          <span class="text-slate-500 dark:text-slate-400">{{ e.user }}</span>
+          {% if e.value is not none %}
+            <span class="block font-mono text-slate-700 dark:text-slate-200">
+              Baixa <span class="text-emerald-600">R$ {{ '%.2f'|format(e.value) }}</span>
+              {% if e.balance_after is not none %} · saldo após <span class="font-semibold">{{ '%.2f'|format(e.balance_after) }}</span>{% endif %}
+            </span>
+          {% else %}
+            <span class="block text-slate-400 italic">Baixa registrada (valor individual não disponível)</span>
+          {% endif %}
+        </span>
+      </li>
+      {% endfor %}
+    </ol>
+    {% if history.pre_10d %}
+    <p class="text-[10px] text-slate-400 italic mt-1.5">
+      <i class="fa-solid fa-circle-info mr-0.5"></i>
+      Detalhamento individual das baixas não disponível para este período (registros anteriores à Etapa 10D).
+    </p>
+    {% endif %}
+    {% if not history.consistent %}
+    <p class="text-[10px] text-amber-600 dark:text-amber-400 mt-1.5">
+      <i class="fa-solid fa-triangle-exclamation mr-0.5"></i>
+      Os valores registrados no histórico não coincidem com o total recebido — os dados originais foram preservados (revisão manual necessária).
+    </p>
+    {% endif %}
+    <p class="text-xs font-mono font-semibold text-slate-700 dark:text-slate-200 mt-1.5">
+      TOTAL RECEBIDO <span class="text-emerald-600">{{ '%.2f'|format(history.final_paid) }}</span>
+      {% if history.pre_10d %}<span class="text-slate-400 font-normal"> (valor comprovado da parcela)</span>{% endif %}
+    </p>
+  </div>
+{% endif %}
+{%- endmacro %}

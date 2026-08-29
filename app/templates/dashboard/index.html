@@ -341,6 +341,9 @@
         <div class="min-w-0">
           <p class="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">
             {{ p.order.client_name or p.order.number if p.order else '–' }}
+            {% if p.payment and p.payment.paid_amount and p.payment.paid_amount < p.payment.amount %}
+            <span class="ml-1 px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded text-[10px] font-semibold">PARCIAL</span>
+            {% endif %}
           </p>
           <p class="text-xs {% if overdue %}text-red-500 font-semibold{% elif due_today %}text-amber-600 font-semibold{% else %}text-slate-400{% endif %}">
             Venc: {{ p.due_date.strftime('%d/%m/%Y') if p.due_date else 'sem data' }}

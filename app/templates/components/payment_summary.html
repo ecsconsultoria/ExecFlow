@@ -1,0 +1,38 @@
+{# payment_summary.html — Resumo financeiro de parcela (Etapa 11B).
+   Uso: {% from 'components/payment_summary.html' import payment_summary %}
+        {{ payment_summary(amount, paid_amount, status_label, status_variant, due_date=None, paid_at=None) }}
+   Somente EXIBIÇÃO — consome dados existentes; nenhuma regra financeira aqui. #}
+{% macro payment_summary(amount, paid_amount, status_label, status_variant, due_date=None, paid_at=None) -%}
+{% set paid = (paid_amount or 0) %}
+{% set balance = ((amount or 0) - paid)|round(2) %}
+{% set pct = ((paid / amount * 100)|round(1)) if amount else 0 %}
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 dark:bg-slate-700/30 rounded-lg p-3">
+  <div>
+    <p class="text-[10px] uppercase tracking-wide text-slate-400 font-semibold">Valor</p>
+    <p class="text-sm font-mono text-slate-700 dark:text-slate-200">{{ amount|currency }}</p>
+  </div>
+  <div>
+    <p class="text-[10px] uppercase tracking-wide text-slate-400 font-semibold">Recebido</p>
+    <p class="text-sm font-mono text-emerald-600">{{ paid|currency }}</p>
+    <div class="mt-1 h-1 rounded-full bg-slate-200 dark:bg-slate-600 overflow-hidden" title="{{ pct }}% recebido">
+      <div class="h-full rounded-full {% if pct >= 100 %}bg-emerald-500{% elif pct > 0 %}bg-amber-400{% endif %}"
+           style="width: {{ [pct, 100]|min }}%"></div>
+    </div>
+  </div>
+  <div>
+    <p class="text-[10px] uppercase tracking-wide text-slate-400 font-semibold">Saldo</p>
+    <p class="text-sm font-mono {% if balance > 0 %}text-amber-600 dark:text-amber-400 font-semibold{% else %}text-slate-500 dark:text-slate-400{% endif %}">{{ balance|currency }}</p>
+  </div>
+  <div>
+    <p class="text-[10px] uppercase tracking-wide text-slate-400 font-semibold">Status</p>
+    {% from 'components/badge.html' import badge %}
+    {{ badge(status_label, variant=status_variant) }}
+    {% if due_date %}
+    <p class="text-[10px] text-slate-400 mt-1">Venc. {{ due_date.strftime('%d/%m/%Y') if due_date else '–' }}</p>
+    {% endif %}
+    {% if paid_at %}
+    <p class="text-[10px] text-slate-400 mt-0.5">Últ. rec. {{ paid_at.strftime('%d/%m/%Y %H:%M') }}</p>
+    {% endif %}
+  </div>
+</div>
+{%- endmacro %}

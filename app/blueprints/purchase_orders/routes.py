@@ -379,13 +379,20 @@ def detail(po_id):
     cid = current_user.company_id
     suppliers, services, categories, suppliers_json, services_json = _build_context(cid)
     audit_logs = AuditLog.query.filter_by(entity="po", entity_id=po.id).order_by(AuditLog.created_at.asc()).all()
+
+    # Etapa 11B: timeline de baixas SOMENTE LEITURA (audit_logs) para exibição
+    from ...services.payment_history_service import build_baixa_history
+    payments_by_no = {p.installment_no: p for p in po.payments}
+    baixa_history = build_baixa_history(audit_logs, payments_by_no)
+
     resp = make_response(render_template("purchase_orders/detail.html",
                            po=po,
                            suppliers=suppliers, services=services, categories=categories,
                            suppliers_json=suppliers_json, services_json=services_json,
                            linked_order=po.order,
                            PO_STATUSES=PO_STATUSES,
-                           audit_logs=audit_logs))
+                           audit_logs=audit_logs,
+                           baixa_history=baixa_history))
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     resp.headers["Pragma"] = "no-cache"
     resp.headers["Expires"] = "0"

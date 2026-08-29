@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{% from 'components/payment_summary.html' import payment_summary %}
+{% from 'components/timeline.html' import baixa_timeline %}
 {% block title %}Pedido {{ order.number }}{% endblock %}
 
 {% block extra_head %}
@@ -831,17 +833,55 @@
             <th class="px-2 py-1.5 text-left hidden sm:table-cell">Obs</th>
             <th class="px-2 py-1.5 text-right">Valor</th>
             <th class="px-2 py-1.5 text-center w-28">Baixa</th>
-            <th class="px-2 py-1.5 text-center">Recebido</th>
+            <th class="px-2 py-1.5 text-center">Recebido / Saldo / Status</th>
             <th class="px-2 py-1.5 w-6"></th>
           </tr>
         </thead>
         <tbody id="pmt-tbody" class="divide-y divide-slate-100 dark:divide-slate-700">
           {% set total_pmts = order.payments|length %}
           {% for pmt in order.payments|sort(attribute='due_date') %}
-          <tr id="pmt-row-{{ pmt.id }}" class="{% if pmt.is_paid %}bg-emerald-50/60 dark:bg-emerald-900/10{% else %}hover:bg-slate-50/50{% endif %}">
+          {% set pmt_partial = (not pmt.is_paid) and (pmt.paid_amount or 0) > 0 %}
+          <tr id="pmt-row-{{ pmt.id }}" class="{% if pmt.is_paid %}bg-emerald-50/60 dark:bg-emerald-900/10{% elif pmt_partial %}bg-amber-50/50 dark:bg-amber-900/10{% else %}hover:bg-slate-50/50{% endif %}">
             <td class="px-2 py-1.5 text-center text-slate-500" data-pmt-no>{{ pmt.installment_no }}/{{ total_pmts }}</td>
 
-            {% if not pmt.is_paid %}
+            {% if pmt_partial %}
+            {# ── Parcela PARCIAL (Etapa 11B): leitura + baixa do saldo ── #}
+            <td class="px-2 py-1.5 text-slate-500">{{ pmt.due_date.strftime('%d/%m/%Y') if pmt.due_date else '–' }}</td>
+            <td class="px-2 py-1.5 text-slate-400 italic hidden sm:table-cell">{{ pmt.notes or '–' }}</td>
+            <td class="px-2 py-1.5 text-right font-mono text-slate-700 dark:text-slate-200">{{ pmt.amount|currency }}</td>
+            <td class="px-2 py-1.5 text-center"
+                id="baixa-o-td-{{ pmt.id }}"
+                data-url="{{ url_for('orders.baixa', pid=pmt.id) }}"
+                data-balance="{{ '%.2f'|format(pmt.balance or 0)|replace('.', ',') }}">
+              {% if order.status not in ('cancelado', 'novo', 'rascunho') %}
+              <button type="button" onclick="openBaixaO({{ pmt.id }})"
+                      class="p-1 rounded text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-900/30"
+                      title="Dar baixa (saldo restante)" aria-label="Dar baixa">
+                <i class="fa-solid fa-circle-check"></i>
+              </button>
+              {% endif %}
+            </td>
+            <td class="px-2 py-1.5 text-center">
+              <p class="font-mono text-xs text-emerald-600">{{ pmt.paid_amount|currency }}</p>
+              <p class="font-mono text-xs text-amber-600 dark:text-amber-400">saldo {{ pmt.balance|currency }}</p>
+              <span class="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-[10px] font-semibold">PARCIAL</span>
+            </td>
+            <td class="px-2 py-1.5 text-center">
+              <button type="button" onclick="togglePmtExtra({{ pmt.id }})"
+                      class="p-1 rounded text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700" title="Detalhes" aria-label="Detalhes">
+                <i class="fa-solid fa-chevron-down text-xs"></i>
+              </button>
+              {% if order.status in ('faturado', 'aberto', 'concluido') %}
+              <button type="button" onclick="estornarPmt({{ pmt.id }})"
+                      class="p-1 rounded text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/30"
+                      title="Estornar pagamento" aria-label="Estornar pagamento">
+                <i class="fa-solid fa-rotate-left"></i>
+              </button>
+              {% endif %}
+            </td>
+
+            {% elif not pmt.is_paid %}
+            {# ── Parcela ABERTA (fluxo atual preservado) ── #}
             <form method="post" action="{{ url_for('orders.update_payment', pid=pmt.id) }}"
                   id="pf-{{ pmt.id }}" class="contents">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -866,47 +906,69 @@
             <td class="px-2 py-1.5 text-center"
                 id="baixa-o-td-{{ pmt.id }}"
                 data-url="{{ url_for('orders.baixa', pid=pmt.id) }}"
-                data-amount="{{ '%.2f'|format(pmt.amount or 0)|replace('.', ',') }}">
+                data-balance="{{ '%.2f'|format(pmt.balance or 0)|replace('.', ',') }}">
               {% if order.status not in ('cancelado', 'novo', 'rascunho') %}
               <button type="button" onclick="openBaixaO({{ pmt.id }})"
                       class="p-1 rounded text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-900/30"
-                      title="Dar baixa">
+                      title="Dar baixa" aria-label="Dar baixa">
                 <i class="fa-solid fa-circle-check"></i>
               </button>
               {% endif %}
             </td>
-            <td class="px-2 py-1.5 text-center text-slate-400">–</td>
+            <td class="px-2 py-1.5 text-center">
+              <p class="font-mono text-xs text-slate-400">R$ 0,00</p>
+              <p class="font-mono text-xs text-amber-600 dark:text-amber-400">saldo {{ pmt.amount|currency }}</p>
+              <span class="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px] font-semibold">ABERTA</span>
+            </td>
             <td class="px-2 py-1.5 text-center">
               {% if not locked %}
               <button type="button" onclick="deletePmt({{ pmt.id }})"
-                      class="p-1 rounded text-red-400 hover:bg-red-100" title="Excluir">
+                      class="p-1 rounded text-red-400 hover:bg-red-100" title="Excluir" aria-label="Excluir parcela">
                 <i class="fa-solid fa-trash-can" style="font-size:9px"></i>
               </button>
               {% endif %}
             </td>
 
             {% else %}
+            {# ── Parcela QUITADA ── #}
             <td class="px-2 py-1.5 text-slate-500">{{ pmt.due_date.strftime('%d/%m/%Y') if pmt.due_date else '–' }}</td>
             <td class="px-2 py-1.5 text-slate-400 italic hidden sm:table-cell">{{ pmt.notes or '–' }}</td>
             <td class="px-2 py-1.5 text-right font-semibold text-emerald-600 font-mono">{{ pmt.paid_amount|currency }}</td>
+            <td class="px-2 py-1.5 text-center text-slate-300">–</td>
             <td class="px-2 py-1.5 text-center">
-              <span class="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded text-xs font-semibold">
-                <i class="fa-solid fa-check mr-0.5"></i>PAGO
+              <p class="font-mono text-xs text-emerald-600">{{ pmt.paid_amount|currency }}</p>
+              <p class="font-mono text-xs text-slate-400">saldo R$ 0,00</p>
+              <span class="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[10px] font-semibold">
+                <i class="fa-solid fa-check mr-0.5"></i>QUITADA
               </span>
             </td>
-            <td class="px-2 py-1.5 text-center text-slate-500 text-xs">
-              {% if pmt.paid_at %}{{ pmt.paid_at|fdate }}{% else %}–{% endif %}
-            </td>
             <td class="px-2 py-1.5 text-center">
+              <button type="button" onclick="togglePmtExtra({{ pmt.id }})"
+                      class="p-1 rounded text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700" title="Detalhes" aria-label="Detalhes">
+                <i class="fa-solid fa-chevron-down text-xs"></i>
+              </button>
               {% if order.status in ('faturado', 'aberto', 'concluido') %}
               <button type="button" onclick="estornarPmt({{ pmt.id }})"
                       class="p-1 rounded text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/30"
-                      title="Estornar pagamento">
+                      title="Estornar pagamento" aria-label="Estornar pagamento">
                 <i class="fa-solid fa-rotate-left"></i>
               </button>
               {% endif %}
             </td>
             {% endif %}
+          </tr>
+          {# ── Linha expansível: resumo + histórico (Etapa 11B) ── #}
+          <tr id="pmt-extra-{{ pmt.id }}" style="display:none" class="bg-slate-50/70 dark:bg-slate-700/20">
+            <td colspan="7" class="px-3 py-2">
+              {% if pmt.is_paid %}
+                {{ payment_summary(pmt.amount, pmt.paid_amount, 'QUITADA', 'success', due_date=pmt.due_date, paid_at=pmt.paid_at) }}
+              {% elif pmt_partial %}
+                {{ payment_summary(pmt.amount, pmt.paid_amount, 'PARCIAL', 'warning', due_date=pmt.due_date, paid_at=pmt.paid_at) }}
+              {% else %}
+                {{ payment_summary(pmt.amount, pmt.paid_amount, 'ABERTA', 'neutral', due_date=pmt.due_date) }}
+              {% endif %}
+              {{ baixa_timeline(baixa_history.get(pmt.installment_no)) }}
+            </td>
           </tr>
           {% endfor %}
         </tbody>
@@ -1003,7 +1065,7 @@
                class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400">
       </div>
       <div>
-        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Valor pago (R$)</label>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Valor a receber nesta baixa (R$)</label>
         <input type="text" name="paid_amount" id="baixa-o-amount"
                class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm font-mono text-right focus:outline-none focus:ring-2 focus:ring-emerald-400">
       </div>
@@ -1034,7 +1096,13 @@
     const td = document.getElementById('baixa-o-td-' + pid);
     if (!td) return;
     document.getElementById('baixa-o-form').action = td.dataset.url;
-    document.getElementById('baixa-o-amount').value = td.dataset.amount;
+    // Etapa 11B/10D: pré-preenche o SALDO RESTANTE (nunca o total original)
+    document.getElementById('baixa-o-amount').value = td.dataset.balance;
+
+  function togglePmtExtra(pid) {
+    const row = document.getElementById('pmt-extra-' + pid);
+    if (row) row.style.display = (row.style.display === 'none') ? 'table-row' : 'none';
+  }
     var today = new Date().toISOString().split('T')[0];
     document.getElementById('baixa-o-date').value = today;
     document.getElementById('baixa-o-date').max = today;
