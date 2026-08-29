@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "components/export_buttons.html" import export_buttons with context %}
 {% block title %}Categorias Financeiras{% endblock %}
 {% block page_title %}<i class="fa-solid fa-tags mr-2 text-amber-500"></i>Categorias Financeiras{% endblock %}
 
@@ -7,6 +8,9 @@
   <a href="{{ url_for('financial.index') }}" class="text-sm text-slate-500 hover:text-blue-500 mr-2"><i class="fa-solid fa-arrow-left mr-1"></i>Financeiro</a>
   <a href="{{ url_for('financial.cost_centers') }}" class="text-sm px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-blue-400"><i class="fa-solid fa-building mr-1"></i>Centros de Custo</a>
   <a href="{{ url_for('financial.new_category') }}" class="text-sm px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700"><i class="fa-solid fa-plus mr-1"></i>Nova Categoria</a>
+  <div class="ml-auto">
+    {{ export_buttons(xlsx_url=url_for('financial.categories_export_xlsx')) }}
+  </div>
 </div>
 
 <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">

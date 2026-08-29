@@ -176,17 +176,8 @@ def index():
     pending_expenses = _ap_totals["despesas"]   # quebra exibida no template
 
     # Registros filtrados pelo período + tipo + status
-    q = (FinancialRecord.query
-         .filter_by(company_id=cid)
-         .filter(FinancialRecord.deleted_at.is_(None))
-         .filter(ref_date.between(first, last)))
-    if ftype:
-        q = q.filter(FinancialRecord.type == ftype)
-    if fstat:
-        q = q.filter(FinancialRecord.status == fstat)
-    if allowed_refs is not None:
-        q = q.filter(FinancialRecord.reference.in_(allowed_refs))
-    records = q.order_by(FinancialRecord.created_at.desc()).limit(500).all()
+    records = (_index_query(cid, first, last, ftype, fstat, allowed_refs)
+               .order_by(FinancialRecord.created_at.desc()).limit(500).all())
 
     # Resolve SO number + client name from reference (e.g. "order_payment:42")
     record_refs = {}  # record_id -> {so_number, client_name, order_id}
@@ -603,15 +594,8 @@ def payables():
 
     # Etapa 8B: AP unificado — obrigações por DUE_DATE (custos de PO + despesas),
     # pago do período por PAID_DATE (caixa). Fonte única: ar_ap_service.
-    from ...services.ar_ap_service import payable_rows, paid_in_period as ap_paid_in_period
-    _ap_rows = payable_rows(cid, first, last)
-    if fsupplier:
-        from ...models.supplier import Supplier as _Sup
-        _sup_obj = _Sup.query.filter_by(
-            company_id=cid, id=int(fsupplier) if fsupplier.isdigit() else 0).first()
-        if _sup_obj:
-            _ap_rows = [r for r in _ap_rows
-                        if r.origem != "PO" or r.supplier_name == _sup_obj.name]
+    from ...services.ar_ap_service import paid_in_period as ap_paid_in_period
+    _ap_rows = _payable_rows_filtered(cid, first, last, fsupplier)
 
     paid_in_period = ap_paid_in_period(cid, first, last)
     pending_total = round(sum(r.amount for r in _ap_rows), 2)
@@ -762,15 +746,8 @@ def receivables():
 
     # Etapa 8B: AR unificado — obrigação por DUE_DATE (parcela válida),
     # recebido por PAID_DATE (caixa). Fonte única: ar_ap_service.
-    from ...services.ar_ap_service import receivable_rows, received_in_period as ar_received
-    _ar_rows = receivable_rows(cid, first, last)
-    if fclient:
-        from ...models.client import Client as _Cli
-        _cli_obj = _Cli.query.filter_by(
-            company_id=cid, id=int(fclient) if fclient.isdigit() else 0).first()
-        if _cli_obj:
-            _ar_rows = [r for r in _ar_rows
-                        if r.order is not None and r.order.client_id == _cli_obj.id]
+    from ...services.ar_ap_service import received_in_period as ar_received
+    _ar_rows = _receivable_rows_filtered(cid, first, last, fclient)
 
     received_in_period = ar_received(cid, first, last)
     pending_total = round(sum(r.amount for r in _ar_rows), 2)
@@ -857,12 +834,10 @@ def receivables():
 # RBAC: mesmas permissões do módulo financeiro (financial.manage).
 # ─────────────────────────────────────────────────────────────────────────────
 
-@financial_bp.route("/categories")
-@login_required
-@require_permission("financial.manage")
-def categories():
+def _category_tree(cid):
+    """Categorias financeiras em ordem hierárquica (raiz → filhas)."""
     cats = (FinancialCategory.query
-            .filter_by(company_id=current_user.company_id)
+            .filter_by(company_id=cid)
             .order_by(FinancialCategory.type, FinancialCategory.id)
             .all())
     by_parent = {}
@@ -878,7 +853,15 @@ def categories():
     for root in [c for c in cats if c.parent_id is None]:
         items.append({"cat": root, "depth": 0})
         _walk(root.id, 1, items)
-    return render_template("financial/categories.html", items=items,
+    return items
+
+
+@financial_bp.route("/categories")
+@login_required
+@require_permission("financial.manage")
+def categories():
+    return render_template("financial/categories.html",
+                           items=_category_tree(current_user.company_id),
                            labels=FINANCIAL_CATEGORY_TYPE_LABELS)
 
 
@@ -1129,6 +1112,9 @@ def expenses():
         overdue_total=overdue_total, paid_total=paid_total,
         categories=categories, centers=centers, suppliers=suppliers,
         fstatus=fstatus,
+        fcategory=request.args.get("category", ""),
+        fcost_center=request.args.get("cost_center", ""),
+        fsupplier=request.args.get("supplier", ""),
         status_labels=_EXPENSE_STATUS_LABELS,
         period=request.args.get("period", "this_month"),
         date_from=request.args.get("date_from", ""),
@@ -1352,37 +1338,32 @@ def _cash_period_bounds(period, date_from_str, date_to_str, today):
     return _financial_period_bounds(period, date_from_str, date_to_str, today)
 
 
-@financial_bp.route("/cash-flow")
-@login_required
-def cash_flow():
+def _cash_flow_data(cid, period, date_from, date_to, today, company):
+    """Dados completos do Caixa para um período (TELA = PDF = XLSX).
+
+    Fonte única: cash_flow_service (Etapas 4 e 9B). Nenhuma regra aqui.
+    """
     from ...services.cash_flow_service import (
         realized_entries, split_movements, movement_info,
         initial_balance, forecast_entries,
     )
-    cid   = current_user.company_id
-    today = now_br().date()
-    period = request.args.get("period", "this_month")
+    first, last = _cash_period_bounds(period, date_from, date_to, today)
 
-    first, last = _cash_period_bounds(
-        period, request.args.get("date_from"), request.args.get("date_to"), today)
-
-    # ── REALIZADO (Etapa 4 preservada): FR pago por paid_date ──
+    # REALIZADO (Etapa 4 preservada): FR pago por paid_date
     entries = realized_entries(cid, first, last)
     inflows, outflows = split_movements(entries)
     total_in = round(sum(float(e.amount or 0) for e in inflows), 2)
     total_out = round(sum(float(e.amount or 0) for e in outflows), 2)
 
-    # ── SALDO INICIAL (Etapa 9B): configurado pelo usuário, nunca inferido ──
-    company = current_user.company
+    # SALDO INICIAL (Etapa 9B): configurado pelo usuário, nunca inferido
     initial_balance_value, initial_balance_date = initial_balance(company)
     initial_configured = initial_balance_date is not None or initial_balance_value != 0.0
 
-    # ── PREVISTO (Etapa 9B): obrigações por due_date via ar_ap_service ──
+    # PREVISTO (Etapa 9B): obrigações por due_date via ar_ap_service
     forecast_in, forecast_out = forecast_entries(cid, first, last)
     total_in_forecast = round(sum(r.amount for r in forecast_in), 2)
     total_out_forecast = round(sum(r.amount for r in forecast_out), 2)
 
-    # ── SALDOS ──
     realized_balance = round(initial_balance_value + total_in - total_out, 2)
     projected_balance = round(realized_balance + total_in_forecast - total_out_forecast, 2)
 
@@ -1394,23 +1375,47 @@ def cash_flow():
     for row in _rows(outflows):
         outflow_groups.setdefault(row["group"], []).append(row)
 
+    return {
+        "first": first, "last": last,
+        "total_in": total_in, "total_out": total_out,
+        "realized_balance": realized_balance,
+        "initial_configured": initial_configured,
+        "initial_balance": initial_balance_value,
+        "initial_balance_date": initial_balance_date,
+        "total_in_forecast": total_in_forecast,
+        "total_out_forecast": total_out_forecast,
+        "projected_balance": projected_balance,
+        "forecast_in": forecast_in, "forecast_out": forecast_out,
+        "inflow_rows": inflow_rows, "outflow_groups": outflow_groups,
+    }
+
+
+@financial_bp.route("/cash-flow")
+@login_required
+def cash_flow():
+    data = _cash_flow_data(current_user.company_id,
+                           request.args.get("period", "this_month"),
+                           request.args.get("date_from"),
+                           request.args.get("date_to"),
+                           now_br().date(), current_user.company)
     return render_template(
         "financial/cash_flow.html",
-        period=period,
+        period=request.args.get("period", "this_month"),
         date_from=request.args.get("date_from", ""),
         date_to=request.args.get("date_to", ""),
-        p_start=first, p_end=last,
+        p_start=data["first"], p_end=data["last"],
         period_labels=_CASH_PERIOD_LABELS,
-        total_in=total_in, total_out=total_out,
-        realized_balance=realized_balance,
-        initial_configured=initial_configured,
-        initial_balance=initial_balance_value,
-        initial_balance_date=initial_balance_date,
-        total_in_forecast=total_in_forecast, total_out_forecast=total_out_forecast,
-        projected_balance=projected_balance,
-        forecast_in=forecast_in, forecast_out=forecast_out,
-        inflow_rows=inflow_rows, outflow_groups=outflow_groups,
-        today=today,
+        total_in=data["total_in"], total_out=data["total_out"],
+        realized_balance=data["realized_balance"],
+        initial_configured=data["initial_configured"],
+        initial_balance=data["initial_balance"],
+        initial_balance_date=data["initial_balance_date"],
+        total_in_forecast=data["total_in_forecast"],
+        total_out_forecast=data["total_out_forecast"],
+        projected_balance=data["projected_balance"],
+        forecast_in=data["forecast_in"], forecast_out=data["forecast_out"],
+        inflow_rows=data["inflow_rows"], outflow_groups=data["outflow_groups"],
+        today=now_br().date(),
     )
 
 
@@ -1542,15 +1547,13 @@ def _monthly_dre(cid, year):
     return months, totals
 
 
-@financial_bp.route("/dre")
-@login_required
-def dre():
+def _dre_data(cid, period, date_from, date_to, today):
+    """Dados completos da DRE para um período (TELA = PDF = XLSX).
+
+    Fonte única: dre_service + _monthly_dre. Nenhuma regra financeira aqui.
+    """
     from ...services import dre_service
-    cid   = current_user.company_id
-    today = now_br().date()
-    period = request.args.get("period", "this_month")
-    first, last = _financial_period_bounds(
-        period, request.args.get("date_from"), request.args.get("date_to"), today)
+    first, last = _financial_period_bounds(period, date_from, date_to, today)
 
     revenue = round(dre_service.recognized_revenue(cid, first, last)
                     + dre_service.other_revenue(cid, first, last), 2)
@@ -1595,20 +1598,874 @@ def dre():
 
     months, totals = _monthly_dre(cid, today.year)
 
+    return {
+        "first": first, "last": last,
+        "revenue": revenue, "direct": direct, "margin": margin,
+        "exp_groups": exp_groups, "expenses": expenses, "result": result,
+        "rev_detail": rev_detail, "other_detail": other_detail,
+        "cost_detail": cost_detail, "exp_detail": exp_detail,
+        "fallback_detail": fallback_detail,
+        "unclassified": unclassified, "indeterminate": indeterminate,
+        "months": months, "totals": totals, "year": today.year, "today": today,
+    }
+
+
+@financial_bp.route("/dre")
+@login_required
+def dre():
+    data = _dre_data(current_user.company_id,
+                     request.args.get("period", "this_month"),
+                     request.args.get("date_from"),
+                     request.args.get("date_to"),
+                     now_br().date())
     return render_template(
         "financial/dre.html",
-        period=period,
+        period=request.args.get("period", "this_month"),
         date_from=request.args.get("date_from", ""),
         date_to=request.args.get("date_to", ""),
-        p_start=first, p_end=last,
+        p_start=data["first"], p_end=data["last"],
         period_labels=_DRE_PERIOD_LABELS,
-        revenue=revenue, direct=direct, margin=margin,
-        exp_groups=exp_groups, expenses=expenses, result=result,
-        rev_detail=rev_detail, other_detail=other_detail,
-        cost_detail=cost_detail, exp_detail=exp_detail,
-        fallback_detail=fallback_detail,
-        unclassified=unclassified, indeterminate=indeterminate,
-        months=months, totals=totals,
-        year=today.year,
-        today=today,
+        revenue=data["revenue"], direct=data["direct"], margin=data["margin"],
+        exp_groups=data["exp_groups"], expenses=data["expenses"], result=data["result"],
+        rev_detail=data["rev_detail"], other_detail=data["other_detail"],
+        cost_detail=data["cost_detail"], exp_detail=data["exp_detail"],
+        fallback_detail=data["fallback_detail"],
+        unclassified=data["unclassified"], indeterminate=data["indeterminate"],
+        months=data["months"], totals=data["totals"],
+        year=data["year"],
+        today=data["today"],
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Etapa 12E — Exportação da DRE (PDF e XLSX) — SOMENTE LEITURA
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _dre_period_label(period, date_from, date_to, p_start, p_end):
+    if period == "custom" and date_from and date_to:
+        return f"Personalizado: {date_from} a {date_to}"
+    return _DRE_PERIOD_LABELS.get(period, "Todos")
+
+
+def _dre_export_context():
+    """Contexto comum PDF/XLSX: dados + filtros + metadados."""
+    from ...services import report_pdf, report_xlsx
+    period = request.args.get("period", "this_month")
+    date_from = request.args.get("date_from", "")
+    date_to = request.args.get("date_to", "")
+    data = _dre_data(current_user.company_id, period, date_from, date_to,
+                     now_br().date())
+    label = _dre_period_label(period, date_from, date_to,
+                              data["first"], data["last"])
+    company = current_user.company
+    return data, {
+        "period": period, "date_from": date_from, "date_to": date_to,
+        "label": label,
+        "range_br": f"{data['first'].strftime('%d/%m/%Y')} — {data['last'].strftime('%d/%m/%Y')}",
+        "company_name": getattr(company, "name", "") or "",
+        "user": current_user.email or "",
+        "report_pdf": report_pdf, "report_xlsx": report_xlsx,
+    }
+
+
+def _dre_pdf_notes(data):
+    notes = []
+    if data["unclassified"]:
+        notes.append("Custo não classificado (PO válida sem SO — fora da margem bruta): "
+                     + "; ".join(f"{u['number']} ({u['value']:,.2f})" for u in data["unclassified"]))
+    if data["indeterminate"]:
+        notes.append("Competência indeterminada (despesa sem emissão — fora da DRE): "
+                     + "; ".join(f"{i['desc']} ({i['value']:,.2f})" for i in data["indeterminate"]))
+    if data["fallback_detail"]:
+        notes.append("Competência por fallback (created_at): " + ", ".join(data["fallback_detail"]))
+    return notes
+
+
+@financial_bp.route("/dre/export/pdf")
+@login_required
+@require_permission("financial.view")
+def dre_export_pdf():
+    from flask import Response
+    data, ctx = _dre_export_context()
+    rp = ctx["report_pdf"]
+
+    demo_rows = [
+        ["RECEITA DE SERVIÇOS", data["revenue"]],
+        ["(−) CUSTOS DIRETOS", data["direct"]],
+        ["MARGEM BRUTA", data["margin"]],
+    ]
+    demo_rows += [[f"(−) {g}", v] for g, v in data["exp_groups"].items()]
+    demo_rows.append(["RESULTADO OPERACIONAL", data["result"]])
+
+    monthly_headers = ["Linha"] + [m["label"] for m in data["months"]] + ["Total"]
+    monthly_rows = []
+    for key, lbl in (("revenue", "Receita"), ("direct", "Custos Diretos"),
+                     ("margin", "Margem Bruta"), ("expenses", "Despesas Gerais"),
+                     ("result", "Resultado")):
+        monthly_rows.append([lbl] + [m[key] for m in data["months"]] + [data["totals"][key]])
+
+    sections = [
+        {"heading": "Demonstração do Resultado",
+         "headers": ["Conta", "Valor"], "money_cols": [1],
+         "rows": demo_rows, "totals": False,
+         "widths": [None, 42]},
+        {"heading": f"Visão mensal — {data['year']}",
+         "headers": monthly_headers, "money_cols": list(range(1, 14)),
+         "rows": monthly_rows, "totals": False},
+    ]
+    if data["rev_detail"] or data["other_detail"]:
+        rev_rows = [[d["number"], d["date"], d["value"]] for d in data["rev_detail"]]
+        rev_rows += [[d["desc"] or "Receita não classificada", d["date"], d["value"]]
+                     for d in data["other_detail"]]
+        sections.append({"heading": "Receitas",
+                         "headers": ["Referência", "Data", "Valor"],
+                         "money_cols": [2], "rows": rev_rows, "totals": False})
+    if data["cost_detail"]:
+        sections.append({"heading": "Custos Diretos",
+                         "headers": ["PO", "SO", "Competência", "Fornecedor", "Valor"],
+                         "money_cols": [4],
+                         "rows": [[d["number"], d["so"] or "—", d["date"],
+                                   d["supplier"], d["value"]] for d in data["cost_detail"]],
+                         "totals": False})
+    if data["exp_detail"]:
+        sections.append({"heading": "Despesas Gerais",
+                         "headers": ["Descrição", "Categoria", "Centro", "Emissão", "Valor"],
+                         "money_cols": [4],
+                         "rows": [[d["desc"], d["category"], d["center"] or "—",
+                                   d["date"], d["value"]] for d in data["exp_detail"]],
+                         "totals": False})
+
+    pdf_bytes = rp.build_report_pdf(
+        title="DRE Gerencial",
+        short_title="DRE Gerencial",
+        meta_lines=[
+            f"Período (competência): {ctx['range_br']}",
+            f"Filtros: {ctx['label']}",
+            "Empresa: " + (ctx["company_name"] or "—"),
+        ],
+        sections=sections,
+        notes=_dre_pdf_notes(data),
+        company_name=ctx["company_name"],
+        generated_by=ctx["user"],
+    )
+    return Response(pdf_bytes, mimetype="application/pdf",
+                    headers={"Content-Disposition":
+                             f"attachment; filename=dre_{data['first'].isoformat()}_{data['last'].isoformat()}.pdf"})
+
+
+@financial_bp.route("/dre/export/xlsx")
+@login_required
+@require_permission("financial.view")
+def dre_export_xlsx():
+    from flask import Response
+    data, ctx = _dre_export_context()
+    rx = ctx["report_xlsx"]
+
+    rows = [
+        ["Receita de Serviços", data["revenue"]],
+        ["(−) Custos Diretos", -data["direct"]],
+        ["Margem Bruta", data["margin"]],
+    ]
+    rows += [[f"(−) {g}", -v] for g, v in data["exp_groups"].items()]
+    rows.append(["Resultado Operacional", data["result"]])
+
+    xlsx_bytes = rx.build_report_xlsx(
+        title="DRE Gerencial",
+        meta_lines=[
+            f"Período (competência): {ctx['range_br']}",
+            f"Filtros: {ctx['label']}",
+            "Empresa: " + (ctx["company_name"] or "—"),
+        ],
+        columns=["Conta", "Valor"],
+        rows=rows,
+        money_cols=(1,),
+        generated_by=ctx["user"],
+    )
+    return Response(xlsx_bytes,
+                    mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition":
+                             f"attachment; filename=dre_{data['first'].isoformat()}_{data['last'].isoformat()}.xlsx"})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Etapa 12E-A3 — Exportação das demais telas financeiras (SOMENTE LEITURA)
+# Helpers de dados compartilhados (mesma fonte das telas) + rotas PDF/XLSX.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _receivable_rows_filtered(cid, first, last, fclient):
+    """AR por due_date (ar_ap_service) com o filtro de cliente da tela."""
+    from ...services.ar_ap_service import receivable_rows
+    rows = receivable_rows(cid, first, last)
+    if fclient:
+        from ...models.client import Client as _Cli
+        _cli_obj = _Cli.query.filter_by(
+            company_id=cid, id=int(fclient) if fclient.isdigit() else 0).first()
+        if _cli_obj:
+            rows = [r for r in rows
+                    if r.order is not None and r.order.client_id == _cli_obj.id]
+    return rows
+
+
+def _payable_rows_filtered(cid, first, last, fsupplier):
+    """AP por due_date (ar_ap_service) com o filtro de fornecedor da tela.
+
+    O filtro vale para as duas origens (PO e DESPESA) — tela e export
+    usam este mesmo helper (TELA = EXPORT).
+    """
+    from ...services.ar_ap_service import payable_rows
+    rows = payable_rows(cid, first, last)
+    if fsupplier:
+        from ...models.supplier import Supplier as _Sup
+        _sup_obj = _Sup.query.filter_by(
+            company_id=cid, id=int(fsupplier) if fsupplier.isdigit() else 0).first()
+        if _sup_obj:
+            rows = [r for r in rows if r.supplier_name == _sup_obj.name]
+    return rows
+
+
+def _index_query(cid, first, last, ftype, fstat, allowed_refs):
+    """Base da consulta de Lançamentos (mesma regra da tela)."""
+    ref_date = func.coalesce(
+        FinancialRecord.emission_date,
+        FinancialRecord.paid_date,
+        func.date(FinancialRecord.created_at),
+    )
+    q = (FinancialRecord.query
+         .filter_by(company_id=cid)
+         .filter(FinancialRecord.deleted_at.is_(None))
+         .filter(ref_date.between(first, last)))
+    if ftype:
+        q = q.filter(FinancialRecord.type == ftype)
+    if fstat:
+        q = q.filter(FinancialRecord.status == fstat)
+    if allowed_refs is not None:
+        q = q.filter(FinancialRecord.reference.in_(allowed_refs))
+    return q
+
+
+def _export_meta(range_br, period_label, company_name, extra=()):
+    """Linhas de metadado comuns a todos os relatórios."""
+    lines = [f"Período: {range_br}", f"Filtros: {period_label}",
+             "Empresa: " + (company_name or "—")]
+    lines += list(extra)
+    return lines
+
+
+def _expense_rows_for_export(cid, fstatus, fcategory, fcost_center, fsupplier):
+    """Mesma consulta da tela de Despesas (todos os filtros)."""
+    q = _expense_base_query()
+    if fstatus:
+        q = q.filter(FinancialRecord.status == fstatus)
+    if fcategory:
+        q = q.filter(FinancialRecord.financial_category_id == int(fcategory))
+    if fcost_center:
+        q = q.filter(FinancialRecord.cost_center_id == int(fcost_center))
+    if fsupplier:
+        q = q.filter(FinancialRecord.supplier_id == int(fsupplier))
+    return q.order_by(FinancialRecord.due_date.desc()).limit(500).all()
+
+
+def _expense_row_values(r):
+    """Campos de exibição de uma despesa (mesmos dados da tela)."""
+    cat = r.category_ref
+    root = None
+    if cat is not None:
+        root = cat.parent if cat.parent else cat
+    return {
+        "desc": r.description or "—",
+        "category": cat.name if cat else (r.category or "—"),
+        "root": root.name if root else "—",
+        "center": r.cost_center.name if r.cost_center else "—",
+        "supplier": r.supplier.name if r.supplier else "—",
+        "emission": r.emission_date,
+        "due": r.due_date,
+        "value": float(r.amount or 0),
+        "status": r.status,
+        "notes": r.notes or "—",
+    }
+
+
+# ════════════════════════ FLUXO DE CAIXA ════════════════════════
+
+@financial_bp.route("/cash-flow/export/pdf")
+@login_required
+@require_permission("financial.view")
+def cash_flow_export_pdf():
+    from flask import Response
+    from ...services import report_pdf
+    cid = current_user.company_id
+    today = now_br().date()
+    period = request.args.get("period", "this_month")
+    date_from, date_to = request.args.get("date_from", ""), request.args.get("date_to", "")
+    data = _cash_flow_data(cid, period, date_from, date_to, today, current_user.company)
+    label = _PERIOD_LABELS.get(period, "Todos")
+    if period == "custom" and date_from and date_to:
+        label = f"{date_from} a {date_to}"
+    range_br = f"{data['first'].strftime('%d/%m/%Y')} — {data['last'].strftime('%d/%m/%Y')}"
+
+    resumo = [
+        ["SALDO INICIAL", data["initial_balance"],
+         "não configurado (nunca é calculado automaticamente)" if not data["initial_configured"] else ""],
+        ["(+) ENTRADAS REALIZADAS", data["total_in"], ""],
+        ["(−) SAÍDAS REALIZADAS", data["total_out"], ""],
+        ["SALDO REALIZADO", data["realized_balance"], ""],
+        ["(+) ENTRADAS PREVISTAS (due_date)", data["total_in_forecast"], ""],
+        ["(−) SAÍDAS PREVISTAS (due_date)", data["total_out_forecast"], ""],
+        ["SALDO PROJETADO", data["projected_balance"], ""],
+    ]
+    sections = [
+        {"heading": "Resumo", "headers": ["Item", "Valor", "Observação"],
+         "money_cols": [1], "rows": resumo, "totals": False, "widths": [None, 42, None]},
+    ]
+    mov_rows = []
+    for row in data["inflow_rows"]:
+        mov_rows.append([row["entry"].paid_date or "", row["entry"].description or "—",
+                         "Entrada", row.get("category_label") or "—",
+                         row.get("cost_center") or "—", float(row["entry"].amount or 0),
+                         "Realizado", row.get("so_number") or row.get("origem") or "—"])
+    for group, rows_ in data["outflow_groups"].items():
+        for row in rows_:
+            mov_rows.append([row["entry"].paid_date or "", row["entry"].description or "—",
+                             "Saída", row.get("category_label") or "—",
+                             row.get("cost_center") or "—", float(row["entry"].amount or 0),
+                             "Realizado", row.get("po_number") or row.get("origem") or "—"])
+    for r in data["forecast_in"]:
+        mov_rows.append([r.due_date or "", r.description or "—", "Entrada", "—", "—",
+                         float(r.amount or 0), "Previsto", r.so_number or "SO"])
+    for r in data["forecast_out"]:
+        mov_rows.append([r.due_date or "", r.description or "—", "Saída",
+                         (r.expense.category_ref.name if r.expense and r.expense.category_ref else "—"),
+                         (r.expense.cost_center.name if r.expense and r.expense.cost_center else "—"),
+                         float(r.amount or 0), "Previsto",
+                         r.po_number or ("DESPESA" if r.origem == "DESPESA" else r.origem)])
+    sections.append({"heading": "Movimentos (realizados + previstos)",
+                     "headers": ["Data", "Descrição", "Tipo", "Categoria", "Centro",
+                                 "Valor", "Real./Prev.", "Referência"],
+                     "money_cols": [5], "rows": mov_rows[:500], "totals": False})
+
+    pdf = report_pdf.build_report_pdf(
+        title="Fluxo de Caixa", short_title="Fluxo de Caixa",
+        meta_lines=_export_meta(range_br, label, getattr(current_user.company, "name", "")),
+        sections=sections, company_name=getattr(current_user.company, "name", ""),
+        generated_by=current_user.email or "")
+    return Response(pdf, mimetype="application/pdf",
+                    headers={"Content-Disposition":
+                             f"attachment; filename=caixa_{data['first'].isoformat()}_{data['last'].isoformat()}.pdf"})
+
+
+@financial_bp.route("/cash-flow/export/xlsx")
+@login_required
+@require_permission("financial.view")
+def cash_flow_export_xlsx():
+    from flask import Response
+    from ...services import report_xlsx
+    cid = current_user.company_id
+    today = now_br().date()
+    period = request.args.get("period", "this_month")
+    date_from, date_to = request.args.get("date_from", ""), request.args.get("date_to", "")
+    data = _cash_flow_data(cid, period, date_from, date_to, today, current_user.company)
+    label = _PERIOD_LABELS.get(period, "Todos")
+    if period == "custom" and date_from and date_to:
+        label = f"{date_from} a {date_to}"
+    range_br = f"{data['first'].strftime('%d/%m/%Y')} — {data['last'].strftime('%d/%m/%Y')}"
+
+    rows = []
+    for row in data["inflow_rows"]:
+        rows.append([row["entry"].paid_date, row["entry"].description or "—", "Entrada",
+                     row.get("category_label") or "—", row.get("cost_center") or "—",
+                     float(row["entry"].amount or 0), "Realizado",
+                     row.get("so_number") or row.get("origem") or "—"])
+    for group, rows_ in data["outflow_groups"].items():
+        for row in rows_:
+            rows.append([row["entry"].paid_date, row["entry"].description or "—", "Saída",
+                         row.get("category_label") or "—", row.get("cost_center") or "—",
+                         float(row["entry"].amount or 0), "Realizado",
+                         row.get("po_number") or row.get("origem") or "—"])
+    for r in data["forecast_in"]:
+        rows.append([r.due_date, r.description or "—", "Entrada", "—", "—",
+                     float(r.amount or 0), "Previsto", r.so_number or "SO"])
+    for r in data["forecast_out"]:
+        rows.append([r.due_date, r.description or "—", "Saída",
+                     (r.expense.category_ref.name if r.expense and r.expense.category_ref else "—"),
+                     (r.expense.cost_center.name if r.expense and r.expense.cost_center else "—"),
+                     float(r.amount or 0), "Previsto",
+                     r.po_number or ("DESPESA" if r.origem == "DESPESA" else r.origem)])
+    rows = rows[:500]
+
+    xlsx = report_xlsx.build_report_xlsx(
+        title="Fluxo de Caixa",
+        meta_lines=_export_meta(range_br, label, getattr(current_user.company, "name", "")),
+        columns=["Data", "Descrição", "Tipo", "Categoria", "Centro de Custo",
+                 "Valor", "Realizado/Previsto", "Referência"],
+        rows=rows,
+        money_cols=(5,), date_cols=(0,),
+        generated_by=current_user.email or "")
+    return Response(xlsx,
+                    mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition":
+                             f"attachment; filename=caixa_{data['first'].isoformat()}_{data['last'].isoformat()}.xlsx"})
+
+
+# ════════════════════════ CONTAS A RECEBER ════════════════════════
+
+def _receivables_export_rows(cid, first, last, fclient):
+    rows = []
+    for r in _receivable_rows_filtered(cid, first, last, fclient):
+        p = r.payment
+        original = float((p.amount or 0)) if p else 0.0
+        received = float((p.paid_amount or 0)) if p else 0.0
+        rows.append({
+            "cliente": r.client_name or "—",
+            "referencia": r.description or "—",
+            "vencimento": r.due_date,
+            "original": original,
+            "recebido": received,
+            "saldo": float(r.amount or 0),
+            "status": "Vencido" if r.is_overdue else "Pendente",
+        })
+    return rows
+
+
+@financial_bp.route("/receivables/export/pdf")
+@login_required
+@require_permission("financial.view")
+def receivables_export_pdf():
+    from flask import Response
+    from ...services import report_pdf
+    cid = current_user.company_id
+    today = now_br().date()
+    period = request.args.get("period", "all")
+    date_from, date_to = request.args.get("date_from", ""), request.args.get("date_to", "")
+    first, last = _financial_period_bounds(period, date_from, date_to, today)
+    rows = _receivables_export_rows(cid, first, last, request.args.get("client", ""))
+    pending_total = round(sum(r["saldo"] for r in rows), 2)
+    label = _PERIOD_LABELS.get(period, "Todos")
+    if period == "custom" and date_from and date_to:
+        label = f"{date_from} a {date_to}"
+    table_rows = [[r["cliente"], r["referencia"], r["vencimento"], r["original"],
+                   r["recebido"], r["saldo"], r["status"]] for r in rows]
+    if table_rows:
+        table_rows.append(["TOTAIS", "", "", round(sum(r["original"] for r in rows), 2),
+                           round(sum(r["recebido"] for r in rows), 2), pending_total,
+                           f"{len(rows)} pendente(s)"])
+    sections = [{
+        "heading": "Contas a Receber",
+        "headers": ["Cliente", "Referência", "Vencimento", "Valor Original",
+                    "Recebido", "Saldo", "Status"],
+        "money_cols": [3, 4, 5],
+        "rows": table_rows, "totals": True,
+    }]
+    pdf = report_pdf.build_report_pdf(
+        title="Contas a Receber", short_title="Contas a Receber",
+        meta_lines=_export_meta(f"{first.strftime('%d/%m/%Y')} — {last.strftime('%d/%m/%Y')}",
+                                label, getattr(current_user.company, "name", "")),
+        sections=sections, company_name=getattr(current_user.company, "name", ""),
+        generated_by=current_user.email or "")
+    return Response(pdf, mimetype="application/pdf",
+                    headers={"Content-Disposition":
+                             f"attachment; filename=ar_{first.isoformat()}_{last.isoformat()}.pdf"})
+
+
+@financial_bp.route("/receivables/export/xlsx")
+@login_required
+@require_permission("financial.view")
+def receivables_export_xlsx():
+    from flask import Response
+    from ...services import report_xlsx
+    cid = current_user.company_id
+    today = now_br().date()
+    period = request.args.get("period", "all")
+    date_from, date_to = request.args.get("date_from", ""), request.args.get("date_to", "")
+    first, last = _financial_period_bounds(period, date_from, date_to, today)
+    rows = _receivables_export_rows(cid, first, last, request.args.get("client", ""))
+    pending_total = round(sum(r["saldo"] for r in rows), 2)
+    label = _PERIOD_LABELS.get(period, "Todos")
+    if period == "custom" and date_from and date_to:
+        label = f"{date_from} a {date_to}"
+    xlsx = report_xlsx.build_report_xlsx(
+        title="Contas a Receber",
+        meta_lines=_export_meta(f"{first.strftime('%d/%m/%Y')} — {last.strftime('%d/%m/%Y')}",
+                                label, getattr(current_user.company, "name", "")),
+        columns=["Cliente", "Referência", "Vencimento", "Valor Original",
+                 "Recebido", "Saldo", "Status"],
+        rows=[[r["cliente"], r["referencia"], r["vencimento"], r["original"],
+               r["recebido"], r["saldo"], r["status"]] for r in rows],
+        totals=["TOTAIS", "", "", round(sum(r["original"] for r in rows), 2),
+                round(sum(r["recebido"] for r in rows), 2), pending_total,
+                f"{len(rows)} pendente(s)"],
+        money_cols=(3, 4, 5), date_cols=(2,),
+        generated_by=current_user.email or "")
+    return Response(xlsx,
+                    mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition":
+                             f"attachment; filename=ar_{first.isoformat()}_{last.isoformat()}.xlsx"})
+
+
+# ════════════════════════ CONTAS A PAGAR ════════════════════════
+
+def _payables_export_rows(cid, first, last, fsupplier):
+    rows = []
+    for r in _payable_rows_filtered(cid, first, last, fsupplier):
+        categoria, centro = "—", "—"
+        if r.origem == "DESPESA" and r.expense:
+            categoria = r.expense.category_ref.name if r.expense.category_ref else "—"
+            centro = r.expense.cost_center.name if r.expense.cost_center else "—"
+        rows.append({
+            "fornecedor": r.supplier_name or "—",
+            "descricao": r.description or "—",
+            "vencimento": r.due_date,
+            "valor": float(r.amount or 0),
+            "pago": 0.0,  # linhas de AP são obrigações pendentes
+            "saldo": float(r.amount or 0),
+            "status": "Vencido" if r.is_overdue else "Pendente",
+            "categoria": categoria,
+            "centro": centro,
+        })
+    return rows
+
+
+@financial_bp.route("/payables/export/pdf")
+@login_required
+@require_permission("financial.view")
+def payables_export_pdf():
+    from flask import Response
+    from ...services import report_pdf
+    cid = current_user.company_id
+    today = now_br().date()
+    period = request.args.get("period", "all")
+    date_from, date_to = request.args.get("date_from", ""), request.args.get("date_to", "")
+    first, last = _financial_period_bounds(period, date_from, date_to, today)
+    rows = _payables_export_rows(cid, first, last, request.args.get("supplier", ""))
+    total = round(sum(r["saldo"] for r in rows), 2)
+    label = _PERIOD_LABELS.get(period, "Todos")
+    if period == "custom" and date_from and date_to:
+        label = f"{date_from} a {date_to}"
+    table_rows = [[r["fornecedor"], r["descricao"], r["vencimento"], r["valor"],
+                   r["pago"], r["saldo"], r["status"], r["categoria"], r["centro"]]
+                  for r in rows]
+    if table_rows:
+        table_rows.append(["TOTAIS", "", "", total, 0.0, total,
+                           f"{len(rows)} pendente(s)", "", ""])
+    sections = [{
+        "heading": "Contas a Pagar",
+        "headers": ["Fornecedor", "Descrição", "Vencimento", "Valor", "Pago",
+                    "Saldo", "Status", "Categoria", "Centro de Custo"],
+        "money_cols": [3, 4, 5],
+        "rows": table_rows, "totals": True,
+    }]
+    pdf = report_pdf.build_report_pdf(
+        title="Contas a Pagar", short_title="Contas a Pagar",
+        meta_lines=_export_meta(f"{first.strftime('%d/%m/%Y')} — {last.strftime('%d/%m/%Y')}",
+                                label, getattr(current_user.company, "name", "")),
+        sections=sections, company_name=getattr(current_user.company, "name", ""),
+        generated_by=current_user.email or "")
+    return Response(pdf, mimetype="application/pdf",
+                    headers={"Content-Disposition":
+                             f"attachment; filename=ap_{first.isoformat()}_{last.isoformat()}.pdf"})
+
+
+@financial_bp.route("/payables/export/xlsx")
+@login_required
+@require_permission("financial.view")
+def payables_export_xlsx():
+    from flask import Response
+    from ...services import report_xlsx
+    cid = current_user.company_id
+    today = now_br().date()
+    period = request.args.get("period", "all")
+    date_from, date_to = request.args.get("date_from", ""), request.args.get("date_to", "")
+    first, last = _financial_period_bounds(period, date_from, date_to, today)
+    rows = _payables_export_rows(cid, first, last, request.args.get("supplier", ""))
+    total = round(sum(r["saldo"] for r in rows), 2)
+    label = _PERIOD_LABELS.get(period, "Todos")
+    if period == "custom" and date_from and date_to:
+        label = f"{date_from} a {date_to}"
+    xlsx = report_xlsx.build_report_xlsx(
+        title="Contas a Pagar",
+        meta_lines=_export_meta(f"{first.strftime('%d/%m/%Y')} — {last.strftime('%d/%m/%Y')}",
+                                label, getattr(current_user.company, "name", "")),
+        columns=["Fornecedor", "Descrição", "Vencimento", "Valor", "Pago",
+                 "Saldo", "Status", "Categoria", "Centro de Custo"],
+        rows=[[r["fornecedor"], r["descricao"], r["vencimento"], r["valor"],
+               r["pago"], r["saldo"], r["status"], r["categoria"], r["centro"]]
+              for r in rows],
+        totals=["TOTAIS", "", "", total, 0.0, total, f"{len(rows)} pendente(s)", "", ""],
+        money_cols=(3, 4, 5), date_cols=(2,),
+        generated_by=current_user.email or "")
+    return Response(xlsx,
+                    mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition":
+                             f"attachment; filename=ap_{first.isoformat()}_{last.isoformat()}.xlsx"})
+
+
+# ════════════════════════ DESPESAS ════════════════════════
+
+def _expenses_export_data():
+    cid = current_user.company_id
+    today = now_br().date()
+    fstatus = request.args.get("status", "")
+    fcategory = request.args.get("category", "")
+    fcost_center = request.args.get("cost_center", "")
+    fsupplier = request.args.get("supplier", "")
+    records = _expense_rows_for_export(cid, fstatus, fcategory, fcost_center, fsupplier)
+    vals = [_expense_row_values(r) for r in records]
+    pending_total = round(sum(v["value"] for v in vals if v["status"] == "pendente"), 2)
+    overdue_total = round(sum(v["value"] for v in vals
+                              if v["status"] == "pendente" and v["due"]
+                              and v["due"] < today), 2)
+    paid_total = round(sum(v["value"] for v in vals if v["status"] == "pago"), 2)
+    label_parts = []
+    if fstatus:
+        label_parts.append(f"Status: {_EXPENSE_STATUS_LABELS.get(fstatus, fstatus)}")
+    if fcategory:
+        label_parts.append(f"Categoria: {fcategory}")
+    if fcost_center:
+        label_parts.append(f"Centro: {fcost_center}")
+    if fsupplier:
+        label_parts.append(f"Fornecedor: {fsupplier}")
+    label = "; ".join(label_parts) or "Sem filtros"
+    return vals, {
+        "pending_total": pending_total, "overdue_total": overdue_total,
+        "paid_total": paid_total, "label": label,
+    }
+
+
+@financial_bp.route("/expenses/export/pdf")
+@login_required
+@require_permission("financial.view")
+def expenses_export_pdf():
+    from flask import Response
+    from ...services import report_pdf
+    vals, ctx = _expenses_export_data()
+    rows = [[v["desc"], v["category"], v["root"], v["center"], v["emission"],
+             v["due"], v["value"], _EXPENSE_STATUS_LABELS.get(v["status"], v["status"]),
+             v["supplier"]] for v in vals]
+    if rows:
+        rows.append(["TOTAIS", "", "", "", "", "",
+                     round(sum(v["value"] for v in vals), 2), "", ""])
+    sections = [{
+        "heading": "Despesas Gerais",
+        "headers": ["Descrição", "Categoria", "Categoria Raiz", "Centro de Custo",
+                    "Emissão", "Vencimento", "Valor", "Status", "Fornecedor"],
+        "money_cols": [6], "rows": rows, "totals": True,
+    }]
+    pdf = report_pdf.build_report_pdf(
+        title="Despesas Gerais", short_title="Despesas Gerais",
+        meta_lines=["Filtros: " + ctx["label"],
+                    "Empresa: " + (getattr(current_user.company, "name", "") or "—"),
+                    f"Pendentes: R$ {report_pdf.brl(ctx['pending_total'])} · "
+                    f"Vencidas: R$ {report_pdf.brl(ctx['overdue_total'])} · "
+                    f"Pagas: R$ {report_pdf.brl(ctx['paid_total'])}"],
+        sections=sections, company_name=getattr(current_user.company, "name", ""),
+        generated_by=current_user.email or "")
+    return Response(pdf, mimetype="application/pdf",
+                    headers={"Content-Disposition":
+                             "attachment; filename=despesas.pdf"})
+
+
+@financial_bp.route("/expenses/export/xlsx")
+@login_required
+@require_permission("financial.view")
+def expenses_export_xlsx():
+    from flask import Response
+    from ...services import report_xlsx
+    vals, ctx = _expenses_export_data()
+    xlsx = report_xlsx.build_report_xlsx(
+        title="Despesas Gerais",
+        meta_lines=["Filtros: " + ctx["label"],
+                    "Empresa: " + (getattr(current_user.company, "name", "") or "—"),
+                    f"Pendentes: R$ {ctx['pending_total']:,.2f} · "
+                    f"Vencidas: R$ {ctx['overdue_total']:,.2f} · "
+                    f"Pagas: R$ {ctx['paid_total']:,.2f}"],
+        columns=["Descrição", "Categoria", "Categoria Raiz", "Centro de Custo",
+                 "Emissão", "Vencimento", "Valor", "Status", "Fornecedor", "Observação"],
+        rows=[[v["desc"], v["category"], v["root"], v["center"], v["emission"],
+               v["due"], v["value"], _EXPENSE_STATUS_LABELS.get(v["status"], v["status"]),
+               v["supplier"], v["notes"]] for v in vals],
+        totals=["TOTAIS", "", "", "", "", "", round(sum(v["value"] for v in vals), 2),
+                "", "", ""],
+        money_cols=(6,), date_cols=(4, 5),
+        generated_by=current_user.email or "")
+    return Response(xlsx,
+                    mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition":
+                             "attachment; filename=despesas.xlsx"})
+
+
+# ════════════════════════ LANÇAMENTOS ════════════════════════
+
+def _index_export_rows():
+    from ...services.cash_flow_service import movement_info
+    cid = current_user.company_id
+    today = now_br().date()
+    period = request.args.get("period", "all")
+    date_from, date_to = request.args.get("date_from", ""), request.args.get("date_to", "")
+    ftype = request.args.get("type", "")
+    fstat = request.args.get("status", "")
+    first, last = _financial_period_bounds(period, date_from, date_to, today)
+    records = (_index_query(cid, first, last, ftype, fstat, None)
+               .order_by(FinancialRecord.created_at.desc()).limit(500).all())
+    rows = []
+    for r in records:
+        info = movement_info(r)
+        type_label = {"revenue": "Receita", "cost": "Custo", "expense": "Despesa"}.get(
+            r.type, r.type or "—")
+        rows.append({
+            "data": r.emission_date or r.paid_date
+            or (r.created_at.date() if r.created_at else None),
+            "desc": r.description or "—",
+            "tipo": type_label,
+            "categoria": info.get("category_label") or "—",
+            "centro": info.get("cost_center") or "—",
+            "valor": float(r.amount or 0),
+            "status": r.status,
+            "referencia": r.reference or "—",
+            "competencia": r.emission_date,
+            "pagamento": r.paid_date,
+            "parte": info.get("client_name") or info.get("supplier_name") or "—",
+        })
+    label = _PERIOD_LABELS.get(period, "Todos")
+    if period == "custom" and date_from and date_to:
+        label = f"{date_from} a {date_to}"
+    if ftype:
+        label += f" · Tipo: {ftype}"
+    if fstat:
+        label += f" · Status: {fstat}"
+    return rows, label, first, last
+
+
+def _index_totals(rows):
+    """Totais por tipo do Lançamentos (mesmos dados — apenas apresentação).
+
+    Receitas / Custos / Despesas separados + resultado líquido
+    (receitas − custos − despesas). Nenhum total misto ambíguo.
+    """
+    t = {"Receita": 0.0, "Custo": 0.0, "Despesa": 0.0}
+    for r in rows:
+        if r["tipo"] in t:
+            t[r["tipo"]] = round(t[r["tipo"]] + r["valor"], 2)
+    liquido = round(t["Receita"] - t["Custo"] - t["Despesa"], 2)
+    return t, liquido
+
+
+@financial_bp.route("/export/pdf")
+@login_required
+@require_permission("financial.view")
+def index_export_pdf():
+    from flask import Response
+    from ...services import report_pdf
+    rows, label, first, last = _index_export_rows()
+    table = [[r["data"], r["desc"], r["tipo"], r["categoria"], r["centro"],
+              r["valor"], r["status"], r["referencia"], r["competencia"],
+              r["pagamento"], r["parte"]] for r in rows]
+    tot, liquido = _index_totals(rows)
+    if table:
+        table += [
+            ["TOTAL RECEITAS", "", "", "", "", tot["Receita"], "", "", "", "", ""],
+            ["TOTAL CUSTOS", "", "", "", "", tot["Custo"], "", "", "", "", ""],
+            ["TOTAL DESPESAS", "", "", "", "", tot["Despesa"], "", "", "", "", ""],
+            ["RESULTADO LÍQUIDO (Receitas − Custos − Despesas)", "", "", "", "",
+             liquido, "", "", "", "", ""],
+        ]
+    sections = [{
+        "heading": "Lançamentos Financeiros",
+        "headers": ["Data", "Descrição", "Tipo", "Categoria", "Centro de Custo",
+                    "Valor", "Status", "Referência", "Competência", "Pagamento",
+                    "Cliente/Fornecedor"],
+        "money_cols": [5], "rows": table, "totals": True,
+    }]
+    pdf = report_pdf.build_report_pdf(
+        title="Lançamentos Financeiros", short_title="Lançamentos",
+        meta_lines=_export_meta(f"{first.strftime('%d/%m/%Y')} — {last.strftime('%d/%m/%Y')}",
+                                label, getattr(current_user.company, "name", "")),
+        sections=sections, company_name=getattr(current_user.company, "name", ""),
+        generated_by=current_user.email or "")
+    return Response(pdf, mimetype="application/pdf",
+                    headers={"Content-Disposition":
+                             f"attachment; filename=lancamentos_{first.isoformat()}_{last.isoformat()}.pdf"})
+
+
+@financial_bp.route("/export/xlsx")
+@login_required
+@require_permission("financial.view")
+def index_export_xlsx():
+    from flask import Response
+    from ...services import report_xlsx
+    rows, label, first, last = _index_export_rows()
+    tot, liquido = _index_totals(rows)
+    xlsx = report_xlsx.build_report_xlsx(
+        title="Lançamentos Financeiros",
+        meta_lines=_export_meta(f"{first.strftime('%d/%m/%Y')} — {last.strftime('%d/%m/%Y')}",
+                                label, getattr(current_user.company, "name", "")),
+        columns=["Data", "Descrição", "Tipo", "Categoria", "Centro de Custo",
+                 "Valor", "Status", "Referência", "Competência", "Pagamento",
+                 "Cliente/Fornecedor"],
+        rows=[[r["data"], r["desc"], r["tipo"], r["categoria"], r["centro"],
+               r["valor"], r["status"], r["referencia"], r["competencia"],
+               r["pagamento"], r["parte"]] for r in rows],
+        totals=[
+            ["TOTAL RECEITAS", "", "", "", "", tot["Receita"], "", "", "", "", ""],
+            ["TOTAL CUSTOS", "", "", "", "", tot["Custo"], "", "", "", "", ""],
+            ["TOTAL DESPESAS", "", "", "", "", tot["Despesa"], "", "", "", "", ""],
+            ["RESULTADO LÍQUIDO (Receitas − Custos − Despesas)", "", "", "", "",
+             liquido, "", "", "", "", ""],
+        ],
+        money_cols=(5,), date_cols=(0, 8, 9),
+        generated_by=current_user.email or "")
+    return Response(xlsx,
+                    mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition":
+                             f"attachment; filename=lancamentos_{first.isoformat()}_{last.isoformat()}.xlsx"})
+
+
+# ════════════════════════ CATEGORIAS / CENTROS (somente XLSX) ════════════════════════
+
+@financial_bp.route("/categories/export/xlsx")
+@login_required
+@require_permission("financial.manage")
+def categories_export_xlsx():
+    from flask import Response
+    from ...services import report_xlsx
+    cid = current_user.company_id
+    items = _category_tree(cid)
+    rows = []
+    for item in items:
+        c = item["cat"]
+        parent = c.parent.name if c.parent else "—"
+        rows.append(["    " * item["depth"] + c.name,
+                     FINANCIAL_CATEGORY_TYPE_LABELS.get(c.type, c.type),
+                     parent, "Ativa" if c.active else "Inativa"])
+    xlsx = report_xlsx.build_report_xlsx(
+        title="Categorias Financeiras",
+        meta_lines=["Empresa: " + (getattr(current_user.company, "name", "") or "—")],
+        columns=["Categoria", "Tipo", "Categoria Pai", "Status"],
+        rows=rows,
+        totals=["TOTAL", "", "", f"{len(rows)} categorias"],
+        generated_by=current_user.email or "")
+    return Response(xlsx,
+                    mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition":
+                             "attachment; filename=categorias_financeiras.xlsx"})
+
+
+@financial_bp.route("/cost-centers/export/xlsx")
+@login_required
+@require_permission("financial.manage")
+def cost_centers_export_xlsx():
+    from flask import Response
+    from ...services import report_xlsx
+    cid = current_user.company_id
+    centers = (CostCenter.query.filter_by(company_id=cid)
+               .order_by(CostCenter.name).all())
+    rows = [[c.name, "Ativo" if c.active else "Inativo"] for c in centers]
+    xlsx = report_xlsx.build_report_xlsx(
+        title="Centros de Custo",
+        meta_lines=["Empresa: " + (getattr(current_user.company, "name", "") or "—")],
+        columns=["Centro de Custo", "Status"],
+        rows=rows,
+        totals=["TOTAL", f"{len(rows)} centros"],
+        generated_by=current_user.email or "")
+    return Response(xlsx,
+                    mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition":
+                             "attachment; filename=centros_de_custo.xlsx"})

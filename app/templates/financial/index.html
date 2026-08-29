@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "components/export_buttons.html" import export_buttons with context %}
 {% block title %}Financeiro{% endblock %}
 {% block page_title %}<i class="fa-solid fa-coins mr-2 text-amber-500"></i>{% if ftype == 'revenue' %}Receitas{% elif ftype == 'cost' %}Despesas{% else %}Lançamentos{% endif %}{% endblock %}
 
@@ -13,6 +14,11 @@
   <a href="{{ url_for('financial.categories') }}" class="text-sm px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-blue-400"><i class="fa-solid fa-tags mr-1"></i>Categorias Financeiras</a>
   <a href="{{ url_for('financial.cost_centers') }}" class="text-sm px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-blue-400"><i class="fa-solid fa-building mr-1"></i>Centros de Custo</a>
   {% endif %}
+  <div class="ml-auto">
+    {{ export_buttons(
+         pdf_url=url_for('financial.index_export_pdf', period=period, date_from=date_from, date_to=date_to, type=ftype, status=fstat, client=fclient, supplier=fsupplier),
+         xlsx_url=url_for('financial.index_export_xlsx', period=period, date_from=date_from, date_to=date_to, type=ftype, status=fstat, client=fclient, supplier=fsupplier)) }}
+  </div>
 </div>
 
 {# ── Mapeamentos de rótulos ───────────────────────────────────────────────── #}

@@ -1,8 +1,15 @@
 {% extends "base.html" %}
+{% from "components/export_buttons.html" import export_buttons with context %}
 {% block title %}Contas a Pagar{% endblock %}
 {% block page_title %}<i class="fa-solid fa-file-invoice mr-2 text-red-500"></i>Contas a Pagar{% endblock %}
 
 {% block content %}
+
+<div class="mb-4 flex flex-wrap items-center justify-end gap-2">
+  {{ export_buttons(
+       pdf_url=url_for('financial.payables_export_pdf', period=period, date_from=date_from, date_to=date_to, supplier=fsupplier),
+       xlsx_url=url_for('financial.payables_export_xlsx', period=period, date_from=date_from, date_to=date_to, supplier=fsupplier)) }}
+</div>
 
 {% set ST_LABELS = {'pago':'Pago','pendente':'Pendente','vencido':'Vencido','cancelado':'Cancelado','parcial':'Parcial'} %}
 {% set ST_CLS = {

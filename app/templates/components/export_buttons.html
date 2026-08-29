@@ -1,0 +1,29 @@
+{# ═══════════════════════════════════════════════════════════════════════════
+   Componente: ExportButtons (ações de relatório/exportação — Etapa 12E)
+   Uso: {% from "components/export_buttons.html" import export_buttons with context %}
+        {{ export_buttons(pdf_url=url_for('financial.dre_export_pdf', **filtros),
+                          xlsx_url=url_for('financial.dre_export_xlsx', **filtros)) }}
+
+   Desktop: ícone + texto. Mobile: só ícone (aria-label/tooltip).
+   Estilo ghost/neutro — ação de exportação, não navegação.
+   ═══════════════════════════════════════════════════════════════════════════ #}
+{% macro export_buttons(pdf_url=None, xlsx_url=None) -%}
+<div class="flex items-center gap-1.5 shrink-0">
+  {% if pdf_url %}
+  <a href="{{ pdf_url }}"
+     class="inline-flex items-center justify-center h-9 px-2.5 sm:px-3 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+     title="Gerar PDF do relatório (respeita os filtros atuais)"
+     aria-label="Gerar PDF">
+    <i class="fa-solid fa-file-pdf mr-0 sm:mr-1.5 text-red-500" aria-hidden="true"></i><span class="hidden sm:inline">PDF</span>
+  </a>
+  {% endif %}
+  {% if xlsx_url %}
+  <a href="{{ xlsx_url }}"
+     class="inline-flex items-center justify-center h-9 px-2.5 sm:px-3 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+     title="Exportar XLSX do relatório (respeita os filtros atuais)"
+     aria-label="Exportar XLSX">
+    <i class="fa-solid fa-file-excel mr-0 sm:mr-1.5 text-emerald-600" aria-hidden="true"></i><span class="hidden sm:inline">XLSX</span>
+  </a>
+  {% endif %}
+</div>
+{%- endmacro %}

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "components/export_buttons.html" import export_buttons with context %}
 {% block title %}Despesas{% endblock %}
 {% block page_title %}<i class="fa-solid fa-receipt mr-2 text-amber-500"></i>Despesas Gerais{% endblock %}
 
@@ -30,6 +31,11 @@
   {% if has_perm('financial.manage') %}
   <a href="{{ url_for('financial.new_expense') }}" class="text-sm px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700"><i class="fa-solid fa-plus mr-1"></i>Nova Despesa</a>
   {% endif %}
+  <div class="ml-auto">
+    {{ export_buttons(
+         pdf_url=url_for('financial.expenses_export_pdf', period=period, date_from=date_from, date_to=date_to, status=fstatus, category=fcategory, cost_center=fcost_center, supplier=fsupplier),
+         xlsx_url=url_for('financial.expenses_export_xlsx', period=period, date_from=date_from, date_to=date_to, status=fstatus, category=fcategory, cost_center=fcost_center, supplier=fsupplier)) }}
+  </div>
 </div>
 <form method="get" class="mb-6 bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm flex flex-wrap items-end gap-3">
   <div>
