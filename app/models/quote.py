@@ -62,7 +62,7 @@ class Quote(db.Model, TimestampMixin, SoftDeleteMixin):
             "aprovado":           "Aprovado",
             "reprovado":          "Reprovado",
             "pago":               "Pago",
-            "reserva_confirmada": "Reserva Confirmada",
+            "reserva_confirmada": "Reservado",
             "cancelado":          "Cancelado",
             "excluido":           "Exclu\u00eddo",
         }
