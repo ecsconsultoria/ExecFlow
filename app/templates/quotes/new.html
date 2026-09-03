@@ -281,11 +281,11 @@
                     <div class="flex items-center gap-2 flex-shrink-0">
                       <span class="text-sm font-bold text-blue-600 min-w-[64px] text-right"
                             x-text="fmtBRL(priceFor(svc))"></span>
-                      <input type="checkbox"
-                             :checked="cart.some(i => i._svc && i._svc.id === svc.id)"
-                             @change="toggleSvc(cat, svc)"
-                             :title="'Incluir ' + svc.name"
-                             class="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0">
+                      <button @click="addToCart(cat, svc)"
+                              class="inline-flex items-center gap-1 bg-yellow-500 hover:bg-yellow-600 text-black text-xs font-bold px-2.5 py-1.5 rounded-lg transition-colors shrink-0"
+                              :title="'Adicionar ' + svc.name">
+                        <i class="fa-solid fa-plus text-[10px]"></i> Adicionar
+                      </button>
                     </div>
                   </div>
                 </template>
@@ -585,11 +585,6 @@ function quoteBuilder() {
     getSvcTime(pricingId) { return this.svcTimeMap[pricingId] || ''; },
     setSvcTime(pricingId, val) { this.svcTimeMap[pricingId] = val; },
 
-    toggleSvc(cat, svc) {
-      const idx = this.cart.findIndex(i => i._svc && i._svc.id === svc.id);
-      if (idx >= 0) { this.cart.splice(idx, 1); }
-      else { this.addToCart(cat, svc); }
-    },
     addToCart(cat, svc) {
       const dateEl = document.getElementById('svcdate-' + svc.id);
       const timeEl = document.getElementById('svctime-' + svc.id);
