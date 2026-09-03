@@ -79,24 +79,23 @@ _LABELS: dict[str, dict[str, str]] = {
     "supplier_sig":    {"pt": "FORNECEDOR",                 "en": "SUPPLIER"},
     "date_sig":        {"pt": "DATA",                       "en": "DATE"},
     "emission":        {"pt": "DATA DE EMISSÃO",            "en": "ISSUE DATE"},
-    "delivery":        {"pt": "DATA PICKUP",                "en": "PICKUP DATE"},
     "vendor_lbl":      {"pt": "COMPRADOR",                  "en": "BUYER"},
     "generated":       {"pt": "GERADO EM",                  "en": "GENERATED ON"},
     # Operational
     "op_hdr":          {"pt": "DADOS OPERACIONAIS",           "en": "OPERATIONAL DATA"},
     "op_driver":       {"pt": "MOTORISTA",                    "en": "DRIVER"},
-    "op_driver_phone": {"pt": "FONE",                          "en": "PHONE"},
+    "op_driver_phone": {"pt": "TELEFONE DO MOTORISTA",        "en": "DRIVER PHONE"},
     "op_modelo":       {"pt": "MODELO",                        "en": "MODEL"},
     "op_plate":        {"pt": "PLACA",                        "en": "PLATE"},
-    "op_pickup":       {"pt": "DATA / HORA PICKUP",            "en": "PICKUP DATE/TIME"},
-    "op_pickup_date":  {"pt": "DATA PICKUP",                  "en": "PICKUP DATE"},
-    "op_pickup_time":  {"pt": "HORA PICKUP",                  "en": "PICKUP TIME"},
+    "op_pickup":       {"pt": "DATA / HORA DE EMBARQUE",       "en": "PICKUP DATE/TIME"},
+    "op_pickup_date":  {"pt": "DATA DE EMBARQUE",             "en": "PICKUP DATE"},
+    "op_pickup_time":  {"pt": "HORA DE EMBARQUE",             "en": "PICKUP TIME"},
     "op_from":         {"pt": "EMBARQUE",                        "en": "PICKUP LOCATION"},
     "op_to":           {"pt": "DESEMBARQUE",                     "en": "DROPOFF LOCATION"},
     "op_passenger":    {"pt": "PASSAGEIRO",                   "en": "PASSENGER"},
-    "op_pax_phone":    {"pt": "FONE PAX",                      "en": "PASSENGER PHONE"},
+    "op_pax_phone":    {"pt": "TELEFONE DO PASSAGEIRO",       "en": "PASSENGER PHONE"},
     "op_flight":       {"pt": "Nº VOO",                       "en": "FLIGHT NO."},
-    "op_pax":          {"pt": "PAX",                          "en": "PAX"},
+    "op_pax":          {"pt": "PASSAGEIROS",                  "en": "PAX"},
     "op_obs":          {"pt": "OBSERVAÇÕES",                  "en": "NOTES"},
 }
 
@@ -290,18 +289,6 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
     }
     status_val = _STATUS_LABELS.get(po.status or "rascunho", {}).get(lang, po.status or "–")
 
-    pickup_str = "–"
-    if getattr(po, "pickup_datetime", None):
-        pickup_str = _fmt_date(po.pickup_datetime, lang)
-    else:
-        # fallback: primeiro item com op_pickup_datetime
-        items_list = list(getattr(po, "items", None) or [])
-        for _it in items_list:
-            _dt = getattr(_it, "op_pickup_datetime", None)
-            if _dt:
-                pickup_str = _fmt_date(_dt, lang)
-                break
-
     linked_so_num = ""
     if getattr(po, "order", None):
         linked_so_num = po.order.number
@@ -310,12 +297,12 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
 
     meta_tbl = Table(
         [[Paragraph(h, cell_hdr) for h in [
-            _t("emission", lang), _t("delivery", lang),
+            _t("emission", lang),
             _t("linked_so", lang), _t("vendor_lbl", lang), "STATUS"]],
          [Paragraph(v, cell_body_c) for v in [
             _fmt_date(po.created_at, lang) if getattr(po, "created_at", None) else "–",
-            pickup_str, linked_so_num or "–", buyer_name or "–", status_val]]],
-        colWidths=[W * 0.16, W * 0.27, W * 0.21, W * 0.22, W * 0.14],
+            linked_so_num or "–", buyer_name or "–", status_val]]],
+        colWidths=[W * 0.22, W * 0.26, W * 0.26, W * 0.26],
     )
     meta_tbl.setStyle(TableStyle([
         ("BACKGROUND",    (0, 0), (-1, 0), BRAND_DARK),
@@ -605,13 +592,10 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
     story.append(Paragraph(_t("notes_hdr", lang), sec_hdr))
     story.append(HRFlowable(width=W, thickness=1, color=BRAND_GOLD, spaceAfter=3))
     bullet_st = ParagraphStyle("obs_bullet", parent=normal, leftIndent=12, firstLineIndent=-8)
-    if po.status != "faturado":
-        hora_extra_txt = (
-            "Hora Extra: 10% sobre o valor total da diária, a partir de 30 minutos de despera."
-            if lang == "pt" else
-            "Overtime: 10% of the total daily rate, after 30 minutes of waiting."
-        )
-        story.append(Paragraph(f"• {hora_extra_txt}", bullet_st))
+    if po.status != "faturado" and lang != "pt":
+        story.append(Paragraph(
+            "• Overtime: 10% of the total daily rate, after 30 minutes of waiting.",
+            bullet_st))
     if obs:
         from ..utils.translate import translate_obs
         obs_text = translate_obs(obs, lang) if lang != "pt" else obs

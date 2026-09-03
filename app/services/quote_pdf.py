@@ -416,7 +416,13 @@ def _translate_vehicle_desc(desc: str, lang: str) -> str:
 
 
 def _translate_vehicle(name: str, lang: str) -> str:
-    if lang == "pt" or not name:
+    if not name:
+        return name
+    if lang == "pt":
+        # armazenado em inglês (ex.: "Executive Sedan") → português
+        for k, v in _VEHICLE_EN.items():
+            if v.lower() == name.strip().lower():
+                return k
         return name
     k = name.strip().lower()
     result = _VEHICLE_EN.get(k) or _VEHICLE_EN.get(_swap_gender(k), "")
@@ -441,14 +447,28 @@ def _translate_driver(driver_type: str, lang: str) -> str:
         return driver_type
     key = driver_type.strip().lower()
     if lang == "pt":
-        return _DRIVER_PT.get(key, driver_type)
+        pt = _DRIVER_PT.get(key)
+        if pt:
+            return pt
+        # armazenado em inglês (ex.: "Bilingual Driver") → português
+        for k, v in _DRIVER_EN.items():
+            if v.lower() == key:
+                return _DRIVER_PT.get(k, driver_type)
+        return driver_type
     return _DRIVER_EN.get(key, driver_type)
 
 
 def _translate_service(name: str, lang: str, vehicle: str = "") -> str:
-    """Translate service name to English using V2-style regex transforms."""
-    if lang == "pt" or not name:
+    """Traduz o nome do serviço para o idioma do PDF."""
+    if not name:
         return name
+    if lang == "pt":
+        # Nomes armazenados em inglês → português (ex.: "Transfer GRU Airport")
+        v = re.sub(r"\bAirport\b", "Aeroporto", name, flags=re.IGNORECASE)
+        v = re.sub(r"\bTransfer\s+(\S+)\s+Aeroporto$", r"Transfer Aeroporto \1", v, flags=re.IGNORECASE)
+        v = re.sub(r"\bAirport\s+Transfer\b", "Transfer Aeroporto", v, flags=re.IGNORECASE)
+        v = re.sub(r"\bHourly\b", "Por Hora", v, flags=re.IGNORECASE)
+        return v
     is_freelance = "free lance" in vehicle.lower() if vehicle else False
     # Se o nome já contém "Airport", substitui apenas "Transfer Airport" → "Airport Transfer"
     # Senão, adiciona "Airport" antes de "Transfer" (ex: "Transfer CGH" → "Airport Transfer CGH")
