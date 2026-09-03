@@ -160,18 +160,19 @@ def test_dashboard_and_panel_same_source(testing_app):
     from app.blueprints.dashboard.routes import index as dash_index  # noqa: F401
     # a rota do Dashboard e o painel usam ar_ap_service — verificamos que a
     # tela do Dashboard renderiza os mesmos números da função central.
+    # Obs.: o dashboard usa "mês até hoje" (start..today) — vencimento = hoje
+    # garante presença no período em qualquer dia do mês.
     cid = _cid(testing_app)
-    due_aug = date(AUG1.year, AUG1.month, 25)
-    _so_with_parcel(testing_app, cid, due=due_aug, amount=3640.0)
-    _po_with_parcel(testing_app, cid, due=due_aug, amount=6600.0)
+    _so_with_parcel(testing_app, cid, due=TODAY, amount=3640.0)
+    _po_with_parcel(testing_app, cid, due=TODAY, amount=6600.0)
 
     c = testing_app.test_client()
     c.post("/auth/login", data={"email": ADMIN_EMAIL, "password": "admin123"},
            follow_redirects=False)
     page = c.get("/?period=this_month").get_data(as_text=True)
     with testing_app.app_context():
-        ar_total, _ = receivable_totals(cid, AUG1, AUG31)
-        ap_total = payable_totals(cid, AUG1, AUG31)["total"]
+        ar_total, _ = receivable_totals(cid, AUG1, TODAY)
+        ap_total = payable_totals(cid, AUG1, TODAY)["total"]
     # os valores do service aparecem na tela do dashboard (mesma fonte)
     assert "3.640,00" in page and "6.600,00" in page
     assert ar_total == 3640.0 and ap_total == 6600.0

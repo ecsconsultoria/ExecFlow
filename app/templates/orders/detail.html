@@ -487,6 +487,7 @@
                   data-email="{{ c.email or '' }}"
                   data-phone="{{ c.whatsapp or c.phone or '' }}"
                   data-contact="{{ c.contact or '' }}"
+                  data-document="{{ c.document or '' }}"
                   {{ 'selected' if order.client_id == c.id }}>{{ c.name }}</option>
           {% endfor %}
         </select>
@@ -525,7 +526,7 @@
 
       <div class="f-cnpj">
         <label class="lbl">CNPJ / CPF</label>
-        <p class="fi-ro">
+        <p class="fi-ro" id="client-cnpj-display">
           {{ order.client.document if order.client and order.client.document else '–' }}
         </p>
       </div>
@@ -1808,9 +1809,11 @@ function selectClient(clientId) {
   const emailInput  = document.querySelector('input[name="email"]');
   const celInput    = document.querySelector('input[name="celular"]');
   const contactEl   = document.getElementById('client-contact-display');
+  const cnpjEl      = document.getElementById('client-cnpj-display');
   if (emailInput && opt.dataset.email !== undefined) emailInput.value = opt.dataset.email;
   if (celInput   && opt.dataset.phone !== undefined) celInput.value   = opt.dataset.phone;
   if (contactEl  && opt.dataset.contact !== undefined) contactEl.textContent = opt.dataset.contact || '–';
+  if (cnpjEl     && opt.dataset.document !== undefined) cnpjEl.textContent = opt.dataset.document || '–';
 }
 
 function createClientInline() {

@@ -5,7 +5,7 @@ mimetype correto; dados e filtros corretos; RBAC/autenticação; isolamento
 por empresa; UTF-8/BRL; ausência de escrita no banco.
 """
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from io import BytesIO
 
 import pytest
@@ -207,7 +207,7 @@ def test_payables_exports_and_supplier_filter(testing_app):
     sup_b = _seed_supplier(testing_app, cid, "Fornecedor Beta")
     _seed_expense(testing_app, cid, cats["das"], cats["cc"],
                   desc="DAS / Simples Nacional — competência 07/2026",
-                  amount=1330.21, emission=date(2026, 7, 31), due=date(2026, 8, 31),
+                  amount=1330.21, emission=date(2026, 7, 31), due=date.today() + timedelta(days=10),
                   supplier_id=sup_a)
     _seed_expense(testing_app, cid, cats["prolabore"], cats["cc"],
                   desc="Outra despesa", amount=50.0,
@@ -248,7 +248,7 @@ def test_expenses_exports_utf8_and_status_filter(testing_app):
                   status="pago", paid_date=date(2026, 8, 10))
     _seed_expense(testing_app, cid, cats["das"], cats["cc"],
                   desc="DAS / Simples Nacional — competência 07/2026",
-                  amount=1330.21, emission=date(2026, 7, 31), due=date(2026, 8, 31))
+                  amount=1330.21, emission=date(2026, 7, 31), due=date.today() + timedelta(days=10))
 
     c = _login(testing_app)
     r = c.get("/financial/expenses")
@@ -290,7 +290,7 @@ def test_lancamentos_exports(testing_app):
                   status="pago", paid_date=date(2026, 8, 10))
     _seed_expense(testing_app, cid, cats["das"], cats["cc"],
                   desc="DAS / Simples Nacional — competência 07/2026",
-                  amount=1330.21, emission=date(2026, 7, 31), due=date(2026, 8, 31))
+                  amount=1330.21, emission=date(2026, 7, 31), due=date.today() + timedelta(days=10))
 
     c = _login(testing_app)
     r = c.get("/financial/")
