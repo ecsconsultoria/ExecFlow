@@ -419,9 +419,13 @@ def _translate_vehicle(name: str, lang: str) -> str:
     if not name:
         return name
     if lang == "pt":
-        # armazenado em inglês (ex.: "Executive Sedan") → português
+        # armazenado em inglês (ex.: "Executive Sedan") → português;
+        # comparação normalizada (ignora hífens/acentos: "Mini-Bus" == "Minibus")
+        def _norm(s: str) -> str:
+            return re.sub(r"[^a-z0-9]+", "", s.strip().lower())
+        nk = _norm(name)
         for k, v in _VEHICLE_EN.items():
-            if v.lower() == name.strip().lower():
+            if _norm(v) == nk:
                 return k
         return name
     k = name.strip().lower()
@@ -463,11 +467,16 @@ def _translate_service(name: str, lang: str, vehicle: str = "") -> str:
     if not name:
         return name
     if lang == "pt":
-        # Nomes armazenados em inglês → português (ex.: "Transfer GRU Airport")
-        v = re.sub(r"\bAirport\b", "Aeroporto", name, flags=re.IGNORECASE)
-        v = re.sub(r"\bTransfer\s+(\S+)\s+Aeroporto$", r"Transfer Aeroporto \1", v, flags=re.IGNORECASE)
-        v = re.sub(r"\bAirport\s+Transfer\b", "Transfer Aeroporto", v, flags=re.IGNORECASE)
+        # Nomes armazenados em inglês → português.
+        # Ordem importa: "Airport Transfer" precisa ser tratado ANTES do
+        # "Airport" → "Aeroporto" genérico.
+        v = re.sub(r"\bAirport\s+Transfer\b", "Transfer Aeroporto", name, flags=re.IGNORECASE)
+        v = re.sub(r"\bAirport\b", "Aeroporto", v, flags=re.IGNORECASE)
+        v = re.sub(r"\bTransfer\s+(\S+)\s+Aeroporto\b", r"Transfer Aeroporto \1", v, flags=re.IGNORECASE)
         v = re.sub(r"\bHourly\b", "Por Hora", v, flags=re.IGNORECASE)
+        v = re.sub(r"\bMonolingual\s+Driver\b", "Motorista Monolíngue", v, flags=re.IGNORECASE)
+        v = re.sub(r"\bBilingual\s+Driver\b", "Motorista Bilíngue", v, flags=re.IGNORECASE)
+        v = re.sub(r"\bFreelance\s+Driver\b", "Motorista Free Lance", v, flags=re.IGNORECASE)
         return v
     is_freelance = "free lance" in vehicle.lower() if vehicle else False
     # Se o nome já contém "Airport", substitui apenas "Transfer Airport" → "Airport Transfer"
