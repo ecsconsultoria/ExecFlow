@@ -55,6 +55,30 @@ class TestReversaPT:
         assert _translate_service("Airport Transfer CGH", "pt") == "Transfer Aeroporto CGH"
 
 
+# ── 2b. Transfer sem "Airport" NÃO pode ganhar "Airport" (SO 60) ────────────
+class TestTransferSemAirport:
+    @pytest.mark.parametrize("raw", [
+        "Transfer São Paulo x Lençóis Paulista",
+        "Transfer Lençóis Paulista x Araraquara",
+        "Transfer Araraquara x Holambra",
+        "Transfer Holambra x São Paulo",
+    ])
+    def test_transfer_intermunicipal_fica_como_esta(self, raw):
+        # Caso SO 60: transfers não-aeroporto não podem virar "Airport Transfer"
+        assert _translate_service(raw, "en") == raw
+
+    @pytest.mark.parametrize("raw,expected", [
+        # Nomes de aeroporto em inglês: só reordena
+        ("Transfer Airport CGH", "Airport Transfer CGH"),
+        ("Transfer Airport GRU", "Airport Transfer GRU"),
+        # Nomes cadastrados em português: traduz "Aeroporto" → "Airport"
+        ("Transfer Aeroporto Guarulhos", "Airport Transfer Guarulhos"),
+        ("Transfer Aeroporto", "Airport Transfer"),
+    ])
+    def test_transfer_aeroporto_mantem_airport(self, raw, expected):
+        assert _translate_service(raw, "en") == expected
+
+
 # ── 3. Tradução automática das observações ─────────────────────────────────
 class TestTranslateObs:
     def test_pt_devolve_original(self):

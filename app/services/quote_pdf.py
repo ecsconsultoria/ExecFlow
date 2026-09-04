@@ -485,12 +485,13 @@ def _translate_service(name: str, lang: str, vehicle: str = "") -> str:
         v = re.sub(r"\bDisposal\b", "Diária", v)
         return v
     is_freelance = "free lance" in vehicle.lower() if vehicle else False
-    # Se o nome já contém "Airport", substitui apenas "Transfer Airport" → "Airport Transfer"
-    # Senão, adiciona "Airport" antes de "Transfer" (ex: "Transfer CGH" → "Airport Transfer CGH")
+    # "Airport" NUNCA é inserido automaticamente: transfers intermunicipais
+    # (ex.: "Transfer São Paulo x Lençóis Paulista") não são de aeroporto.
+    # Só reordena quando o nome já contém "Airport" (inglês) ou "Aeroporto" (português).
     if re.search(r"\bAirport\b", name, re.IGNORECASE):
         v = re.sub(r"\bTransfer\s+Airport\b", "Airport Transfer", name, flags=re.IGNORECASE)
     else:
-        v = re.sub(r"\bTransfer\b", "Airport Transfer", name)
+        v = re.sub(r"\bTransfer\s+Aeroporto\b", "Airport Transfer", name, flags=re.IGNORECASE)
     if not is_freelance:
         # Padrão genérico para QUALQUER carga horária (5h, 10h, 14h, 24h...):
         # "Diária NNh + NNkm Franquia" → "Disposal NN Hours + NN Km Included".
