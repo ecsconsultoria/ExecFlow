@@ -25,7 +25,8 @@ from reportlab.platypus.frames import Frame
 from reportlab.lib.pagesizes import landscape as _landscape
 
 # Re-use brand constants + helpers from quote_pdf
-from .quote_pdf import BRAND_DARK, BRAND_GOLD, BRAND_LIGHT, _fmt_brl, _fmt_phone_link, _fmt_time_12h, _get_vehicle_model, _translate_service, _translate_vehicle, _translate_driver
+from . import quote_pdf as _qp
+from .quote_pdf import BRAND_DARK, BRAND_GOLD, BRAND_LIGHT, _fmt_brl, _fmt_phone_link, _fmt_time_12h, _get_vehicle_model, _translate_payment_terms, _translate_service, _translate_vehicle, _translate_driver
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -103,6 +104,26 @@ _LABELS: dict[str, dict[str, str]] = {
 def _t(key: str, lang: str) -> str:
     entry = _LABELS.get(key, {})
     return entry.get(lang) or entry.get("pt") or key
+
+
+def _pay_method_label(raw: str, lang: str) -> str:
+    """Traduz o VALOR da forma de pagamento (mesmo padrão dos PDFs de RFQ/SO).
+
+    Ex.: 'TRANSFERÊNCIA' → 'Wire Transfer' (en); 'DINHEIRO' → 'Cash' (en).
+    Valores fora do dicionário caem no texto original.
+    """
+    upper = (raw or "").strip().upper()
+    if not upper:
+        return "–"
+    lbl = _qp._t(f"pay_{upper}", lang)
+    if lbl == f"pay_{upper}":
+        return raw or "–"
+    return lbl
+
+
+def _pay_terms_label(raw: str, lang: str) -> str:
+    """Traduz o VALOR do prazo de pagamento (ex.: '15 dias' → '15 Days' no en)."""
+    return _translate_payment_terms((raw or "–").strip(), lang)
 
 
 # ─── Standalone Sign PDF ──────────────────────────────────────────────────────
@@ -332,7 +353,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
             _t("supplier_lbl", lang),
             "CONTATO" if lang == "pt" else "CONTACT",
             "EMAIL",
-            "TELEFONE" if lang == "pt" else "PHONE",
+            "CELULAR" if lang == "pt" else "PHONE",
             "CNPJ/CPF" if lang == "pt" else "TAX ID"]],
          [Paragraph(v, cell_body_c) for v in [
             sup_name, sup_contact, sup_email, sup_phone, sup_doc]]],
@@ -520,8 +541,8 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
         [[Paragraph(_t("payment_col",    lang),  cell_hdr),
           Paragraph(_t("prazo_col",       lang),  cell_hdr),
           Paragraph(_t("total_price_col", lang),  cell_hdr)],
-         [Paragraph(pay_method_raw or "–",        cell_body_c),
-          Paragraph(pay_terms_raw,                 cell_body_c),
+         [Paragraph(_pay_method_label(pay_method_raw, lang), cell_body_c),
+          Paragraph(_pay_terms_label(pay_terms_raw, lang),   cell_body_c),
           Paragraph(f"<b>{_fmt_brl(computed)}</b>",
                     ParagraphStyle("ctg2", fontSize=10, fontName="Helvetica-Bold",
                                    textColor=BRAND_GOLD, alignment=TA_CENTER, leading=12))]],
