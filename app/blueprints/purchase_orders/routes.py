@@ -26,6 +26,16 @@ def _void_po_financial_records(po):
     void_payment_financial_records(po.payments, "po_payment")
 
 
+def _normalize_lang(value: str) -> str:
+    """Normaliza o idioma do PDF ('pt'/'en').
+
+    Aceita valores malformados vindos de links antigos (ex.: 'pt?ts=123',
+    'en?_cb=456') cortando no primeiro '?'. Qualquer outro valor vira 'pt'.
+    """
+    lang = (value or "pt").split("?")[0]
+    return lang if lang in ("pt", "en") else "pt"
+
+
 
 @purchase_orders_bp.route("/")
 @login_required
@@ -345,7 +355,7 @@ def pdf(po_id):
             .populate_existing()
             .filter_by(id=po_id, company_id=current_user.company_id)
             .first_or_404())
-    lang = request.args.get("lang", "pt")
+    lang = _normalize_lang(request.args.get("lang", "pt"))
     buf  = generate_po_pdf(po, lang=lang)
     buf.seek(0)
     gc.collect()

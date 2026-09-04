@@ -3,12 +3,32 @@
 O PDF de PO traduzia rótulos, mas imprimia valores brutos em português no EN:
   'TRANSFERÊNCIA' (deveria ser 'Wire Transfer'), '15 dias' (deveria ser '15 Days').
 A correção usa o mesmo padrão já existente nos PDFs de RFQ e SO.
+Também cobre a normalização do idioma na rota do PDF (links com '?ts=' grudado).
 """
 from __future__ import annotations
 
 import pytest
 
+from app.blueprints.purchase_orders.routes import _normalize_lang
 from app.services.purchase_order_pdf import _pay_method_label, _pay_terms_label
+
+
+class TestNormalizeLang:
+    @pytest.mark.parametrize("raw,expected", [
+        ("pt", "pt"),
+        ("en", "en"),
+        # Links antigos com cache-buster grudado (bug do '?ts=' no template)
+        ("pt?ts=1756800000", "pt"),
+        ("en?ts=1756800000", "en"),
+        ("en?_cb=123.0", "en"),
+        # Valores inválidos caem no padrão pt
+        ("", "pt"),
+        (None, "pt"),
+        ("fr", "pt"),
+        ("PT", "pt"),
+    ])
+    def test_normalize(self, raw, expected):
+        assert _normalize_lang(raw) == expected
 
 
 class TestPayMethodLabel:
