@@ -477,6 +477,12 @@ def _translate_service(name: str, lang: str, vehicle: str = "") -> str:
         v = re.sub(r"\bMonolingual\s+Driver\b", "Motorista Monolíngue", v, flags=re.IGNORECASE)
         v = re.sub(r"\bBilingual\s+Driver\b", "Motorista Bilíngue", v, flags=re.IGNORECASE)
         v = re.sub(r"\bFreelance\s+Driver\b", "Motorista Free Lance", v, flags=re.IGNORECASE)
+        # Nomes armazenados em inglês: "Disposal NN Hours + NN Km Included" → "Diária NNh + NNkm Franquia"
+        v = re.sub(
+            r"\bDisposal\s+(\d{1,2})\s*Hours?\b(?:\s*\+\s*(\d+)\s*[Kk][Mm]\s*Included)?",
+            lambda m: f"Diária {int(m.group(1))}h + {m.group(2) or '100'}km Franquia",
+            v, flags=re.IGNORECASE)
+        v = re.sub(r"\bDisposal\b", "Diária", v)
         return v
     is_freelance = "free lance" in vehicle.lower() if vehicle else False
     # Se o nome já contém "Airport", substitui apenas "Transfer Airport" → "Airport Transfer"
@@ -486,14 +492,20 @@ def _translate_service(name: str, lang: str, vehicle: str = "") -> str:
     else:
         v = re.sub(r"\bTransfer\b", "Airport Transfer", name)
     if not is_freelance:
+        # Padrão genérico para QUALQUER carga horária (5h, 10h, 14h, 24h...):
+        # "Diária NNh + NNkm Franquia" → "Disposal NN Hours + NN Km Included".
+        # Km padrão quando o nome não informa a franquia: 50 para até 5h, 100 acima.
+        def _diaria_en(m):
+            hours = int(m.group(1))
+            km = m.group(2) or (50 if hours <= 5 else 100)
+            return f"Disposal {hours} Hours + {km} Km Included"
         v = re.sub(
-            r"Di[aá]ria\s+0?5h\b(?:\s*\+\s*(\d+)\s*[Kk][Mm]\s*Franquia)?",
-            lambda m: f"Disposal 5 Hours + {m.group(1) or '50'} Km Included",
-            v, flags=re.IGNORECASE)
+            r"Di[aá]ria\s+(\d{1,2})\s*h\b(?:\s*\+\s*(\d+)\s*[Kk][Mm]\s*Franquia)?",
+            _diaria_en, v, flags=re.IGNORECASE)
+        # Variante com "horas" por extenso: "Diária 14 horas + 100km Franquia"
         v = re.sub(
-            r"Di[aá]ria\s+10h\b(?:\s*\+\s*(\d+)\s*[Kk][Mm]\s*Franquia)?",
-            lambda m: f"Disposal 10 Hours + {m.group(1) or '100'} Km Included",
-            v, flags=re.IGNORECASE)
+            r"Di[aá]ria\s+(\d{1,2})\s*horas?(?:\s*\+\s*(\d+)\s*[Kk][Mm]\s*Franquia)?",
+            _diaria_en, v, flags=re.IGNORECASE)
     v = re.sub(r"\s*\+\s*\d+\s*[Kk][Mm]\s*Franquia", "", v, flags=re.IGNORECASE)
     v = re.sub(r"\bDi[aá]ria\b", "Disposal", v)
     return v
@@ -821,6 +833,11 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
     # ── Additional info (obs) ─────────────────────────────────────────────
     story.append(Paragraph(f"<b>{_t('add_info', lang)}:</b>", sec_hdr))
     obs = quote.obs or getattr(quote, "notes", None)
+    if obs and lang != "pt":
+        # Tradução automática das observações (Google Translate, sem API key).
+        # Em falha, translate_obs devolve o texto original — nunca quebra o PDF.
+        from ..utils.translate import translate_obs
+        obs = translate_obs(obs, lang)
     if obs:
         for line in obs.splitlines():
             # Escape user-provided text so it cannot override PDF font/size via markup.
