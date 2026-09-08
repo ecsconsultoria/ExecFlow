@@ -26,7 +26,7 @@ from reportlab.lib.pagesizes import landscape as _landscape
 
 # Re-use brand constants + helpers from quote_pdf
 from . import quote_pdf as _qp
-from .quote_pdf import BRAND_DARK, BRAND_GOLD, BRAND_LIGHT, _fmt_brl, _fmt_phone_link, _fmt_time_12h, _get_vehicle_model, _translate_payment_terms, _translate_service, _translate_vehicle, _translate_driver
+from .quote_pdf import BRAND_DARK, BRAND_GOLD, BRAND_LIGHT, _fmt_brl, _fmt_phone_link, _fmt_time_12h, _get_vehicle_model, _sanitize_phone, _translate_payment_terms, _translate_service, _translate_vehicle, _translate_driver
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -345,7 +345,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
     sup_name    = getattr(supplier, "name",     None) or "–"
     sup_contact = getattr(supplier, "contact",  None) or "–"
     sup_email   = getattr(supplier, "email",    None) or "–"
-    sup_phone   = getattr(supplier, "phone",    None) or "–"
+    sup_phone   = _sanitize_phone(getattr(supplier, "phone", None) or "–")
     sup_doc     = getattr(supplier, "document", None) or "–"
 
     sup_tbl = Table(

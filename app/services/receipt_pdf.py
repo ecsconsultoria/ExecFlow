@@ -38,6 +38,7 @@ from .quote_pdf import (
     _fmt_brl,
     _fmt_usd_raw,
     _fmt_phone_link,
+    _sanitize_phone,
     _translate_service,
     _translate_vehicle,
     _translate_driver,
@@ -467,7 +468,7 @@ def _build_receipt_pdf(order, payment, receipt_number: str, lang: str,
          [Paragraph(ctx["customer"]["name"].replace('\xa0', ' '),    cell_body_c),
           Paragraph(ctx["customer"]["contact"].replace('\xa0', ' '), cell_body_c),
           Paragraph(ctx["customer"]["email"].replace('\xa0', ' '),   cell_body_c),
-          Paragraph(ctx["customer"]["phone"].replace('\xa0', ' '),   cell_body_c)]],
+          Paragraph(_sanitize_phone(ctx["customer"]["phone"]),   cell_body_c)]],
         colWidths=[W * 0.28, W * 0.24, W * 0.30, W * 0.18],
     )
     client_tbl.setStyle(TableStyle([

@@ -29,6 +29,7 @@ from .quote_pdf import (
     _fmt_brl,
     _fmt_phone_link,
     _fmt_time_12h,
+    _sanitize_phone,
     _total_cell_text,
     _total_cell_aligned,
     _PAYMENT_TERMS_EN,
@@ -261,7 +262,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         [Paragraph((order.client.name if order.client and order.client.name else order.client_name) or "–", cell_body_c),
          Paragraph((order.client.contact if order.client and order.client.contact else order.contact_name) or "–", cell_body_c),
          Paragraph((order.client.email if order.client and order.client.email else order.email) or "–", cell_body_c),
-         Paragraph(((order.client.whatsapp if order.client and order.client.whatsapp else (order.client.phone if order.client else None)) or getattr(order, "celular", None) or order.phone or "–").replace('\xa0', ' '), cell_body_c)],
+         Paragraph(_sanitize_phone((order.client.whatsapp if order.client and order.client.whatsapp else (order.client.phone if order.client else None)) or getattr(order, "celular", None) or order.phone or "–"), cell_body_c)],
     ]
     client_tbl = Table(client_tbl_data,
                        colWidths=[W * 0.28, W * 0.24, W * 0.30, W * 0.18])

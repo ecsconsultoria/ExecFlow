@@ -14,7 +14,28 @@ import types
 
 import pytest
 
-from app.services.quote_pdf import _translate_service
+from app.services.quote_pdf import _sanitize_phone, _translate_service
+
+
+class TestSanitizePhone:
+    @pytest.mark.parametrize("raw,expected", [
+        # Hífen não separável (U+2011) — caso real do SO 65/RFQ 76
+        ("+55 21 98210‑1221", "+55 21 98210-1221"),
+        # Marcas de direção de texto (U+202A/U+202C) e espaços não separáveis
+        ("‪+55 21 98210‑1221‬", "+55 21 98210-1221"),
+        # Hífen comum e dígitos normais ficam como estão
+        ("(11) 99999-9999", "(11) 99999-9999"),
+        # Diversos hífens Unicode usados em telefones
+        ("11‐98210−1221", "11-98210-1221"),
+        ("11‒98210–1221", "11-98210-1221"),
+        ("11－98210﹘1221", "11-98210-1221"),
+        # Placeholder en-dash NÃO é convertido
+        ("–", "–"),
+        ("", ""),
+        (None, None),
+    ])
+    def test_sanitize(self, raw, expected):
+        assert _sanitize_phone(raw) == expected
 
 
 # ── 1. Padrão genérico de horas (EN) ──────────────────────────────────────
@@ -238,6 +259,15 @@ def _norm(s: str) -> str:
 
 
 class TestObsNoPdf:
+    def test_telefone_com_hifen_unicode_sai_corrigido(self):
+        # Caso real: telefone com U+2011 quebrava o glifo no PDF.
+        from app.services.quote_pdf import generate_quote_pdf
+        stub = _stub_quote()
+        stub.phone = "‪+55 21 98210‑1221‬"
+        buf = generate_quote_pdf(stub, lang="pt")
+        texto = _norm(_pdf_text(buf))
+        assert "98210-1221" in texto
+
     def test_en_traduz_observacoes(self, monkeypatch):
         from app.services.quote_pdf import generate_quote_pdf
         monkeypatch.setattr(

@@ -168,6 +168,28 @@ def _fmt_usd_raw(value: float) -> str:
     return f"{value:,.2f}"
 
 
+def _sanitize_phone(text: str) -> str:
+    """Normaliza telefone para impressão no PDF.
+
+    Telefones copiados de apps chegam com hífen não separável (U+2011),
+    marcas de direção de texto (U+202A/U+202C) e espaços não separáveis —
+    caracteres que a fonte Helvetica (WinAnsi) não consegue desenhar e que
+    viram glifos quebrados no PDF. Aqui viram '-' / espaço / são removidos.
+    """
+    if not text:
+        return text
+    v = text
+    # Hífens/dashes Unicode → '-' apenas quando há dígitos (número de
+    # telefone de verdade); o placeholder "–" (en dash) puro fica intacto.
+    if any(c.isdigit() for c in v):
+        v = re.sub(r"[‐‑‒–—−﹘﹣－]", "-", v)
+    # espaços não separáveis → espaço
+    v = v.replace(" ", " ").replace(" ", " ")
+    # marcas invisíveis de direção de texto (LTR/RTL embutidas)
+    v = re.sub(r"[‎‏‪-‮⁦-⁩]", "", v)
+    return v
+
+
 def _fmt_phone_link(phone: str, add_country: bool = True) -> str:
     """Retorna link WhatsApp clicável se o telefone tiver dígitos."""
     digits = ''.join(c for c in (phone or '') if c.isdigit())
@@ -176,7 +198,7 @@ def _fmt_phone_link(phone: str, add_country: bool = True) -> str:
     # Adiciona código do Brasil se não informado (apenas para motorista)
     if add_country and len(digits) <= 11 and not digits.startswith('55'):
         digits = '55' + digits
-    return f'<a href="https://wa.me/{digits}" color="#2563eb">{phone}</a>'
+    return f'<a href="https://wa.me/{digits}" color="#2563eb">{_sanitize_phone(phone)}</a>'
 
 
 def _total_cell_text(brl_total: float, lang: str, usd_rate) -> str:
@@ -622,7 +644,7 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
     contact_name = quote.contact_name or "–"
     email_str    = quote.email or (quote.client.email if quote.client else None) or "–"
     _cphn        = (quote.client.phone or getattr(quote.client, 'whatsapp', None)) if quote.client else None
-    phone_str    = (quote.phone or _cphn or "–").replace('\xa0', ' ')
+    phone_str    = _sanitize_phone(quote.phone or _cphn or "–")
     c_col_w = [W * 0.22, W * 0.20, W * 0.27, W * 0.17, W * 0.14]
 
     status_key = quote.status or "pendente"
