@@ -31,6 +31,10 @@ class TestDiariaGenericaEN:
         # Variante com "horas" por extenso
         ("Diária 14 horas + 100km Franquia", "Disposal 14 Hours + 100 Km Included"),
         ("Diária 14 Horas",             "Disposal 14 Hours + 100 Km Included"),
+        # Franquia ANTES do número (caso RFQ 76: "Diária 10h + Franquia 600km")
+        ("Diária 10h + Franquia 600km", "Disposal 10 Hours + 600 Km Included"),
+        ("Diária 10h + Franquia 600 km", "Disposal 10 Hours + 600 Km Included"),
+        ("Diária 14 horas + Franquia 600km", "Disposal 14 Hours + 600 Km Included"),
     ])
     def test_diaria_generica(self, raw, expected):
         assert _translate_service(raw, "en") == expected
@@ -39,6 +43,9 @@ class TestDiariaGenericaEN:
         # Comportamento antigo preservado: veículo free lance não recebe "Hours"
         assert (_translate_service("Diária 14h + 100km Franquia", "en",
                                    "Sedan Free Lance") == "Disposal 14h")
+        # Franquia na ordem inversa também é removida no free lance
+        assert (_translate_service("Diária 10h + Franquia 600km", "en",
+                                   "Sedan Free Lance") == "Disposal 10h")
 
 
 # ── 2. Regra reversa (PT) — nomes cadastrados em inglês ────────────────────

@@ -494,20 +494,25 @@ def _translate_service(name: str, lang: str, vehicle: str = "") -> str:
         v = re.sub(r"\bTransfer\s+Aeroporto\b", "Airport Transfer", name, flags=re.IGNORECASE)
     if not is_freelance:
         # Padrão genérico para QUALQUER carga horária (5h, 10h, 14h, 24h...):
-        # "Diária NNh + NNkm Franquia" → "Disposal NN Hours + NN Km Included".
+        # "Diária NNh [+ NNkm Franquia | + Franquia NNkm]" →
+        # "Disposal NN Hours + NN Km Included" (aceita as duas ordens de franquia).
         # Km padrão quando o nome não informa a franquia: 50 para até 5h, 100 acima.
         def _diaria_en(m):
             hours = int(m.group(1))
-            km = m.group(2) or (50 if hours <= 5 else 100)
+            km = m.group(2) or m.group(3) or (50 if hours <= 5 else 100)
             return f"Disposal {hours} Hours + {km} Km Included"
+        _FRANQUIA = (r"(?:\s*\+\s*(?:(\d+)\s*[Kk][Mm]\s*Franquia"
+                     r"|Franquia\s*(?:de\s*)?(\d+)\s*[Kk][Mm]))?")
         v = re.sub(
-            r"Di[aá]ria\s+(\d{1,2})\s*h\b(?:\s*\+\s*(\d+)\s*[Kk][Mm]\s*Franquia)?",
+            r"Di[aá]ria\s+(\d{1,2})\s*h\b" + _FRANQUIA,
             _diaria_en, v, flags=re.IGNORECASE)
         # Variante com "horas" por extenso: "Diária 14 horas + 100km Franquia"
         v = re.sub(
-            r"Di[aá]ria\s+(\d{1,2})\s*horas?(?:\s*\+\s*(\d+)\s*[Kk][Mm]\s*Franquia)?",
+            r"Di[aá]ria\s+(\d{1,2})\s*horas?" + _FRANQUIA,
             _diaria_en, v, flags=re.IGNORECASE)
-    v = re.sub(r"\s*\+\s*\d+\s*[Kk][Mm]\s*Franquia", "", v, flags=re.IGNORECASE)
+    # Remove restos de franquia não consumidos (ambas as ordens, ex.: free lance)
+    v = re.sub(r"\s*\+\s*(?:\d+\s*[Kk][Mm]\s*Franquia|Franquia\s*\d+\s*[Kk][Mm])",
+               "", v, flags=re.IGNORECASE)
     v = re.sub(r"\bDi[aá]ria\b", "Disposal", v)
     return v
 
