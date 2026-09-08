@@ -127,6 +127,77 @@ class TestTranslateObs:
         from app.utils.translate import translate_obs
         assert translate_obs("algum texto", "en") == "EN[algum texto]"
 
+    def test_pagina_de_erro_do_google_e_descartada(self, monkeypatch):
+        # Caso SO 65: Google respondeu com página de erro (status 200) e o
+        # deep-translator entregou o texto do erro como "tradução".
+        fake = types.ModuleType("deep_translator")
+
+        class _ErroGoogle:
+            def __init__(self, *a, **k):
+                pass
+
+            def translate(self, text):
+                return ("Error 500 (Server Error)!!1500. That's an error. "
+                        "There was an error. Please try again later. "
+                        "That's all we know.")
+
+        fake.GoogleTranslator = _ErroGoogle
+        monkeypatch.setitem(sys.modules, "deep_translator", fake)
+        from app.utils.translate import translate_obs
+        texto = "TESTE PEIDO"
+        assert translate_obs(texto, "en") == texto
+
+    def test_cache_reusa_traducao_sem_rechamar(self, monkeypatch):
+        # Gerações consecutivas do mesmo PDF não chamam o Google de novo.
+        import app.utils.translate as T
+        T._CACHE.clear()
+        chamadas = []
+        fake = types.ModuleType("deep_translator")
+
+        class _Conta:
+            def __init__(self, *a, **k):
+                pass
+
+            def translate(self, text):
+                chamadas.append(text)
+                return f"EN[{text}]"
+
+        fake.GoogleTranslator = _Conta
+        monkeypatch.setitem(sys.modules, "deep_translator", fake)
+        from app.utils.translate import translate_obs
+        assert translate_obs("TESTE PEIDO", "en") == "EN[TESTE PEIDO]"
+        assert translate_obs("TESTE PEIDO", "en") == "EN[TESTE PEIDO]"
+        assert len(chamadas) == 1
+        # Outro idioma não reusa o cache
+        assert translate_obs("TESTE PEIDO", "es") == "EN[TESTE PEIDO]"
+        assert len(chamadas) == 2
+
+    def test_falha_nao_poluia_o_cache(self, monkeypatch):
+        # Tradução falha → texto original e NÃO entra no cache (próxima
+        # tentativa pode chamar o serviço de novo).
+        import app.utils.translate as T
+        T._CACHE.clear()
+        fake = types.ModuleType("deep_translator")
+
+        class _FalhaUmaVez:
+            # contador de classe: translate_obs cria uma instância nova por chamada
+            n = 0
+
+            def __init__(self, *a, **k):
+                pass
+
+            def translate(self, text):
+                type(self).n += 1
+                if type(self).n == 1:
+                    raise RuntimeError("sem rede")
+                return f"EN[{text}]"
+
+        fake.GoogleTranslator = _FalhaUmaVez
+        monkeypatch.setitem(sys.modules, "deep_translator", fake)
+        from app.utils.translate import translate_obs
+        assert translate_obs("TESTE PEIDO 2", "en") == "TESTE PEIDO 2"
+        assert translate_obs("TESTE PEIDO 2", "en") == "EN[TESTE PEIDO 2]"
+
 
 # ── 4. Integração: observações dentro do PDF da RFQ ────────────────────────
 def _stub_quote(obs=""):
