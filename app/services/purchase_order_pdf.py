@@ -613,10 +613,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
     story.append(Paragraph(_t("notes_hdr", lang), sec_hdr))
     story.append(HRFlowable(width=W, thickness=1, color=BRAND_GOLD, spaceAfter=3))
     bullet_st = ParagraphStyle("obs_bullet", parent=normal, leftIndent=12, firstLineIndent=-8)
-    if po.status != "faturado" and lang != "pt":
-        story.append(Paragraph(
-            "• Overtime: 10% of the total daily rate, after 30 minutes of waiting.",
-            bullet_st))
+    # Frase de overtime removida definitivamente do PDF de PO (todos os idiomas).
     if obs:
         from ..utils.translate import translate_obs
         obs_text = translate_obs(obs, lang) if lang != "pt" else obs
