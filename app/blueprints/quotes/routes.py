@@ -28,6 +28,30 @@ def _get_rates():
     return nf, card
 
 
+def _edit_item_payload(it) -> dict:
+    """Serializa um QuoteItem para o edit_data do formulário (JSON).
+
+    Inclui data/hora do serviço: sem elas, uma simples edição (ex.: só nas
+    observações) apagava a data/hora gravada na primeira versão da RFQ.
+    """
+    return {
+        "service_id": it.service_id, "category_id": it.category_id,
+        "ref_note": it.ref_note or "", "description": it.description or "",
+        "vehicle_description": it.vehicle_description or "",
+        "driver_name": it.driver_name or "", "state_code": it.state_code or "",
+        "quantity": it.quantity, "unit_price": it.unit_price,
+        "hour_extra": it.hour_extra or 0, "total_price": it.total_price,
+        "price_base": it.price_base or 0, "price_nf": it.price_nf or 0,
+        "price_cartao": it.price_cartao or 0, "price_nf_cartao": it.price_nf_cartao or 0,
+        "km_extra": it.km_extra or 0, "km_extra_rate": it.km_extra_rate or 0,
+        "sort_order": it.sort_order or 0,
+        "service_date": (it.service_date.isoformat() if getattr(it, "service_date", None)
+                         else ""),
+        "service_time": (it.service_time.strftime("%H:%M") if getattr(it, "service_time", None)
+                         else ""),
+    }
+
+
 def _catalog_json():
     """Return JSON-serialisable structure: list of categories, each with services+prices."""
     nf_rate, card_rate = _get_rates()
@@ -243,16 +267,7 @@ def edit(qid):
                       or [{"text_pt": d["text_pt"], "text_en": d["text_en"],
                             "included": True, "sort_order": i}
                            for i, d in enumerate(DEFAULT_INCLUSIONS)],
-        "items": [{"service_id": it.service_id, "category_id": it.category_id,
-                   "ref_note": it.ref_note or "", "description": it.description or "",
-                   "vehicle_description": it.vehicle_description or "",
-                   "driver_name": it.driver_name or "", "state_code": it.state_code or "",
-                   "quantity": it.quantity, "unit_price": it.unit_price,
-                   "hour_extra": it.hour_extra or 0, "total_price": it.total_price,
-                   "price_base": it.price_base or 0, "price_nf": it.price_nf or 0,
-                   "price_cartao": it.price_cartao or 0, "price_nf_cartao": it.price_nf_cartao or 0,
-                   "km_extra": it.km_extra or 0, "km_extra_rate": it.km_extra_rate or 0,
-                   "sort_order": it.sort_order or 0}
+        "items": [_edit_item_payload(it)
                   for it in sorted(quote.items, key=lambda x: x.sort_order or 0)]
     }})
     states     = State.query.order_by(State.code).all()
