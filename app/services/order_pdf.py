@@ -530,13 +530,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
     story.append(Paragraph(obs_hdr_label, sec_hdr))
     story.append(HRFlowable(width=W, thickness=1, color=BRAND_GOLD, spaceAfter=3))
     bullet_st = ParagraphStyle("obs_bullet", parent=normal, leftIndent=12, firstLineIndent=-8)
-    if order.status != "faturado":
-        hora_extra_txt = (
-            "Hora Extra será cobrada a partir de 30 minutos de espera."
-            if lang == "pt" else
-            "Overtime will be charged after 30 minutes of waiting."
-        )
-        story.append(Paragraph(f"• {hora_extra_txt}", bullet_st))
+    # Frase de overtime removida definitivamente do PDF de SO (todos os idiomas).
     if order.obs:
         from ..utils.translate import translate_obs
         obs_text = translate_obs(order.obs, lang) if lang != "pt" else order.obs
