@@ -26,7 +26,7 @@ from reportlab.lib.pagesizes import landscape as _landscape
 
 # Re-use brand constants + helpers from quote_pdf
 from . import quote_pdf as _qp
-from .quote_pdf import BRAND_DARK, BRAND_GOLD, BRAND_LIGHT, _fmt_brl, _fmt_phone_link, _fmt_time_12h, _get_vehicle_model, _sanitize_phone, _translate_payment_terms, _translate_service, _translate_vehicle, _translate_driver
+from .quote_pdf import BRAND_DARK, BRAND_GOLD, BRAND_LIGHT, _fmt_brl, _fmt_phone_link, _fmt_time_12h, _get_vehicle_model, _sanitize_phone, _total_cell_text, _translate_payment_terms, _translate_service, _translate_vehicle, _translate_driver
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -543,7 +543,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
           Paragraph(_t("total_price_col", lang),  cell_hdr)],
          [Paragraph(_pay_method_label(pay_method_raw, lang), cell_body_c),
           Paragraph(_pay_terms_label(pay_terms_raw, lang),   cell_body_c),
-          Paragraph(f"<b>{_fmt_brl(computed)}</b>",
+          Paragraph(f"<b>{_total_cell_text(computed, lang, getattr(po, 'usd_rate', None))}</b>",
                     ParagraphStyle("ctg2", fontSize=10, fontName="Helvetica-Bold",
                                    textColor=BRAND_GOLD, alignment=TA_CENTER, leading=12))]],
         colWidths=[W * 0.36, W * 0.28, W * 0.36],
@@ -581,7 +581,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
             inst_rows.append([
                 Paragraph(f"{pmt.installment_no}/{total_pmts}", cell_body_c),
                 Paragraph(_fmt_date(pmt.due_date, lang),        cell_body_c),
-                Paragraph(_fmt_brl(pmt.amount or 0),            cell_body_r),
+                Paragraph(_total_cell_text(pmt.amount or 0, lang, getattr(po, 'usd_rate', None)), cell_body_r),
                 Paragraph(status_label,                         st_p),
             ])
 

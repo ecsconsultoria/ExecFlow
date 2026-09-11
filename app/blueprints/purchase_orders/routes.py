@@ -502,6 +502,8 @@ def update_adjustments(po_id):
 
     po.discount_type      = d.get("discount_type", "R$") or "R$"
     po.discount_value     = _pf(d.get("discount_value"))
+    rate = _pf(d.get("usd_rate"))
+    po.usd_rate           = rate if rate > 0 else None
     po.freight_amount     = _pf(d.get("freight_amount"))
     po.other_costs_amount = _pf(d.get("other_costs_amount"))
     po.other_costs_label  = d.get("other_costs_label", "") or ""

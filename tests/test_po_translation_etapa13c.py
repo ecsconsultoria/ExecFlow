@@ -11,6 +11,21 @@ import pytest
 
 from app.blueprints.purchase_orders.routes import _normalize_lang
 from app.services.purchase_order_pdf import _pay_method_label, _pay_terms_label
+from app.services.quote_pdf import _total_cell_text
+
+
+class TestTotalCellTextUSD:
+    def test_com_cotacao_mostra_usd(self):
+        out = _total_cell_text(9200.0, "en", 5.4)
+        assert "USD" in out
+
+    def test_sem_cotacao_nao_mostra_usd(self):
+        assert "USD" not in _total_cell_text(9200.0, "en", None)
+        assert "USD" not in _total_cell_text(9200.0, "pt", 0)
+
+    def test_formato_brl_preservado(self):
+        out = _total_cell_text(9200.0, "pt", None)
+        assert "9.200,00" in out
 
 
 class TestNormalizeLang:

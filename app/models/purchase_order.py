@@ -79,6 +79,7 @@ class PurchaseOrder(db.Model, TimestampMixin, SoftDeleteMixin):
     # Ajustes financeiros (afetam o total final)
     discount_type      = db.Column(db.String(5),   default="R$")   # 'R$' ou '%'
     discount_value     = db.Column(db.Float,        default=0)
+    usd_rate           = db.Column(db.Float,        nullable=True)  # cotação R$/USD p/ PDF
     freight_amount     = db.Column(db.Float,        default=0)
     other_costs_amount = db.Column(db.Float,        default=0)
     other_costs_label  = db.Column(db.String(200),  default="")
