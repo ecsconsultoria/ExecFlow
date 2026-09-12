@@ -10,8 +10,40 @@ from __future__ import annotations
 import pytest
 
 from app.blueprints.purchase_orders.routes import _normalize_lang
+from app.models.purchase_order import PurchaseOrder
 from app.services.purchase_order_pdf import _pay_method_label, _pay_terms_label
+from app.services.purchase_order_service import _apply_data
 from app.services.quote_pdf import _total_cell_text
+
+
+class TestApplyDataUsdRate:
+    """PO 75: usd_rate='' no save quebrava o Postgres (double precision)."""
+
+    def test_vazio_vira_none(self):
+        po = PurchaseOrder()
+        _apply_data(po, {"usd_rate": "", "amount": "1.100,00"})
+        assert po.usd_rate is None
+        assert po.amount == 1100.0
+
+    def test_virgula_parseia(self):
+        po = PurchaseOrder()
+        _apply_data(po, {"usd_rate": "5,40"})
+        assert po.usd_rate == 5.4
+
+    def test_zero_vira_none(self):
+        po = PurchaseOrder()
+        _apply_data(po, {"usd_rate": "0"})
+        assert po.usd_rate is None
+
+    def test_float_nativo_mantem(self):
+        po = PurchaseOrder()
+        _apply_data(po, {"usd_rate": 5.4})
+        assert po.usd_rate == 5.4
+
+    def test_invalido_vira_none(self):
+        po = PurchaseOrder()
+        _apply_data(po, {"usd_rate": "abc"})
+        assert po.usd_rate is None
 
 
 class TestTotalCellTextUSD:

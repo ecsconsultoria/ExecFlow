@@ -291,6 +291,16 @@ def _apply_data(po: PurchaseOrder, data: dict):
         if f in safe:
             safe[f] = _to_float(safe[f], 0.0)
 
+    # Cotação USD: vazio → None (coluna nullable); valor inválido/<= 0 → None.
+    # Postgres rejeita '' em coluna double precision.
+    if "usd_rate" in safe:
+        raw = safe["usd_rate"]
+        if raw in (None, ""):
+            safe["usd_rate"] = None
+        else:
+            rate = _to_float(raw, None)
+            safe["usd_rate"] = rate if rate and rate > 0 else None
+
     if "pax_count" in safe:
         try:
             safe["pax_count"] = int(safe["pax_count"]) if safe["pax_count"] not in (None, "") else 1
