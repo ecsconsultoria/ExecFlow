@@ -66,7 +66,8 @@ _T: dict[str, dict[str, str]] = {
     "page_lbl":         {"pt": "PÁGINA",                   "en": "PAGE"},
     "generated":        {"pt": "GERADO EM",                "en": "GENERATED ON"},
     # Operational data
-    "op_hdr":           {"pt": "DADOS OPERACIONAIS",       "en": "OPERATIONAL DATA"},
+    # Título da página de dados operacionais (aparece uma vez, no topo da página)
+    "op_page_title":    {"pt": "DETALHES DA AGENDA",       "en": "SCHEDULE DETAILS"},
     "op_driver":        {"pt": "MOTORISTA",                "en": "DRIVER NAME"},
     "op_driver_phone":  {"pt": "FONE",                     "en": "MOBILE"},
     "op_modelo":        {"pt": "MODELO",                   "en": "VEHICLE MODEL"},
@@ -560,6 +561,11 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         "op_title_c", fontName="Helvetica-Bold", fontSize=11,
         textColor=colors.white, alignment=TA_LEFT, leading=14,
     )
+    # Título da página de dados operacionais — grande e centralizado (24pt)
+    op_page_title_st = ParagraphStyle(
+        "op_page_title_c", fontName="Helvetica-Bold", fontSize=24,
+        textColor=BRAND_DARK, alignment=TA_CENTER, leading=28, spaceAfter=10,
+    )
 
     items_sorted = sorted(order.items, key=lambda it: (it.sort_order or 0, it.id))
     item_index = {it.id: i + 1 for i, it in enumerate(items_sorted)}
@@ -597,6 +603,8 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
 
     if op_groups:
         story.append(PageBreak())
+        # Título da página de dados operacionais (uma vez, antes dos blocos)
+        story.append(Paragraph(_t("op_page_title", lang), op_page_title_st))
 
     for key, items in op_groups:
         sample = items[0]
@@ -631,7 +639,9 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
             nums = ", ".join(f"#{item_index[it.id]}" for it in items)
             sub = (f"Item {nums}" if len(items) == 1 else
                    (f"Itens {nums}" if lang == "pt" else f"Items {nums}"))
-        hdr_text = f"{_t('op_hdr', lang)} \u2014 {sub}"
+        # Tarja do bloco: apenas o(s) item(ns). O rotulo "DADOS OPERACIONAIS" /
+        # "OPERATIONAL DATA" saiu - o titulo da pagina ja identifica a secao.
+        hdr_text = sub
 
         hdr_tbl = Table(
             [[Paragraph(hdr_text, op_title_st)]],

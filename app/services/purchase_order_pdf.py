@@ -83,7 +83,8 @@ _LABELS: dict[str, dict[str, str]] = {
     "vendor_lbl":      {"pt": "COMPRADOR",                  "en": "BUYER"},
     "generated":       {"pt": "GERADO EM",                  "en": "GENERATED ON"},
     # Operational
-    "op_hdr":          {"pt": "DADOS OPERACIONAIS",           "en": "OPERATIONAL DATA"},
+    # Título da página de dados operacionais (aparece uma vez, no topo da página)
+    "op_page_title":   {"pt": "DETALHES DA AGENDA",           "en": "SCHEDULE DETAILS"},
     "op_driver":       {"pt": "MOTORISTA",                    "en": "DRIVER"},
     "op_driver_phone": {"pt": "TELEFONE DO MOTORISTA",        "en": "DRIVER PHONE"},
     "op_modelo":       {"pt": "MODELO",                        "en": "MODEL"},
@@ -128,6 +129,15 @@ def _pay_terms_label(raw: str, lang: str) -> str:
 
 # ─── Standalone Sign PDF ──────────────────────────────────────────────────────
 
+# Título da página da placa de receptivo — pequeno e centralizado no cabeçalho.
+# Mesmo texto em pt e en; o '&' vai escapado para o Paragraph do ReportLab.
+_PLACA_TITULO = "Meet &amp; Greet"
+_PLACA_TITULO_ST = ParagraphStyle(
+    "placa_titulo", fontName="Helvetica-Bold", fontSize=11,
+    textColor=BRAND_DARK, alignment=TA_CENTER, leading=14, spaceAfter=2,
+)
+
+
 def generate_sign_pdf(text: str = "", img_path: str = "", img_pos: str = "abaixo") -> io.BytesIO:
     """Gera PDF standalone com uma página landscape para placa de receptivo."""
     buffer = io.BytesIO()
@@ -147,6 +157,9 @@ def generate_sign_pdf(text: str = "", img_path: str = "", img_pos: str = "abaixo
 def _render_sign_page(story: list, text: str, img_path: str, img_pos: str):
     """Adiciona conteúdo da placa de receptivo a uma story (reutilizável)."""
     ls_W_val = _landscape(A4)[0] - 40 * mm
+
+    # Cabeçalho da página da placa
+    story.append(Paragraph(_PLACA_TITULO, _PLACA_TITULO_ST))
 
     img_flowable = None
     if img_path:
@@ -169,7 +182,8 @@ def _render_sign_page(story: list, text: str, img_path: str, img_pos: str):
         else:                fs = 64
         sign_st = ParagraphStyle("placa_st", fontSize=fs, fontName="Helvetica-Bold",
                                   textColor=BRAND_DARK, alignment=TA_CENTER, leading=fs * 1.15)
-        story.append(Spacer(1, 30 * mm if (img_flowable and img_pos != 'centro') else 50 * mm))
+        # Espaçadores reduzidos em 8mm para compensar o título do cabeçalho
+        story.append(Spacer(1, 22 * mm if (img_flowable and img_pos != 'centro') else 42 * mm))
         story.append(Paragraph(text, sign_st))
         story.append(Spacer(1, 15 * mm))
         story.append(HRFlowable(width=ls_W_val * 0.5, thickness=2, color=BRAND_GOLD,
@@ -179,7 +193,7 @@ def _render_sign_page(story: list, text: str, img_path: str, img_pos: str):
             img_tbl.setStyle(TableStyle([("ALIGN", (0, 0), (-1, -1), "CENTER")]))
             story.append(img_tbl)
     elif img_flowable:
-        story.append(Spacer(1, 30 * mm))
+        story.append(Spacer(1, 22 * mm))
         img_tbl = Table([[img_flowable]], colWidths=[ls_W_val])
         img_tbl.setStyle(TableStyle([("ALIGN", (0, 0), (-1, -1), "CENTER")]))
         story.append(img_tbl)
@@ -637,6 +651,11 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
         "po_op_title", fontName="Helvetica-Bold", fontSize=11,
         textColor=colors.white, alignment=TA_LEFT, leading=14,
     )
+    # Título da página de dados operacionais — grande e centralizado (24pt)
+    op_page_title_st = ParagraphStyle(
+        "po_op_page_title", fontName="Helvetica-Bold", fontSize=24,
+        textColor=BRAND_DARK, alignment=TA_CENTER, leading=28, spaceAfter=10,
+    )
 
     items_sorted = sorted(po.items, key=lambda it: (getattr(it, "sort_order", 0) or 0, it.id))
     item_index   = {it.id: i + 1 for i, it in enumerate(items_sorted)}
@@ -672,6 +691,10 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
 
     if op_groups:
         story.append(PageBreak())
+        # Título da página de dados operacionais (uma vez, antes dos blocos).
+        # É sempre o título grande — a placa receptivo tem página própria
+        # (landscape), com o título "Meet & Greet" em _render_sign_page.
+        story.append(Paragraph(_t("op_page_title", lang), op_page_title_st))
 
     for key, items in op_groups:
         sample = items[0]
@@ -703,7 +726,9 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
             nums = ", ".join(f"#{item_index[it.id]}" for it in items)
             sub = (f"Item {nums}" if len(items) == 1 else
                    (f"Itens {nums}" if lang == "pt" else f"Items {nums}"))
-        hdr_text = f"{_t('op_hdr', lang)} \u2014 {sub}"
+        # Tarja do bloco: apenas o(s) item(ns). O rotulo "DADOS OPERACIONAIS" /
+        # "OPERATIONAL DATA" saiu - o titulo da pagina ja identifica a secao.
+        hdr_text = sub
 
         hdr_tbl = Table(
             [[Paragraph(hdr_text, op_title_st)]],
