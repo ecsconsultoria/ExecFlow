@@ -787,7 +787,7 @@
         </div>
         {% endif %}
       </div>
-      {% if po.status not in ('faturado', 'pago', 'cancelado') %}
+      {% if not locked %}
       <div class="space-y-2">
         <div>
           <label class="lbl text-slate-400">Forma</label>
