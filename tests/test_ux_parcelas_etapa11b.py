@@ -150,14 +150,19 @@ def test_detail_renders_summary_and_badges(testing_app):
 
     c = _login(testing_app)
     page = c.get(f"/orders/{oid_parcial}").get_data(as_text=True)
-    assert "PARCIAL" in page and "saldo R$ 600,00" in page
+    assert "PARCIAL" in page
+    # Etapa 13P: Recebido / Saldo / Status viraram colunas separadas — cada valor
+    # fica na sua própria célula, sob o seu cabeçalho (sem o prefixo "saldo ").
+    assert ">Recebido</th>" in page and ">Saldo</th>" in page and ">Status</th>" in page
+    assert "R$ 400,00</td>" in page and "R$ 600,00</td>" in page
     assert 'data-balance="600,00"' in page          # modal pré-preenche o SALDO
 
     page = c.get(f"/orders/{oid_aberta}").get_data(as_text=True)
     assert "ABERTA" in page
 
     page = c.get(f"/orders/{oid_quitada}").get_data(as_text=True)
-    assert "QUITADA" in page and "saldo R$ 0,00" in page
+    # Etapa 13Q: o badge visível da parcela quitada passou a ser RECEBIDO
+    assert "</i>RECEBIDO" in page and "R$ 0,00</td>" in page
 
 
 def test_detail_timeline_render(testing_app):

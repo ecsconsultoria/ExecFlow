@@ -834,7 +834,9 @@
             <th class="px-2 py-1.5 text-left hidden sm:table-cell">Obs</th>
             <th class="px-2 py-1.5 text-right">Valor</th>
             <th class="px-2 py-1.5 text-center w-28">Baixa</th>
-            <th class="px-2 py-1.5 text-center">Recebido / Saldo / Status</th>
+            <th class="px-2 py-1.5 text-center whitespace-nowrap">Recebido</th>
+            <th class="px-2 py-1.5 text-center whitespace-nowrap">Saldo</th>
+            <th class="px-2 py-1.5 text-center whitespace-nowrap">Status</th>
             <th class="px-2 py-1.5 w-6"></th>
           </tr>
         </thead>
@@ -862,16 +864,12 @@
               </button>
               {% endif %}
             </td>
-            <td class="px-2 py-1.5 text-center">
-              <p class="font-mono text-xs text-emerald-600">{{ pmt.paid_amount|currency }}</p>
-              <p class="font-mono text-xs text-amber-600 dark:text-amber-400">saldo {{ pmt.balance|currency }}</p>
+            <td class="px-2 py-1.5 text-center font-mono text-xs text-emerald-600 whitespace-nowrap">{{ pmt.paid_amount|currency }}</td>
+            <td class="px-2 py-1.5 text-center font-mono text-xs text-amber-600 dark:text-amber-400 whitespace-nowrap">{{ pmt.balance|currency }}</td>
+            <td class="px-2 py-1.5 text-center whitespace-nowrap">
               <span class="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-[10px] font-semibold">PARCIAL</span>
             </td>
             <td class="px-2 py-1.5 text-center">
-              <button type="button" onclick="togglePmtExtra({{ pmt.id }})"
-                      class="p-1 rounded text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700" title="Detalhes" aria-label="Detalhes">
-                <i class="fa-solid fa-chevron-down text-xs"></i>
-              </button>
               {% if order.status in ('faturado', 'aberto', 'concluido') %}
               <button type="button" onclick="estornarPmt({{ pmt.id }})"
                       class="p-1 rounded text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/30"
@@ -894,14 +892,14 @@
               </td>
               <td class="px-2 py-1.5 hidden sm:table-cell">
                 <input type="text" name="notes" value="{{ pmt.notes or '' }}"
-                       placeholder="nota..." class="fi" style="min-width:80px"
+                       placeholder="nota..." class="fi" style="min-width:56px"
                        onblur="savePmtNotes({{ pmt.id }}, this.value)"
                        onkeydown="if(event.key==='Enter')this.blur()">
               </td>
               <td class="px-2 py-1.5">
                 <input type="text" name="amount"
                        value="{{ '%.2f'|format(pmt.amount or 0)|replace('.', ',') }}"
-                       class="fi text-right font-mono" style="min-width:75px">
+                       class="fi text-right font-mono" style="min-width:62px">
               </td>
             </form>
             <td class="px-2 py-1.5 text-center"
@@ -916,9 +914,9 @@
               </button>
               {% endif %}
             </td>
-            <td class="px-2 py-1.5 text-center">
-              <p class="font-mono text-xs text-slate-400">R$ 0,00</p>
-              <p class="font-mono text-xs text-amber-600 dark:text-amber-400">saldo {{ pmt.amount|currency }}</p>
+            <td class="px-2 py-1.5 text-center font-mono text-xs text-slate-400 whitespace-nowrap">R$ 0,00</td>
+            <td class="px-2 py-1.5 text-center font-mono text-xs text-amber-600 dark:text-amber-400 whitespace-nowrap">{{ pmt.amount|currency }}</td>
+            <td class="px-2 py-1.5 text-center whitespace-nowrap">
               <span class="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px] font-semibold">ABERTA</span>
             </td>
             <td class="px-2 py-1.5 text-center">
@@ -936,18 +934,14 @@
             <td class="px-2 py-1.5 text-slate-400 italic hidden sm:table-cell">{{ pmt.notes or '–' }}</td>
             <td class="px-2 py-1.5 text-right font-semibold text-emerald-600 font-mono">{{ pmt.paid_amount|currency }}</td>
             <td class="px-2 py-1.5 text-center text-slate-300">–</td>
-            <td class="px-2 py-1.5 text-center">
-              <p class="font-mono text-xs text-emerald-600">{{ pmt.paid_amount|currency }}</p>
-              <p class="font-mono text-xs text-slate-400">saldo R$ 0,00</p>
+            <td class="px-2 py-1.5 text-center font-mono text-xs text-emerald-600 whitespace-nowrap">{{ pmt.paid_amount|currency }}</td>
+            <td class="px-2 py-1.5 text-center font-mono text-xs text-slate-400 whitespace-nowrap">R$ 0,00</td>
+            <td class="px-2 py-1.5 text-center whitespace-nowrap">
               <span class="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[10px] font-semibold">
-                <i class="fa-solid fa-check mr-0.5"></i>QUITADA
+                <i class="fa-solid fa-check mr-0.5"></i>RECEBIDO
               </span>
             </td>
             <td class="px-2 py-1.5 text-center">
-              <button type="button" onclick="togglePmtExtra({{ pmt.id }})"
-                      class="p-1 rounded text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700" title="Detalhes" aria-label="Detalhes">
-                <i class="fa-solid fa-chevron-down text-xs"></i>
-              </button>
               {% if order.status in ('faturado', 'aberto', 'concluido') %}
               <button type="button" onclick="estornarPmt({{ pmt.id }})"
                       class="p-1 rounded text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/30"
@@ -960,7 +954,7 @@
           </tr>
           {# ── Linha expansível: resumo + histórico (Etapa 11B) ── #}
           <tr id="pmt-extra-{{ pmt.id }}" style="display:none" class="bg-slate-50/70 dark:bg-slate-700/20">
-            <td colspan="7" class="px-3 py-2">
+            <td colspan="9" class="px-3 py-2">
               {% if pmt.is_paid %}
                 {{ payment_summary(pmt.amount, pmt.paid_amount, 'QUITADA', 'success', due_date=pmt.due_date, paid_at=pmt.paid_at) }}
               {% elif pmt_partial %}
@@ -975,19 +969,16 @@
         </tbody>
         <tfoot class="border-t-2 border-slate-200 dark:border-slate-600 text-xs">
           {% if order.total_paid() > 0 %}
+          {# Totais consolidados: os rotulos "Recebido"/"Saldo" sairam (as colunas ja
+             identificam os valores) e os dois totais ficam na mesma linha. #}
           <tr>
-            <td colspan="3" class="px-2 py-1.5 text-right font-semibold text-emerald-600">Recebido</td>
-            <td class="px-2 py-1.5 text-right font-bold text-emerald-600 font-mono">{{ order.total_paid()|currency }}</td>
-            <td colspan="3"></td>
-          </tr>
-          <tr>
-            <td colspan="3" class="px-2 py-1.5 text-right font-semibold
-              {% if order.total_pending()>0 %}text-red-500{% else %}text-emerald-600{% endif %}">Saldo</td>
-            <td class="px-2 py-1.5 text-right font-bold font-mono
+            <td colspan="5"></td>
+            <td class="px-2 py-1.5 text-center font-bold text-emerald-600 font-mono whitespace-nowrap">{{ order.total_paid()|currency }}</td>
+            <td class="px-2 py-1.5 text-center font-bold font-mono whitespace-nowrap
               {% if order.total_pending()>0 %}text-red-500{% else %}text-emerald-600{% endif %}">
               {{ order.total_pending()|currency }}
             </td>
-            <td colspan="3"></td>
+            <td colspan="2"></td>
           </tr>
           {% endif %}
         </tfoot>
@@ -1161,9 +1152,9 @@
       + ' onblur="savePmtDueDate(' + p.id + ', this.value)">';
     tr.appendChild(tdDue);
     const tdNotes = document.createElement('td');
-    tdNotes.className = 'px-2 py-1.5';
+    tdNotes.className = 'px-2 py-1.5 hidden sm:table-cell';
     tdNotes.innerHTML = '<input type="text" placeholder="nota..." value="' + (p.notes || '').replace(/"/g, '&quot;') + '"' +
-      ' class="fi" style="min-width:80px"' +
+      ' class="fi" style="min-width:56px"' +
       ' onblur="savePmtNotes(' + p.id + ', this.value)"' +
       ' onkeydown="if(event.key===\'Enter\')this.blur()">';
     tr.appendChild(tdNotes);
@@ -1178,6 +1169,19 @@
     tdBx.dataset.amount = amtVal;
     tdBx.innerHTML = '<button type="button" class="p-1 rounded text-emerald-600 hover:bg-emerald-100" title="Dar baixa" onclick="openBaixaO(' + p.id + ')"><i class="fa-solid fa-circle-check"></i></button>';
     tr.appendChild(tdBx);
+    // Colunas Recebido, Saldo e Status - iguais as linhas renderizadas pelo servidor
+    const tdRec = document.createElement('td');
+    tdRec.className = 'px-2 py-1.5 text-center font-mono text-xs text-slate-400 whitespace-nowrap';
+    tdRec.textContent = 'R$ 0,00';
+    tr.appendChild(tdRec);
+    const tdSld = document.createElement('td');
+    tdSld.className = 'px-2 py-1.5 text-center font-mono text-xs text-amber-600 dark:text-amber-400 whitespace-nowrap';
+    tdSld.textContent = amtDisp;
+    tr.appendChild(tdSld);
+    const tdSt = document.createElement('td');
+    tdSt.className = 'px-2 py-1.5 text-center whitespace-nowrap';
+    tdSt.innerHTML = '<span class="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px] font-semibold">ABERTA</span>';
+    tr.appendChild(tdSt);
     const tdDel = document.createElement('td');
     tdDel.className = 'px-2 py-1.5 text-center';
     tdDel.innerHTML = '<button type="button" onclick="deletePmt(' + p.id + ')" class="p-1 rounded text-red-400 hover:bg-red-100" title="Excluir"><i class="fa-solid fa-trash-can" style="font-size:9px"></i></button>';

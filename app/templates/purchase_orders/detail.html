@@ -825,8 +825,7 @@
       </div>
       {% else %}
       <div class="pt-1 text-center">
-        <p class="text-xs text-slate-400 italic">Agenda de pagamentos encerrada</p>
-        {% if po.payment_method %}<p class="text-xs text-slate-300 mt-1">{{ po.payment_method }}</p>{% endif %}
+        {% if po.payment_method %}<p class="text-xs text-slate-300">{{ po.payment_method }}</p>{% endif %}
       </div>
       {% endif %}
     </div>
@@ -847,7 +846,9 @@
             <th class="px-2 py-1.5 text-left hidden sm:table-cell">Obs</th>
             <th class="px-2 py-1.5 text-right">Valor</th>
             <th class="px-2 py-1.5 text-center w-28">Baixa</th>
-            <th class="px-2 py-1.5 text-center">Pago / Saldo / Status</th>
+            <th class="px-2 py-1.5 text-center whitespace-nowrap">Pago</th>
+            <th class="px-2 py-1.5 text-center whitespace-nowrap">Saldo</th>
+            <th class="px-2 py-1.5 text-center whitespace-nowrap">Status</th>
             <th class="px-2 py-1.5 w-6"></th>
           </tr>
         </thead>
@@ -875,16 +876,12 @@
               </button>
               {% endif %}
             </td>
-            <td class="px-2 py-1.5 text-center">
-              <p class="font-mono text-xs text-emerald-600">{{ pmt.paid_amount|currency }}</p>
-              <p class="font-mono text-xs text-amber-600 dark:text-amber-400">saldo {{ pmt.balance|currency }}</p>
+            <td class="px-2 py-1.5 text-center font-mono text-xs text-emerald-600 whitespace-nowrap">{{ pmt.paid_amount|currency }}</td>
+            <td class="px-2 py-1.5 text-center font-mono text-xs text-amber-600 dark:text-amber-400 whitespace-nowrap">{{ pmt.balance|currency }}</td>
+            <td class="px-2 py-1.5 text-center whitespace-nowrap">
               <span class="px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded text-[10px] font-semibold">PARCIAL</span>
             </td>
             <td class="px-2 py-1.5 text-center">
-              <button type="button" onclick="togglePmtExtra({{ pmt.id }})"
-                      class="p-1 rounded text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700" title="Detalhes" aria-label="Detalhes">
-                <i class="fa-solid fa-chevron-down text-xs"></i>
-              </button>
               {% if po.status not in ('cancelado', 'rascunho') %}
               <button type="button" onclick="estornarPmt({{ pmt.id }})"
                       class="p-1 rounded text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/30"
@@ -904,13 +901,13 @@
               </td>
               <td class="px-2 py-1.5 hidden sm:table-cell">
                 <input type="text" name="notes" value="{{ pmt.notes or '' }}"
-                       placeholder="nota..." class="fi" style="min-width:80px"
+                       placeholder="nota..." class="fi" style="min-width:56px"
                        onblur="savePmt({{ pmt.id }}, 'notes', this.value)">
               </td>
               <td class="px-2 py-1.5">
                 <input type="text" name="amount"
                        value="{{ '%.2f'|format(pmt.amount or 0)|replace('.', ',') }}"
-                       class="fi text-right font-mono" style="min-width:75px"
+                       class="fi text-right font-mono" style="min-width:62px"
                        onblur="savePmt({{ pmt.id }}, 'amount', this.value)">
               </td>
             <td class="px-2 py-1.5 text-center"
@@ -925,9 +922,9 @@
               </button>
               {% endif %}
             </td>
-            <td class="px-2 py-1.5 text-center">
-              <p class="font-mono text-xs text-slate-400">R$ 0,00</p>
-              <p class="font-mono text-xs text-amber-600 dark:text-amber-400">saldo {{ pmt.amount|currency }}</p>
+            <td class="px-2 py-1.5 text-center font-mono text-xs text-slate-400 whitespace-nowrap">R$ 0,00</td>
+            <td class="px-2 py-1.5 text-center font-mono text-xs text-amber-600 dark:text-amber-400 whitespace-nowrap">{{ pmt.amount|currency }}</td>
+            <td class="px-2 py-1.5 text-center whitespace-nowrap">
               <span class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 rounded text-[10px] font-semibold">ABERTA</span>
             </td>
             <td class="px-2 py-1.5 text-center">
@@ -943,18 +940,14 @@
             <td class="px-2 py-1.5 text-slate-400 italic hidden sm:table-cell">{{ pmt.notes or '–' }}</td>
             <td class="px-2 py-1.5 text-right font-semibold text-emerald-600 font-mono">{{ pmt.paid_amount|currency }}</td>
             <td class="px-2 py-1.5 text-center text-slate-300">–</td>
-            <td class="px-2 py-1.5 text-center">
-              <p class="font-mono text-xs text-emerald-600">{{ pmt.paid_amount|currency }}</p>
-              <p class="font-mono text-xs text-slate-400">saldo R$ 0,00</p>
+            <td class="px-2 py-1.5 text-center font-mono text-xs text-emerald-600 whitespace-nowrap">{{ pmt.paid_amount|currency }}</td>
+            <td class="px-2 py-1.5 text-center font-mono text-xs text-slate-400 whitespace-nowrap">R$ 0,00</td>
+            <td class="px-2 py-1.5 text-center whitespace-nowrap">
               <span class="px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 rounded text-[10px] font-semibold">
-                <i class="fa-solid fa-check mr-0.5"></i>QUITADA
+                <i class="fa-solid fa-check mr-0.5"></i>PAGO
               </span>
             </td>
             <td class="px-2 py-1.5 text-center">
-              <button type="button" onclick="togglePmtExtra({{ pmt.id }})"
-                      class="p-1 rounded text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700" title="Detalhes" aria-label="Detalhes">
-                <i class="fa-solid fa-chevron-down text-xs"></i>
-              </button>
               {% if po.status not in ('cancelado', 'rascunho') %}
               <button type="button" onclick="estornarPmt({{ pmt.id }})"
                       class="p-1 rounded text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/30"
@@ -967,7 +960,7 @@
           </tr>
           {# ── Linha expansível: resumo + histórico (Etapa 11B) ── #}
           <tr id="pmt-extra-{{ pmt.id }}" style="display:none" class="bg-slate-50/70 dark:bg-slate-700/20">
-            <td colspan="7" class="px-3 py-2">
+            <td colspan="9" class="px-3 py-2">
               {% if pmt.is_paid %}
                 {{ payment_summary(pmt.amount, pmt.paid_amount, 'QUITADA', 'success', due_date=pmt.due_date, paid_at=pmt.paid_at) }}
               {% elif pmt_partial %}
@@ -982,19 +975,16 @@
         </tbody>
         <tfoot class="border-t-2 border-slate-200 dark:border-slate-600 text-xs">
           {% if po.total_paid() > 0 %}
+          {# Totais consolidados: os rotulos "Pago"/"Saldo" sairam (as colunas ja
+             identificam os valores) e os dois totais ficam na mesma linha. #}
           <tr>
-            <td colspan="3" class="px-2 py-1.5 text-right font-semibold text-emerald-600">Pago</td>
-            <td class="px-2 py-1.5 text-right font-bold text-emerald-600 font-mono">{{ po.total_paid()|currency }}</td>
-            <td colspan="3"></td>
-          </tr>
-          <tr>
-            <td colspan="3" class="px-2 py-1.5 text-right font-semibold
-              {% if po.total_pending()>0 %}text-red-500{% else %}text-emerald-600{% endif %}">Saldo</td>
-            <td class="px-2 py-1.5 text-right font-bold font-mono
+            <td colspan="5"></td>
+            <td class="px-2 py-1.5 text-center font-bold text-emerald-600 font-mono whitespace-nowrap">{{ po.total_paid()|currency }}</td>
+            <td class="px-2 py-1.5 text-center font-bold font-mono whitespace-nowrap
               {% if po.total_pending()>0 %}text-red-500{% else %}text-emerald-600{% endif %}">
               {{ po.total_pending()|currency }}
             </td>
-            <td colspan="3"></td>
+            <td colspan="2"></td>
           </tr>
           {% endif %}
         </tfoot>
@@ -1700,6 +1690,7 @@ function submitGenPayments() {
       tr.id = 'pmt-row-' + p.id;
       tr.className = 'hover:bg-slate-50/50';
       const amt_fmt = p.amount.toFixed(2).replace('.', ',');
+      const amt_disp = 'R$ ' + p.amount.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
       const rowUrl  = updUrl.replace('/0/', '/' + p.id + '/');
     const bUrl    = baixaUrl.replace('/0/', '/' + p.id + '/');
       tr.innerHTML = `
@@ -1708,12 +1699,12 @@ function submitGenPayments() {
           <input type="date" name="due_date" value="${p.due_date}" class="fi" style="min-width:120px"
                  onchange="savePmt(${p.id}, 'due_date', this.value)">
         </td>
-        <td class="px-2 py-1.5">
-          <input type="text" name="notes" value="${p.notes || ''}" placeholder="nota..." class="fi" style="min-width:80px"
+        <td class="px-2 py-1.5 hidden sm:table-cell">
+          <input type="text" name="notes" value="${p.notes || ''}" placeholder="nota..." class="fi" style="min-width:56px"
                  onblur="savePmt(${p.id}, 'notes', this.value)">
         </td>
         <td class="px-2 py-1.5">
-          <input type="text" name="amount" value="${amt_fmt}" class="fi text-right font-mono" style="min-width:75px"
+          <input type="text" name="amount" value="${amt_fmt}" class="fi text-right font-mono" style="min-width:62px"
                  onblur="savePmt(${p.id}, 'amount', this.value)">
         </td>
         <td class="px-2 py-1.5 text-center"
@@ -1726,7 +1717,11 @@ function submitGenPayments() {
             <i class="fa-solid fa-circle-check"></i>
           </button>
         </td>
-        <td class="px-2 py-1.5 text-center text-slate-400">–</td>
+        <td class="px-2 py-1.5 text-center font-mono text-xs text-slate-400 whitespace-nowrap">R$ 0,00</td>
+        <td class="px-2 py-1.5 text-center font-mono text-xs text-amber-600 dark:text-amber-400 whitespace-nowrap">${amt_disp}</td>
+        <td class="px-2 py-1.5 text-center whitespace-nowrap">
+          <span class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 rounded text-[10px] font-semibold">ABERTA</span>
+        </td>
         <td class="px-2 py-1.5 text-center">
           <button type="button" onclick="deletePmt(${p.id})"
                   class="p-1 rounded text-red-400 hover:bg-red-100">
