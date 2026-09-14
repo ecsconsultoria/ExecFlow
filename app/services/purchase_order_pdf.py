@@ -319,7 +319,9 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
         "enviado":     {"pt": "Aberto",      "en": "Open"},
         "aprovado":    {"pt": "Aprovado",     "en": "Approved"},
         "em_execucao": {"pt": "Em Execução",  "en": "In Execution"},
-        "concluido":   {"pt": "Concluído",    "en": "Concluded"},
+        # concluido e pago exibem o mesmo rotulo: CONCLUIDO (pt) / COMPLETED (en)
+        "concluido":   {"pt": "CONCLUÍDO",    "en": "COMPLETED"},
+        "pago":        {"pt": "CONCLUÍDO",    "en": "COMPLETED"},
         "cancelado":   {"pt": "Cancelado",    "en": "Cancelled"},
     }
     status_val = _STATUS_LABELS.get(po.status or "rascunho", {}).get(lang, po.status or "–")
