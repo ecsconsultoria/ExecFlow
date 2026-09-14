@@ -711,14 +711,12 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
             ("op_pax_phone",    key[4]),
             ("op_flight",       key[5]),
             ("op_pax",          key[6]),
-            ("op_pickup_date",  pickup_date_str),
-            ("op_pickup_time",  pickup_time_str),
             ("op_from",         key[1]),
             ("op_to",           key[2]),
             ("op_obs",          key[7]),
         ]
         filled = [(lk, v) for lk, v in fields if v]
-        if not filled:
+        if not filled and not pickup_dt:
             continue
 
         # Header com subtítulo (quais itens)
@@ -728,9 +726,14 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
             nums = ", ".join(f"#{item_index[it.id]}" for it in items)
             sub = (f"Item {nums}" if len(items) == 1 else
                    (f"Itens {nums}" if lang == "pt" else f"Items {nums}"))
-        # Tarja do bloco: apenas o(s) item(ns). O rotulo "DADOS OPERACIONAIS" /
-        # "OPERATIONAL DATA" saiu - o titulo da pagina ja identifica a secao.
+        # Tarja do bloco: item(ns) + data/hora de embarque (quando preenchidos).
+        # O rotulo "DADOS OPERACIONAIS" / "OPERATIONAL DATA" saiu - o titulo da
+        # pagina ja identifica a secao.
         hdr_text = sub
+        if pickup_dt:
+            when = " ".join(x for x in (pickup_date_str, pickup_time_str) if x).strip()
+            if when:
+                hdr_text = f"{sub} — {when}"
 
         hdr_tbl = Table(
             [[Paragraph(hdr_text, op_title_st)]],
