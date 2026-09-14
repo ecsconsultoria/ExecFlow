@@ -313,7 +313,7 @@
         {% elif quote.status == 'pendente' %}{% set status_variant = 'warning' %}
         {% elif quote.status == 'reprovado' %}{% set status_variant = 'danger' %}
         {% endif %}
-        <div class="fi-ro">{{ badge(quote.status, variant=status_variant) }}</div>
+        <div class="fi-ro">{{ badge(quote.status_label, variant=status_variant) }}</div>
       </div>
 
       <div>

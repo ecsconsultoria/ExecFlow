@@ -503,7 +503,9 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
                 Paragraph(status_label, st_p),
             ])
 
-        inst_col_w = [W * 0.14, W * 0.24, W * 0.36, W * 0.26]
+        # Mesmas larguras da tabela de pagamento acima (Forma de Pagamento,
+        # Faturamento Fiscal, Prazo de Pagamento, Valor Total) — coluna a coluna
+        inst_col_w = [W * 0.28, W * 0.26, W * 0.22, W * 0.24]
         inst_tbl   = Table(inst_rows, colWidths=inst_col_w, repeatRows=1)
         inst_style = TableStyle([
             ("BACKGROUND",    (0, 0), (-1, 0), BRAND_DARK),
