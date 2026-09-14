@@ -95,7 +95,7 @@ _LABELS: dict[str, dict[str, str]] = {
     "op_from":         {"pt": "EMBARQUE",                        "en": "PICKUP LOCATION"},
     "op_to":           {"pt": "DESEMBARQUE",                     "en": "DROPOFF LOCATION"},
     "op_passenger":    {"pt": "PASSAGEIRO",                   "en": "PASSENGER"},
-    "op_pax_phone":    {"pt": "TELEFONE DO PASSAGEIRO",       "en": "PASSENGER PHONE"},
+    "op_pax_phone":    {"pt": "FONE",                          "en": "MOBILE"},
     "op_flight":       {"pt": "Nº VOO",                       "en": "FLIGHT NO."},
     "op_pax":          {"pt": "PASSAGEIROS",                  "en": "PAX"},
     "op_obs":          {"pt": "OBSERVAÇÕES",                  "en": "NOTES"},
