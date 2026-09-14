@@ -82,7 +82,7 @@ _T: dict[str, dict[str, str]] = {
     "status_aprovado":  {"pt": "Aprovado",                 "en": "Approved"},
     "status_reprovado": {"pt": "Reprovado",                "en": "Declined"},
     "status_pago":      {"pt": "Pago",                     "en": "Paid"},
-    "status_reserva_confirmada": {"pt": "CONFIRMADO",     "en": "CONFIRMED"},
+    "status_reserva_confirmada": {"pt": "RESERVADO",      "en": "RESERVED"},
     "billing_recibo":       {"pt": "Recibo",               "en": "Receipt"},
     "billing_nf":           {"pt": "Nota Fiscal",          "en": "Invoice (NF)"},
     "billing_cartao":       {"pt": "Cartão de Crédito",    "en": "Credit Card"},
