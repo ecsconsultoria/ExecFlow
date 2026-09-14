@@ -1307,6 +1307,26 @@ def cancel_expense(eid):
     return redirect(url_for("financial.expenses"))
 
 
+@financial_bp.route("/expenses/<int:eid>/estornar", methods=["POST"])
+@login_required
+@require_permission("financial.manage")
+def estornar_expense(eid):
+    """Estorna a baixa de uma despesa avulsa: pago -> pendente, sem paid_date."""
+    r = _expense_base_query().filter(FinancialRecord.id == eid).first_or_404()
+    if r.status != "pago":
+        flash("Somente despesas pagas podem ser estornadas.", "warning")
+        return redirect(url_for("financial.expenses"))
+    r.status         = "pendente"
+    r.paid_date      = None
+    r.payment_method = None
+    log_activity("financial", r.id, current_user.company_id,
+                 f"Baixa estornada — despesa '{r.description}' voltou a pendente",
+                 current_user.id)
+    db.session.commit()
+    flash("Baixa estornada. A despesa voltou para pendente.", "success")
+    return redirect(url_for("financial.expenses"))
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Etapa 4 — Fluxo de Caixa REALIZADO (fonte oficial: FinancialRecord)
 # Tela SOMENTE LEITURA: nenhuma rota de mutação aqui.
