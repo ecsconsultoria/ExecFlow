@@ -75,6 +75,20 @@ def _period_bounds(period: str, today):
         prev_end   = date(today.year - 1, 12, 31)
         return start, today, prev_start, prev_end
 
+    elif period == "last_180":
+        # últimos 6 meses (~180 dias), mesmo padrão do last_30
+        end   = today
+        start = today - __import__("datetime").timedelta(days=179)
+        prev_end   = start - __import__("datetime").timedelta(days=1)
+        prev_start = prev_end - __import__("datetime").timedelta(days=179)
+        return start, end, prev_start, prev_end
+
+    elif period == "year_2025":
+        # ano 2025 completo; comparativo = ano 2024 completo
+        start = date(2025, 1, 1)
+        end   = date(2025, 12, 31)
+        return start, end, date(2024, 1, 1), date(2024, 12, 31)
+
     else:  # "this_month" (default)
         start = today.replace(day=1)
         prev_end   = start - __import__("datetime").timedelta(days=1)

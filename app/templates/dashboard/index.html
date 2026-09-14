@@ -12,13 +12,13 @@
   </span>
 
   <div class="flex items-center gap-1 ml-4">
-    {% for val, label in [('this_month','Este Mês'),('last_month','Mês Anterior'),('last_30','Últimos 30d'),('quarter','Trimestre'),('ytd','Este Ano')] %}
-    <a href="?period={{ val }}"
-       class="text-xs px-2.5 py-1 rounded-lg border transition-colors
-              {% if period == val %}bg-blue-600 text-white border-blue-600{% else %}bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-blue-400{% endif %}">
-      {{ label }}
-    </a>
-    {% endfor %}
+    <select onchange="window.location='?period='+this.value"
+            title="Filtrar por período"
+            class="text-xs px-2.5 py-1 rounded-lg border transition-colors bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-blue-400 focus:outline-none focus:border-blue-400 cursor-pointer">
+      {% for val, label in [('this_month','Este Mês'),('last_month','Mês Anterior'),('last_30','Últimos 30d'),('quarter','Trimestre'),('ytd','Este Ano'),('last_180','Últimos 6 meses'),('year_2025','Ano 2025')] %}
+      <option value="{{ val }}" {% if period == val %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
   </div>
 </div>
 {% endblock %}
