@@ -677,7 +677,9 @@ def baixa(pid):
 
         # Se saldo total está zerado e SO está em status permitido, concluir
         if order.total_pending() <= 0 and order.status in ('rascunho', 'novo', 'aberto', 'faturado'):
-            order.status = 'concluido'
+            order.status    = 'concluido'
+            order.closed_at = now_br()
+            order.closed_by = current_user.id
             log_activity("order", order.id, order.company_id, "SO concluída automaticamente (todas as parcelas pagas)", current_user.id)
             db.session.commit()
 

@@ -142,12 +142,21 @@ def test_dre_revenue_concluded_without_invoice(testing_app):
     # concluída com closed_at fora do período continua fora
     _seed_order(testing_app, cid, status="concluido",
                 closed_at=datetime(2026, 7, 10, 9, 0), total=999.0)
+    # conclusão automática (baixa sem closed_at): entra pelo último pagamento
+    oid, pid = _seed_order(testing_app, cid, status="concluido",
+                           total=400.0, with_payment=True)
+    with testing_app.app_context():
+        pmt = db.session.get(OrderPayment, pid)
+        pmt.paid_amount = 400.0
+        pmt.paid_at = datetime(2026, 8, 25, 15, 0)
+        db.session.commit()
 
     with testing_app.app_context():
-        assert dre_service.recognized_revenue(cid, AUG, AUG_END) == 700.0
+        assert dre_service.recognized_revenue(cid, AUG, AUG_END) == 1100.0
         rows = dre_service.revenue_rows(cid, AUG, AUG_END)
-        assert len(rows) == 1
-        assert dre_service.revenue_competence(rows[0]) == date(2026, 8, 10)
+        assert len(rows) == 2
+        comps = sorted(dre_service.revenue_competence(o) for o in rows)
+        assert comps == [date(2026, 8, 10), date(2026, 8, 25)]
 
 
 # ─────────────────────────────────────────────────────────────────────────────

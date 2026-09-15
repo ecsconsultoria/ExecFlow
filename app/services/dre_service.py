@@ -39,8 +39,10 @@ def revenue_rows(cid, start, end):
     """SOs com receita reconhecida no período.
 
     Competência = data do faturamento (invoiced_at). SOs CONCLUÍDAS sem
-    faturamento entram pela data de conclusão (closed_at) — o dinheiro
-    entrou e o pedido foi encerrado, então a receita não pode sumir da DRE.
+    faturamento entram pela data de conclusão (closed_at) — ou, quando a
+    conclusão foi automática (baixa das parcelas, sem closed_at gravado),
+    pela data do último pagamento — o dinheiro entrou e o pedido foi
+    encerrado, então a receita não pode sumir da DRE.
     """
     rows = (Order.query
             .filter_by(company_id=cid, deleted_at=None)
@@ -49,22 +51,27 @@ def revenue_rows(cid, start, end):
             .filter(Order.invoiced_at >= _start_dt(start))
             .filter(Order.invoiced_at <= _end_dt(end))
             .all())
-    rows += (Order.query
-             .filter_by(company_id=cid, deleted_at=None)
-             .filter(Order.status == "concluido")
-             .filter(Order.invoiced_at.is_(None))
-             .filter(Order.closed_at.isnot(None))
-             .filter(Order.closed_at >= _start_dt(start))
-             .filter(Order.closed_at <= _end_dt(end))
-             .all())
+    for o in (Order.query
+              .filter_by(company_id=cid, deleted_at=None)
+              .filter(Order.status == "concluido")
+              .filter(Order.invoiced_at.is_(None))
+              .all()):
+        comp = revenue_competence(o)
+        if comp and start <= comp <= end:
+            rows.append(o)
     rows.sort(key=lambda o: revenue_competence(o) or _date.min)
     return rows
 
 
 def revenue_competence(o):
-    """Data de competência da receita de uma SO: faturamento ou conclusão."""
-    dt = o.invoiced_at or o.closed_at
-    return dt.date() if dt else None
+    """Data de competência da receita de uma SO: faturamento → conclusão →
+    último pagamento."""
+    if o.invoiced_at:
+        return o.invoiced_at.date()
+    if o.closed_at:
+        return o.closed_at.date()
+    paid = [p.paid_at for p in o.payments if getattr(p, "paid_at", None)]
+    return max(paid).date() if paid else None
 
 
 def recognized_revenue(cid, start, end) -> float:
