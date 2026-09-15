@@ -110,8 +110,25 @@ def index():
         query = query.filter(Quote.status != "excluido")
     if q:
         query = query.filter(Quote.client_name.ilike(f"%{q}%") | Quote.number.ilike(f"%{q}%"))
+    # Filtro por periodo (data de criacao): De/Até inclusivos
+    from datetime import date as _date, timedelta as _td
+    date_from = request.args.get("date_from", "")
+    date_to   = request.args.get("date_to", "")
+    try:
+        d_from = _date.fromisoformat(date_from) if date_from else None
+    except ValueError:
+        d_from = None
+    try:
+        d_to = _date.fromisoformat(date_to) if date_to else None
+    except ValueError:
+        d_to = None
+    if d_from:
+        query = query.filter(Quote.created_at >= d_from)
+    if d_to:
+        query = query.filter(Quote.created_at < d_to + _td(days=1))
     quotes = query.order_by(Quote.created_at.desc()).all()
     return render_template("quotes/index.html", quotes=quotes, status=status, q=q,
+                           date_from=date_from, date_to=date_to,
                            QUOTE_STATUSES=QUOTE_STATUSES)
 
 
@@ -131,9 +148,23 @@ def export_csv():
         query = query.filter(Quote.status != "excluido")
     if q:
         query = query.filter(Quote.client_name.ilike(f"%{q}%") | Quote.number.ilike(f"%{q}%"))
+    from datetime import date as _date, timedelta as _td
+    date_from = request.args.get("date_from", "")
+    date_to   = request.args.get("date_to", "")
+    try:
+        d_from = _date.fromisoformat(date_from) if date_from else None
+    except ValueError:
+        d_from = None
+    try:
+        d_to = _date.fromisoformat(date_to) if date_to else None
+    except ValueError:
+        d_to = None
+    if d_from:
+        query = query.filter(Quote.created_at >= d_from)
+    if d_to:
+        query = query.filter(Quote.created_at < d_to + _td(days=1))
     quotes = query.order_by(Quote.created_at.desc()).all()
 
-    from datetime import date as _date
     headers = ["Nº RFQ", "Nº SO", "Cliente", "Data", "Total", "Status"]
     rows = []
     for qt in quotes:

@@ -74,23 +74,37 @@ def index():
             PurchaseOrder.number.ilike(f"%{q}%") |
             Supplier.name.ilike(f"%{q}%")
         )
-    page = request.args.get("page", 1, type=int)
-    pagination = query.order_by(
+    # Filtro por periodo (data de criacao): De/Até inclusivos
+    from datetime import date as _date, timedelta as _td
+    date_from = request.args.get("date_from", "")
+    date_to   = request.args.get("date_to", "")
+    try:
+        d_from = _date.fromisoformat(date_from) if date_from else None
+    except ValueError:
+        d_from = None
+    try:
+        d_to = _date.fromisoformat(date_to) if date_to else None
+    except ValueError:
+        d_to = None
+    if d_from:
+        query = query.filter(PurchaseOrder.created_at >= d_from)
+    if d_to:
+        query = query.filter(PurchaseOrder.created_at < d_to + _td(days=1))
+
+    # Lista completa, sem paginação — todos os pedidos aparecem
+    all_filtered = query.order_by(
         PurchaseOrder.pickup_datetime.asc().nullsfirst(),
         PurchaseOrder.id.desc()
-    ).paginate(page=page, per_page=25, error_out=False)
-    po_list = pagination.items
-
-    # Soma dos totais filtrados (todos os registros, sem paginação)
-    all_filtered = query.order_by(None).all()
+    ).all()
+    po_list = all_filtered
     total_filtered         = sum(p.computed_total or 0 for p in all_filtered)
     total_paid_filtered    = sum(p.total_paid() or 0 for p in all_filtered)
     total_pending_filtered = sum(p.total_pending() or 0 for p in all_filtered)
 
     resp = make_response(render_template(
         "purchase_orders/index.html",
-        po_list=po_list, pagination=pagination,
-        status=status, q=q,
+        po_list=po_list,
+        status=status, q=q, date_from=date_from, date_to=date_to,
         PO_STATUSES=PO_STATUSES,
         total_filtered=total_filtered,
         total_paid_filtered=total_paid_filtered,
@@ -232,6 +246,21 @@ def export_csv():
             PurchaseOrder.number.ilike(f"%{q}%") |
             Supplier.name.ilike(f"%{q}%")
         )
+    from datetime import date as _date, timedelta as _td
+    date_from = request.args.get("date_from", "")
+    date_to   = request.args.get("date_to", "")
+    try:
+        d_from = _date.fromisoformat(date_from) if date_from else None
+    except ValueError:
+        d_from = None
+    try:
+        d_to = _date.fromisoformat(date_to) if date_to else None
+    except ValueError:
+        d_to = None
+    if d_from:
+        query = query.filter(PurchaseOrder.created_at >= d_from)
+    if d_to:
+        query = query.filter(PurchaseOrder.created_at < d_to + _td(days=1))
     po_list = query.order_by(
         PurchaseOrder.pickup_datetime.asc().nullsfirst(),
         PurchaseOrder.id.desc()

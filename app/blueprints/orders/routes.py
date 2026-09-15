@@ -70,19 +70,34 @@ def index():
         query = query.filter(
             Order.client_name.ilike(f"%{q}%") | Order.number.ilike(f"%{q}%")
         )
-    page = request.args.get("page", 1, type=int)
-    pagination = query.order_by(Order.created_at.desc()).paginate(page=page, per_page=25, error_out=False)
-    orders = pagination.items
+    # Filtro por periodo (data de criacao): De/Até inclusivos
+    from datetime import date as _date, timedelta as _td
+    date_from = request.args.get("date_from", "")
+    date_to   = request.args.get("date_to", "")
+    try:
+        d_from = _date.fromisoformat(date_from) if date_from else None
+    except ValueError:
+        d_from = None
+    try:
+        d_to = _date.fromisoformat(date_to) if date_to else None
+    except ValueError:
+        d_to = None
+    if d_from:
+        query = query.filter(Order.created_at >= d_from)
+    if d_to:
+        query = query.filter(Order.created_at < d_to + _td(days=1))
 
-    # Soma dos totais filtrados (todos os registros, sem paginação)
-    all_filtered = query.order_by(None).all()  # remove order_by para performance
+    # Lista completa, sem paginação — todos os pedidos aparecem
+    all_filtered = query.order_by(Order.created_at.desc()).all()
+    orders = all_filtered
     total_filtered         = sum(o.computed_total or 0 for o in all_filtered)
     total_paid_filtered    = sum(o.total_paid() or 0 for o in all_filtered)
     total_pending_filtered = sum(o.total_pending() or 0 for o in all_filtered)
 
     resp = make_response(render_template(
-        "orders/index.html", orders=orders, pagination=pagination,
-        status=status, q=q, ORDER_STATUSES=ORDER_STATUSES,
+        "orders/index.html", orders=orders,
+        status=status, q=q, date_from=date_from, date_to=date_to,
+        ORDER_STATUSES=ORDER_STATUSES,
         total_filtered=total_filtered,
         total_paid_filtered=total_paid_filtered,
         total_pending_filtered=total_pending_filtered,
@@ -216,6 +231,21 @@ def export_csv():
         query = query.filter(
             Order.client_name.ilike(f"%{q}%") | Order.number.ilike(f"%{q}%")
         )
+    from datetime import date as _date, timedelta as _td
+    date_from = request.args.get("date_from", "")
+    date_to   = request.args.get("date_to", "")
+    try:
+        d_from = _date.fromisoformat(date_from) if date_from else None
+    except ValueError:
+        d_from = None
+    try:
+        d_to = _date.fromisoformat(date_to) if date_to else None
+    except ValueError:
+        d_to = None
+    if d_from:
+        query = query.filter(Order.created_at >= d_from)
+    if d_to:
+        query = query.filter(Order.created_at < d_to + _td(days=1))
     orders = query.order_by(Order.created_at.desc()).all()
 
     from datetime import date as _date
