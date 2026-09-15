@@ -1146,6 +1146,25 @@ def _expense_form_context():
     return categories, centers, suppliers, orders, pos
 
 
+def _apply_recurrence_form(r, form):
+    """Aplica os campos de recorrência (Etapa 14) no criar e no editar."""
+    from ...services import recurrence_service
+    rec = (form.get("recurrence", "") or "").strip()
+    if rec not in recurrence_service.RECURRENCE_CHOICES:
+        rec = None
+    if rec:
+        r.recurrence        = rec
+        r.recurrence_active = True
+        r.next_run          = recurrence_service.next_emission(r.emission_date, rec)
+        until_raw = (form.get("recurrence_until", "") or "").strip()
+        r.recurrence_until  = date.fromisoformat(until_raw) if until_raw else None
+    else:
+        r.recurrence        = None
+        r.recurrence_active = False
+        r.recurrence_until  = None
+        r.next_run          = None
+
+
 def _apply_expense_form(r, form, *, edit: bool = False):
     """Valida e aplica o formulário na FinancialRecord de despesa.
 
@@ -1249,17 +1268,7 @@ def new_expense():
         try:
             r = FinancialRecord(company_id=current_user.company_id)
             _apply_expense_form(r, request.form)
-            # Recorrência (Etapa 14): mensal/anual — a corrente vive no elo atual
-            from ...services import recurrence_service
-            rec = request.form.get("recurrence", "")
-            if rec not in recurrence_service.RECURRENCE_CHOICES:
-                rec = None
-            if rec:
-                r.recurrence        = rec
-                r.recurrence_active = True
-                r.next_run          = recurrence_service.next_emission(r.emission_date, rec)
-                until_raw = (request.form.get("recurrence_until", "") or "").strip()
-                r.recurrence_until  = date.fromisoformat(until_raw) if until_raw else None
+            _apply_recurrence_form(r, request.form)
             db.session.add(r)
             db.session.flush()
             r.reference = f"expense:{r.id}"   # convenção única de despesa
@@ -1289,6 +1298,7 @@ def edit_expense(eid):
     if request.method == "POST":
         try:
             _apply_expense_form(r, request.form, edit=True)
+            _apply_recurrence_form(r, request.form)
             log_activity("financial", r.id, current_user.company_id,
                          "Despesa editada", current_user.id)
             db.session.commit()

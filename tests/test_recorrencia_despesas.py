@@ -136,3 +136,35 @@ def test_botao_rota(testing_app):
     assert r.status_code == 302
     with testing_app.app_context():
         assert FinancialRecord.query.filter_by(description="Consórcio").count() == 2
+
+
+def test_edit_recurrence(testing_app):
+    """A edicao salva os campos de recorrencia (inclusive remover)."""
+    cid, cat_id, cc_id = _seed_catalog(testing_app)
+    c = _login(testing_app)
+    _nova(testing_app, c, cid, cat_id, cc_id, recurrence="monthly",
+          until="2027-07-10", desc="Consórcio")
+    with testing_app.app_context():
+        elo = FinancialRecord.query.filter_by(description="Consórcio").one()
+        rid = elo.id
+    r = c.post(f"/financial/expenses/{rid}/edit", data={
+        "description": "Consórcio", "amount": "3025,00",
+        "emission_date": "2026-10-10", "due_date": "2026-10-10",
+        "financial_category_id": str(cat_id), "cost_center_id": str(cc_id),
+        "supplier_id": "", "notes": "",
+        "recurrence": "monthly", "recurrence_until": "2028-07-10",
+    }, follow_redirects=False)
+    assert r.status_code == 302
+    with testing_app.app_context():
+        elo = db.session.get(FinancialRecord, rid)
+        assert elo.recurrence == "monthly" and elo.recurrence_until == date(2028, 7, 10)
+        # remover a recorrencia pela edicao
+        c.post(f"/financial/expenses/{rid}/edit", data={
+            "description": "Consórcio", "amount": "3025,00",
+            "emission_date": "2026-10-10", "due_date": "2026-10-10",
+            "financial_category_id": str(cat_id), "cost_center_id": str(cc_id),
+            "supplier_id": "", "notes": "",
+            "recurrence": "", "recurrence_until": "",
+        }, follow_redirects=False)
+        elo = db.session.get(FinancialRecord, rid)
+        assert elo.recurrence is None and elo.next_run is None
