@@ -1539,7 +1539,7 @@ def _monthly_dre(cid, year):
         return None
 
     for o in orders:
-        row = _bucket(o.invoiced_at.date(), "revenue")
+        row = _bucket(dre_service.revenue_competence(o), "revenue")
         if row:
             row["revenue"] = round(row["revenue"] + float(o.computed_total or 0), 2)
     for fr in other_rev:
@@ -1584,7 +1584,7 @@ def _dre_data(cid, period, date_from, date_to, today):
     result = round(margin - expenses, 2)
 
     # Detalhamento (somente leitura)
-    rev_detail = [{"number": o.number, "date": o.invoiced_at.date(),
+    rev_detail = [{"number": o.number, "date": dre_service.revenue_competence(o),
                    "value": float(o.computed_total or 0)} for o in
                   dre_service.revenue_rows(cid, first, last)]
     other_detail = [{"desc": fr.description, "date": fr.emission_date or fr.paid_date

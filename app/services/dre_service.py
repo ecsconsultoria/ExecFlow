@@ -1,8 +1,8 @@
 """dre_service.py — DRE Gerencial por COMPETÊNCIA (Etapa 5).
 
 FONTES (nenhum dado é alterado; tudo calculado em tempo de consulta):
-  * Receita   = Orders efetivamente faturadas (regra da Etapa 2),
-                competência = data do faturamento (invoiced_at).
+  * Receita   = Orders faturadas (competência = invoiced_at) OU concluídas
+                sem faturamento (competência = closed_at).
   * Custos    = POs válidas (fora rascunho/cancelado/excluído) vinculadas a SO
                 não excluído. Competência (prioridade):
                   1. service_date dos itens da PO (data real de execução);
@@ -36,15 +36,35 @@ DRE_EXPENSE_GROUPS = [
 # ─────────────────────────────────────────────────────────────────────────────
 
 def revenue_rows(cid, start, end):
-    """SOs com receita reconhecida no período (por invoiced_at)."""
-    return (Order.query
+    """SOs com receita reconhecida no período.
+
+    Competência = data do faturamento (invoiced_at). SOs CONCLUÍDAS sem
+    faturamento entram pela data de conclusão (closed_at) — o dinheiro
+    entrou e o pedido foi encerrado, então a receita não pode sumir da DRE.
+    """
+    rows = (Order.query
             .filter_by(company_id=cid, deleted_at=None)
             .filter(Order.status.in_(["faturado", "concluido"]))
             .filter(Order.invoiced_at.isnot(None))
             .filter(Order.invoiced_at >= _start_dt(start))
             .filter(Order.invoiced_at <= _end_dt(end))
-            .order_by(Order.invoiced_at.asc())
             .all())
+    rows += (Order.query
+             .filter_by(company_id=cid, deleted_at=None)
+             .filter(Order.status == "concluido")
+             .filter(Order.invoiced_at.is_(None))
+             .filter(Order.closed_at.isnot(None))
+             .filter(Order.closed_at >= _start_dt(start))
+             .filter(Order.closed_at <= _end_dt(end))
+             .all())
+    rows.sort(key=lambda o: revenue_competence(o) or _date.min)
+    return rows
+
+
+def revenue_competence(o):
+    """Data de competência da receita de uma SO: faturamento ou conclusão."""
+    dt = o.invoiced_at or o.closed_at
+    return dt.date() if dt else None
 
 
 def recognized_revenue(cid, start, end) -> float:

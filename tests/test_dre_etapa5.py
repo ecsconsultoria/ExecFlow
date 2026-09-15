@@ -62,7 +62,8 @@ def _cid_of(app):
         return User.query.filter_by(email=ADMIN_EMAIL).first().company_id
 
 
-def _seed_order(app, cid, *, status, invoiced_at=None, total=1000.0, with_payment=False):
+def _seed_order(app, cid, *, status, invoiced_at=None, total=1000.0, with_payment=False,
+                closed_at=None):
     with app.app_context():
         client = Client(company_id=cid, name=f"Cliente {uuid.uuid4().hex[:6]}")
         db.session.add(client)
@@ -72,7 +73,7 @@ def _seed_order(app, cid, *, status, invoiced_at=None, total=1000.0, with_paymen
                   client_name=client.name, contact_name="", email="", celular="",
                   language="pt", billing_type="recibo", total_amount=total,
                   payment_method="PIX", emission_date=date.today(),
-                  invoiced_at=invoiced_at, created_by=1)
+                  invoiced_at=invoiced_at, closed_at=closed_at, created_by=1)
         db.session.add(o)
         db.session.flush()
         pid = None
@@ -129,6 +130,24 @@ def test_dre_revenue_rules(testing_app):
         pmt = db.session.get(OrderPayment, pid)
         baixa(pmt, 500.0, 1, paid_date=date(2026, 8, 21))
         assert dre_service.recognized_revenue(cid, AUG, AUG_END) == 1500.0
+
+
+def test_dre_revenue_concluded_without_invoice(testing_app):
+    """SO concluída SEM faturamento entra pela data de conclusão (closed_at)."""
+    cid = _cid_of(testing_app)
+    _seed_order(testing_app, cid, status="concluido",
+                closed_at=datetime(2026, 8, 10, 9, 0), total=700.0)
+    # concluída sem closed_at (pendência de data) continua fora
+    _seed_order(testing_app, cid, status="concluido", total=888.0)
+    # concluída com closed_at fora do período continua fora
+    _seed_order(testing_app, cid, status="concluido",
+                closed_at=datetime(2026, 7, 10, 9, 0), total=999.0)
+
+    with testing_app.app_context():
+        assert dre_service.recognized_revenue(cid, AUG, AUG_END) == 700.0
+        rows = dre_service.revenue_rows(cid, AUG, AUG_END)
+        assert len(rows) == 1
+        assert dre_service.revenue_competence(rows[0]) == date(2026, 8, 10)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
