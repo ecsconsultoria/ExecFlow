@@ -1249,6 +1249,17 @@ def new_expense():
         try:
             r = FinancialRecord(company_id=current_user.company_id)
             _apply_expense_form(r, request.form)
+            # Recorrência (Etapa 14): mensal/anual — a corrente vive no elo atual
+            from ...services import recurrence_service
+            rec = request.form.get("recurrence", "")
+            if rec not in recurrence_service.RECURRENCE_CHOICES:
+                rec = None
+            if rec:
+                r.recurrence        = rec
+                r.recurrence_active = True
+                r.next_run          = recurrence_service.next_emission(r.emission_date, rec)
+                until_raw = (request.form.get("recurrence_until", "") or "").strip()
+                r.recurrence_until  = date.fromisoformat(until_raw) if until_raw else None
             db.session.add(r)
             db.session.flush()
             r.reference = f"expense:{r.id}"   # convenção única de despesa
@@ -1304,6 +1315,25 @@ def cancel_expense(eid):
                  "Despesa cancelada", current_user.id)
     db.session.commit()
     flash("Despesa cancelada.", "success")
+    return redirect(url_for("financial.expenses"))
+
+
+@financial_bp.route("/expenses/run-recurrences", methods=["POST"])
+@login_required
+@require_permission("financial.manage")
+def run_recurrences():
+    """Gera as despesas recorrentes vencidas (Etapa 14).
+
+    Chamado manualmente pelo botão da tela de despesas; em produção poderá ser
+    acionado por um Cron Job do Render (POST diário nesta rota).
+    """
+    from ...services import recurrence_service
+    criadas = recurrence_service.generate_due(current_user.company_id)
+    for r in criadas:
+        log_activity("financial", r.id, current_user.company_id,
+                     f"Despesa recorrente '{r.description}' R$ {r.amount:.2f} gerada",
+                     current_user.id)
+    flash(f"{len(criadas)} despesa(s) recorrente(s) gerada(s).", "success")
     return redirect(url_for("financial.expenses"))
 
 

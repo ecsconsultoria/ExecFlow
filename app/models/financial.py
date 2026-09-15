@@ -42,6 +42,13 @@ class FinancialRecord(db.Model, TimestampMixin, SoftDeleteMixin):
     order_id          = db.Column(db.Integer, db.ForeignKey("orders.id"),          nullable=True)
     purchase_order_id = db.Column(db.Integer, db.ForeignKey("purchase_orders.id"), nullable=True)
 
+    # Etapa 14 — recorrência de despesas: "monthly"/"yearly" (None = despesa comum).
+    # A corrente vive no registro mais recente (recurrence_active + next_run).
+    recurrence        = db.Column(db.String(20), nullable=True)
+    recurrence_until  = db.Column(db.Date,    nullable=True)   # data-limite opcional
+    recurrence_active = db.Column(db.Boolean, default=False)   # True só no elo atual
+    next_run          = db.Column(db.Date,    nullable=True)   # próxima data de geração
+
     category_ref = db.relationship("FinancialCategory")
     cost_center  = db.relationship("CostCenter")
     supplier     = db.relationship("Supplier")

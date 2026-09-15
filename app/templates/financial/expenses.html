@@ -30,6 +30,14 @@
   <a href="{{ url_for('financial.index') }}" class="text-sm text-slate-500 hover:text-blue-500 mr-1"><i class="fa-solid fa-arrow-left mr-1"></i>Financeiro</a>
   {% if has_perm('financial.manage') %}
   <a href="{{ url_for('financial.new_expense') }}" class="text-sm px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700"><i class="fa-solid fa-plus mr-1"></i>Nova Despesa</a>
+  <form method="post" action="{{ url_for('financial.run_recurrences') }}" class="inline"
+        onsubmit="return confirm('Gerar as despesas recorrentes vencidas?')">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" title="Gerar despesas recorrentes vencidas"
+            class="text-sm px-3 py-1.5 rounded-lg bg-violet-600 text-white hover:bg-violet-700">
+      <i class="fa-solid fa-rotate mr-1"></i>Recorrências
+    </button>
+  </form>
   {% endif %}
   <div class="ml-auto">
     {{ export_buttons(
@@ -108,6 +116,11 @@
         <td class="px-4 py-2.5 whitespace-nowrap">{{ r.emission_date.strftime('%d/%m/%Y') if r.emission_date else '—' }}</td>
         <td class="px-4 py-2.5 font-medium text-slate-700 dark:text-slate-200">
           {{ r.description }}
+          {% if r.recurrence %}
+          <span title="Recorrente ({{ 'mensal' if r.recurrence == 'monthly' else 'anual' }}){{ ' · próxima: ' ~ r.next_run.strftime('%d/%m/%Y') if r.recurrence_active and r.next_run }}{{ ' · até ' ~ r.recurrence_until.strftime('%d/%m/%Y') if r.recurrence_until }}">
+            <i class="fa-solid fa-rotate {% if r.recurrence_active %}text-violet-500{% else %}text-slate-300{% endif %} text-[10px] ml-1"></i>
+          </span>
+          {% endif %}
           {% if r.notes %}<span class="text-xs text-slate-400 block">{{ r.notes }}</span>{% endif %}
         </td>
         <td class="px-4 py-2.5">{{ r.category_ref.name if r.category_ref else '—' }}</td>
