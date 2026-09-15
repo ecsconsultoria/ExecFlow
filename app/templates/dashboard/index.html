@@ -63,7 +63,7 @@
       <div class="w-7 h-7 {% if margin_month >= 0 %}bg-emerald-50 dark:bg-emerald-900/30{% else %}bg-red-50 dark:bg-red-900/30{% endif %} rounded-lg flex items-center justify-center shrink-0">
         <i class="fa-solid fa-chart-line {% if margin_month >= 0 %}text-emerald-600{% else %}text-red-500{% endif %} text-xs"></i>
       </div>
-      <p class="text-xs text-slate-500 dark:text-slate-400 truncate">Margem R$</p>
+      <p class="text-xs text-slate-500 dark:text-slate-400 truncate">Resultado</p>
     </div>
     <p class="text-base font-extrabold {% if margin_month >= 0 %}text-emerald-700 dark:text-emerald-400{% else %}text-red-600 dark:text-red-400{% endif %} leading-none font-mono">{{ margin_month|currency }}</p>
   </div>
@@ -74,7 +74,7 @@
       <div class="w-7 h-7 {% if margin_pct >= 20 %}bg-emerald-50 dark:bg-emerald-900/30{% elif margin_pct >= 0 %}bg-amber-50 dark:bg-amber-900/30{% else %}bg-red-50 dark:bg-red-900/30{% endif %} rounded-lg flex items-center justify-center shrink-0">
         <i class="fa-solid fa-percent {% if margin_pct >= 20 %}text-emerald-600{% elif margin_pct >= 0 %}text-amber-600{% else %}text-red-500{% endif %} text-xs"></i>
       </div>
-      <p class="text-xs text-slate-500 dark:text-slate-400 truncate">Margem %</p>
+      <p class="text-xs text-slate-500 dark:text-slate-400 truncate">Resultado %</p>
     </div>
     <p class="text-base font-extrabold {% if margin_pct >= 20 %}text-emerald-700 dark:text-emerald-400{% elif margin_pct >= 0 %}text-amber-700 dark:text-amber-400{% else %}text-red-600 dark:text-red-400{% endif %} leading-none">{{ margin_pct }}%</p>
     {% if delta_pct is not none %}

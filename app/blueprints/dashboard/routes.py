@@ -149,17 +149,22 @@ def index():
 
     # ── KPI: financials (current period) ─────────────────────────────────────
     # Etapa 10B: fonte única — dre_service (Dashboard = DRE no mesmo período).
+    # Regra do usuário (15/09/2026): a margem do dashboard é o RESULTADO —
+    # Receita − Custos Diretos − Despesas (tudo que entrou menos tudo que saiu).
     from ...services import dre_service as _dre
     so_revenue = _dre.recognized_revenue(cid, p_start, p_end)
     po_cost    = _dre.direct_costs(cid, p_start, p_end)
-    margin_val = _dre.gross_margin(cid, p_start, p_end)  # receita total − custos diretos
+    expenses_total = _dre.general_expenses(cid, p_start, p_end)
+    margin_val = round(so_revenue - po_cost - expenses_total, 2)
     margin_pct = round(margin_val / so_revenue * 100, 1) if so_revenue else 0.0
 
     # Prior period for delta
     delta_revenue = delta_pct = None
     if pp_start and pp_end:
         prev_rev   = _dre.recognized_revenue(cid, pp_start, pp_end)
-        prev_margin = _dre.gross_margin(cid, pp_start, pp_end)
+        prev_margin = round(prev_rev
+                            - _dre.direct_costs(cid, pp_start, pp_end)
+                            - _dre.general_expenses(cid, pp_start, pp_end), 2)
         if prev_rev:
             delta_revenue = round((so_revenue - prev_rev) / prev_rev * 100, 1)
         if prev_rev:
@@ -214,11 +219,13 @@ def index():
         m_end   = m_start.replace(day=_mr(m_start.year, m_start.month)[1])
         rev  = _so_revenue(cid, m_start, m_end)
         cost = _po_cost(cid, m_start, m_end)
+        exp  = dre_service.general_expenses(cid, m_start, m_end)
         chart_rows.append({
             "month": m_start.strftime("%b/%y"),
             "revenue": round(rev, 2),
             "cost": round(cost, 2),
-            "margin_pct": round((rev - cost) / rev * 100, 1) if rev else 0.0,
+            # margem = resultado (receita − custos − despesas)
+            "margin_pct": round((rev - cost - exp) / rev * 100, 1) if rev else 0.0,
         })
     chart_data_json = json.dumps(chart_rows)
 

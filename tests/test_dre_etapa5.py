@@ -174,7 +174,7 @@ def test_dre_cost_rules_and_competence(testing_app):
     # fallback: sem service_date/delivery → competência = created_at (julho)
     _seed_po(testing_app, cid, order_id=oid, created=datetime(2026, 7, 12, 9, 0),
              amount=300.0)
-    # inválidas: rascunho / cancelada / sem SO
+    # inválidas: rascunho / cancelada ficam fora; sem SO ENTRA (regra 15/09)
     _seed_po(testing_app, cid, status="rascunho", order_id=oid, amount=900.0)
     _seed_po(testing_app, cid, status="cancelado", order_id=oid, amount=800.0)
     _seed_po(testing_app, cid, status="pago", order_id=None, amount=13500.0)
@@ -188,8 +188,14 @@ def test_dre_cost_rules_and_competence(testing_app):
         assert len(jul_rows) == 1 and jul_rows[0][2] is True  # usou fallback
         assert dre_service.direct_costs(cid, JUL, JUL_END) == 300.0
 
-        uncl = dre_service.unclassified_cost_rows(cid)
-        assert len(uncl) == 1 and uncl[0].amount == 13500.0  # CUSTO NÃO CLASSIFICADO
+        # PO sem SO agora entra no custo direto (competência = created_at = hoje)
+        hoje = now_br().date()
+        set_rows = dre_service.direct_cost_rows(cid, hoje.replace(day=1), hoje)
+        assert any(r[0].order_id is None for r in set_rows)
+        assert dre_service.direct_costs(cid, hoje.replace(day=1), hoje) == 13500.0
+
+        # a categoria "não classificado" deixou de existir
+        assert dre_service.unclassified_cost_rows(cid) == []
 
 
 # ─────────────────────────────────────────────────────────────────────────────

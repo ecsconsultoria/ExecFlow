@@ -194,7 +194,8 @@ def test_dashboard_period_functions(testing_app):
 
     with testing_app.app_context():
         assert _so_revenue(cid, m_start, today) == 1000.0   # só faturado
-        assert _po_cost(cid, m_start, today) == 300.0        # rascunho e sem-SO fora
+        # regra 15/09/2026: todas as POs válidas entram (com ou sem SO); só rascunho fora
+        assert _po_cost(cid, m_start, today) == 5300.0
 
 
 # ─────────────────────────────────────────────────────────────────────────────

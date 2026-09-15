@@ -3,8 +3,9 @@
 FONTES (nenhum dado é alterado; tudo calculado em tempo de consulta):
   * Receita   = Orders faturadas (competência = invoiced_at) OU concluídas
                 sem faturamento (competência = closed_at).
-  * Custos    = POs válidas (fora rascunho/cancelado/excluído) vinculadas a SO
-                não excluído. Competência (prioridade):
+  * Custos    = TODAS as POs válidas (fora rascunho/cancelado/excluído), com ou
+                sem SO vinculado (regra do usuário 15/09/2026 — custo é tudo que
+                saiu). Competência (prioridade):
                   1. service_date dos itens da PO (data real de execução);
                   2. delivery_date da PO (data operacional);
                   3. somente se não houver informação melhor: created_at.
@@ -126,20 +127,18 @@ def po_competence_date(po) -> _date:
 def direct_cost_rows(cid, start, end):
     """POs de custo direto realizado no período (por competência).
 
-    Somente POs válidas, vinculadas a SO não excluído.
+    TODAS as POs válidas (fora rascunho/cancelado/excluído) entram, com ou
+    sem SO vinculado — regra do usuário 15/09/2026 (custo é tudo que saiu).
     Retorna lista de (po, competência, usou_fallback).
     """
     pos = (PurchaseOrder.query
            .filter_by(company_id=cid)
            .filter(PurchaseOrder.deleted_at.is_(None))
            .filter(PurchaseOrder.status.notin_(list(PO_INVALID_COST_STATUSES)))
-           .filter(PurchaseOrder.order_id.isnot(None))
            .order_by(PurchaseOrder.id.asc())
            .all())
     rows = []
     for po in pos:
-        if po.order is None or po.order.status == "excluido" or po.order.deleted_at is not None:
-            continue
         comp = po_competence_date(po)
         if comp is None:
             continue  # competência indeterminada (pendência)
@@ -155,17 +154,11 @@ def direct_costs(cid, start, end) -> float:
 
 
 def unclassified_cost_rows(cid):
-    """CUSTO NÃO CLASSIFICADO: POs válidas sem SO (não entram na margem bruta).
-
-    Ex.: PO-260602-005 (R$ 13.500,00) — preservada, listada como pendência.
+    """(vazio) Todas as POs válidas agora entram no custo direto — a categoria
+    'não classificado' deixou de existir (regra do usuário 15/09/2026).
+    Mantida a assinatura para compatibilidade de tela/exportações.
     """
-    return (PurchaseOrder.query
-            .filter_by(company_id=cid)
-            .filter(PurchaseOrder.deleted_at.is_(None))
-            .filter(PurchaseOrder.status.notin_(list(PO_INVALID_COST_STATUSES)))
-            .filter(PurchaseOrder.order_id.is_(None))
-            .order_by(PurchaseOrder.id.asc())
-            .all())
+    return []
 
 
 # ─────────────────────────────────────────────────────────────────────────────
