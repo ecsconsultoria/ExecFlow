@@ -151,20 +151,55 @@ def index():
     # Etapa 10B: fonte única — dre_service (Dashboard = DRE no mesmo período).
     # Regra do usuário (15/09/2026): a margem do dashboard é o RESULTADO —
     # Receita − Custos Diretos − Despesas (tudo que entrou menos tudo que saiu).
+    # Otimização (15/09/2026): UM fetch por fonte cobre o período, o anterior e
+    # os 12 meses do gráfico — nada de consulta por mês.
     from ...services import dre_service as _dre
-    so_revenue = _dre.recognized_revenue(cid, p_start, p_end)
-    po_cost    = _dre.direct_costs(cid, p_start, p_end)
-    expenses_total = _dre.general_expenses(cid, p_start, p_end)
+    from datetime import date as _date
+    from calendar import monthrange as _mr
+
+    # meses do gráfico (mesma sequência do algoritmo original)
+    chart_months = []
+    for i in range(11, -1, -1):
+        ref = today.replace(day=1) - timedelta(days=1) if i > 0 else today
+        for _ in range(i):
+            ref = ref.replace(day=1) - timedelta(days=1)
+        m_start = ref.replace(day=1)
+        m_end = m_start.replace(day=_mr(m_start.year, m_start.month)[1])
+        chart_months.append((m_start, m_end))
+
+    fetch_start = min([m[0] for m in chart_months] +
+                      [x for x in (pp_start, p_start) if x])
+    fetch_end = max(p_end, pp_end or p_end, today)
+
+    _rev_rows = _dre.revenue_rows(cid, fetch_start, fetch_end)
+    _cost_rows = _dre.direct_cost_rows(cid, fetch_start, fetch_end)
+    _exp_rows = _dre.expense_rows(cid, fetch_start, fetch_end)
+
+    def _rev(s, e):
+        return round(sum(float(o.computed_total or 0) for o in _rev_rows
+                         if s <= (_dre.revenue_competence(o) or _date.min) <= e), 2)
+
+    def _custo(s, e):
+        return round(sum(float(po.computed_total or 0) for po, comp, _ in _cost_rows
+                         if s <= comp <= e), 2)
+
+    def _desp(s, e):
+        return round(sum(float(fr.amount or 0) for fr in _exp_rows
+                         if fr.emission_date and s <= fr.emission_date <= e), 2)
+
+    so_revenue = _rev(p_start, p_end)
+    po_cost    = _custo(p_start, p_end)
+    expenses_total = _desp(p_start, p_end)
     margin_val = round(so_revenue - po_cost - expenses_total, 2)
     margin_pct = round(margin_val / so_revenue * 100, 1) if so_revenue else 0.0
 
     # Prior period for delta
     delta_revenue = delta_pct = None
     if pp_start and pp_end:
-        prev_rev   = _dre.recognized_revenue(cid, pp_start, pp_end)
+        prev_rev = _rev(pp_start, pp_end)
         prev_margin = round(prev_rev
-                            - _dre.direct_costs(cid, pp_start, pp_end)
-                            - _dre.general_expenses(cid, pp_start, pp_end), 2)
+                            - _custo(pp_start, pp_end)
+                            - _desp(pp_start, pp_end), 2)
         if prev_rev:
             delta_revenue = round((so_revenue - prev_rev) / prev_rev * 100, 1)
         if prev_rev:
@@ -200,26 +235,19 @@ def index():
 
     # ── DRE resumida do período (Etapa 5) — mesmas funções centrais da tela DRE ──
     from ...services import dre_service
-    dre_revenue = round(dre_service.recognized_revenue(cid, p_start, p_end)
+    dre_revenue = round(_rev(p_start, p_end)
                         + dre_service.other_revenue(cid, p_start, p_end), 2)
-    dre_costs = dre_service.direct_costs(cid, p_start, p_end)
+    dre_costs = _custo(p_start, p_end)
     dre_gross = round(dre_revenue - dre_costs, 2)
-    dre_expenses = dre_service.general_expenses(cid, p_start, p_end)
+    dre_expenses = _desp(p_start, p_end)
     dre_result = round(dre_gross - dre_expenses, 2)
 
-    # ── 12-month rolling chart data ────────────────────────────────────────
+    # ── 12-month rolling chart data (bucket em memoria — sem consultas novas) ──
     chart_rows = []
-    for i in range(11, -1, -1):
-        # compute month start/end for i months ago
-        ref = today.replace(day=1) - timedelta(days=1) if i > 0 else today
-        for _ in range(i):
-            ref = ref.replace(day=1) - timedelta(days=1)
-        m_start = ref.replace(day=1)
-        from calendar import monthrange as _mr
-        m_end   = m_start.replace(day=_mr(m_start.year, m_start.month)[1])
-        rev  = _so_revenue(cid, m_start, m_end)
-        cost = _po_cost(cid, m_start, m_end)
-        exp  = dre_service.general_expenses(cid, m_start, m_end)
+    for m_start, m_end in chart_months:
+        rev  = _rev(m_start, m_end)
+        cost = _custo(m_start, m_end)
+        exp  = _desp(m_start, m_end)
         chart_rows.append({
             "month": m_start.strftime("%b/%y"),
             "revenue": round(rev, 2),

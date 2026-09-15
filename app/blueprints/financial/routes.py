@@ -1543,7 +1543,10 @@ def _monthly_dre(cid, year):
     m_end = _d(year, 12, 31)
 
     orders = dre_service.revenue_rows(cid, m_start, m_end)
+    from sqlalchemy.orm import selectinload, joinedload
     pos = (PurchaseOrder.query
+           .options(selectinload(PurchaseOrder.items),
+                    joinedload(PurchaseOrder.order))
            .filter_by(company_id=cid)
            .filter(PurchaseOrder.deleted_at.is_(None))
            .filter(PurchaseOrder.status.notin_(["rascunho", "cancelado", "excluido"]))
@@ -1615,25 +1618,30 @@ def _dre_data(cid, period, date_from, date_to, today):
     from ...services import dre_service
     first, last = _financial_period_bounds(period, date_from, date_to, today)
 
-    revenue = round(dre_service.recognized_revenue(cid, first, last)
-                    + dre_service.other_revenue(cid, first, last), 2)
-    direct = dre_service.direct_costs(cid, first, last)
+    # Fetch único por fonte (relacionamentos já vêm eager) — totais e detalhes
+    # saem das MESMAS listas, sem novas consultas.
+    rev_rows = dre_service.revenue_rows(cid, first, last)
+    cost_rows = dre_service.direct_cost_rows(cid, first, last)
+    exp_rows = dre_service.expense_rows(cid, first, last)
+    other_rev_rows = dre_service.other_revenue_rows(cid, first, last)
+
+    revenue = round(sum(float(o.computed_total or 0) for o in rev_rows)
+                    + sum(float(fr.amount or 0) for fr in other_rev_rows), 2)
+    direct = round(sum(float(po.computed_total or 0) for po, _, _ in cost_rows), 2)
     margin = round(revenue - direct, 2)
-    exp_groups = dre_service.general_expenses_by_group(cid, first, last)
+    exp_groups = dre_service.group_expenses(exp_rows)
     expenses = round(sum(exp_groups.values()), 2)
     result = round(margin - expenses, 2)
 
     # Detalhamento (somente leitura)
     rev_detail = [{"number": o.number, "date": dre_service.revenue_competence(o),
-                   "value": float(o.computed_total or 0)} for o in
-                  dre_service.revenue_rows(cid, first, last)]
+                   "value": float(o.computed_total or 0)} for o in rev_rows]
     other_detail = [{"desc": fr.description, "date": fr.emission_date or fr.paid_date
                      or (fr.created_at.date() if fr.created_at else None),
-                     "value": float(fr.amount or 0)} for fr in
-                    dre_service.other_revenue_rows(cid, first, last)]
+                     "value": float(fr.amount or 0)} for fr in other_rev_rows]
     cost_detail = []
     fallback_detail = []
-    for po, comp, fallback in dre_service.direct_cost_rows(cid, first, last):
+    for po, comp, fallback in cost_rows:
         cost_detail.append({
             "number": po.number, "so": po.order.number if po.order else None,
             "date": comp, "value": float(po.computed_total or 0),
@@ -1647,7 +1655,7 @@ def _dre_data(cid, period, date_from, date_to, today):
         "center": fr.cost_center.name if fr.cost_center else None,
         "supplier": fr.supplier.name if fr.supplier else "",
         "value": float(fr.amount or 0),
-    } for fr in dre_service.expense_rows(cid, first, last)]
+    } for fr in exp_rows]
 
     # Pendências (nada é alterado — apenas listado)
     unclassified = [{"number": po.number, "value": float(po.computed_total or 0),

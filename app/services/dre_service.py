@@ -18,6 +18,8 @@ Nenhuma tabela nova, nenhuma migration, nenhum backfill.
 """
 from datetime import date as _date
 
+from sqlalchemy.orm import selectinload, joinedload
+
 from ..models.order import Order
 from ..models.purchase_order import PurchaseOrder, PO_INVALID_COST_STATUSES
 from ..models.financial import FinancialRecord
@@ -46,6 +48,7 @@ def revenue_rows(cid, start, end):
     encerrado, então a receita não pode sumir da DRE.
     """
     rows = (Order.query
+            .options(selectinload(Order.payments))
             .filter_by(company_id=cid, deleted_at=None)
             .filter(Order.status.in_(["faturado", "concluido"]))
             .filter(Order.invoiced_at.isnot(None))
@@ -53,6 +56,7 @@ def revenue_rows(cid, start, end):
             .filter(Order.invoiced_at <= _end_dt(end))
             .all())
     for o in (Order.query
+              .options(selectinload(Order.payments))
               .filter_by(company_id=cid, deleted_at=None)
               .filter(Order.status == "concluido")
               .filter(Order.invoiced_at.is_(None))
@@ -132,6 +136,9 @@ def direct_cost_rows(cid, start, end):
     Retorna lista de (po, competência, usou_fallback).
     """
     pos = (PurchaseOrder.query
+           .options(selectinload(PurchaseOrder.items),
+                    joinedload(PurchaseOrder.order),
+                    joinedload(PurchaseOrder.supplier))
            .filter_by(company_id=cid)
            .filter(PurchaseOrder.deleted_at.is_(None))
            .filter(PurchaseOrder.status.notin_(list(PO_INVALID_COST_STATUSES)))
@@ -168,6 +175,9 @@ def unclassified_cost_rows(cid):
 def expense_rows(cid, start, end):
     """Despesas (type='expense') não canceladas cuja emissão cai no período."""
     return (FinancialRecord.query
+            .options(joinedload(FinancialRecord.category_ref),
+                     joinedload(FinancialRecord.cost_center),
+                     joinedload(FinancialRecord.supplier))
             .filter_by(company_id=cid, type="expense")
             .filter(FinancialRecord.deleted_at.is_(None))
             .filter(FinancialRecord.status != "cancelado")
@@ -185,13 +195,18 @@ def _expense_group(fr) -> str:
     return root.name
 
 
-def general_expenses_by_group(cid, start, end) -> dict:
+def group_expenses(exp_rows) -> dict:
+    """Agrupa linhas de despesa pela categoria-raiz (mesma regra da DRE)."""
     groups = {g: 0.0 for g in DRE_EXPENSE_GROUPS}
     groups["Despesas Não Classificadas"] = 0.0
-    for fr in expense_rows(cid, start, end):
-        groups[_expense_group(fr)] = round(groups.get(_expense_group(fr), 0.0)
-                                           + float(fr.amount or 0), 2)
+    for fr in exp_rows:
+        nome = _expense_group(fr)
+        groups[nome] = round(groups.get(nome, 0.0) + float(fr.amount or 0), 2)
     return groups
+
+
+def general_expenses_by_group(cid, start, end) -> dict:
+    return group_expenses(expense_rows(cid, start, end))
 
 
 def general_expenses(cid, start, end) -> float:
