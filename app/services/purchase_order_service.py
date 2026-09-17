@@ -706,7 +706,9 @@ def reorder_items(po, item_ids: list[int]) -> None:
 
 
 def update_item(item: POItem, data: dict) -> POItem:
-    """Atualiza quantidade, custo unitário, categoria e motorista de um POItem."""
+    """Atualiza quantidade, custo unitário, categoria, motorista e data/hora
+    de um POItem (o usuário pode alterar data/hora quando quiser)."""
+    from datetime import date as _date, time as _time
     if "quantity" in data:
         item.quantity = max(int(data["quantity"] or 1), 1)
     if "unit_cost" in data:
@@ -718,6 +720,18 @@ def update_item(item: POItem, data: dict) -> POItem:
         item.category_id = int(cid) if cid and str(cid).strip() else None
     if "driver_name" in data:
         item.op_driver_name = (data.get("driver_name") or "").strip() or None
+    if "service_date" in data:
+        raw = (data.get("service_date") or "").strip()
+        try:
+            item.service_date = _date.fromisoformat(raw) if raw else None
+        except ValueError:
+            item.service_date = None
+    if "service_time" in data:
+        raw = (data.get("service_time") or "").strip()
+        try:
+            item.service_time = _time.fromisoformat(raw) if raw else None
+        except ValueError:
+            item.service_time = None
     item.total_cost = round((item.unit_cost or 0) * (item.quantity or 1), 2)
     db.session.flush()
     return item
