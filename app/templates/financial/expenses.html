@@ -98,6 +98,7 @@
   <table class="w-full text-sm">
     <thead class="bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 text-xs uppercase">
       <tr>
+        <th class="px-3 py-3 w-8"><input type="checkbox" id="bulk-select-all" class="rounded" onchange="toggleAll(this)"></th>
         <th class="text-left px-4 py-3">Data</th>
         <th class="text-left px-4 py-3">Descrição</th>
         <th class="text-left px-4 py-3">Categoria</th>
@@ -113,6 +114,9 @@
       {% for r in records %}
       {% set is_overdue = (r.status == 'pendente' and r.due_date and r.due_date < today) %}
       <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30">
+        <td class="px-3 py-2.5">
+          {% if r.status == 'pendente' %}<input type="checkbox" class="bulk-check rounded" value="{{ r.id }}" onchange="updateBulkBar()">{% endif %}
+        </td>
         <td class="px-4 py-2.5 whitespace-nowrap">{{ r.emission_date.strftime('%d/%m/%Y') if r.emission_date else '—' }}</td>
         <td class="px-4 py-2.5 font-medium text-slate-700 dark:text-slate-200">
           {{ r.description }}
@@ -157,9 +161,55 @@
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="9" class="px-4 py-8 text-center text-slate-400">Nenhuma despesa encontrada. {% if has_perm('financial.manage') %}<a class="text-blue-500" href="{{ url_for('financial.new_expense') }}">Criar a primeira</a>.{% endif %}</td></tr>
+      <tr><td colspan="10" class="px-4 py-8 text-center text-slate-400">Nenhuma despesa encontrada. {% if has_perm('financial.manage') %}<a class="text-blue-500" href="{{ url_for('financial.new_expense') }}">Criar a primeira</a>.{% endif %}</td></tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
+
+{# ── Barra de ação em lote (pagar selecionadas) ─────────────────────────── #}
+<div id="bulk-bar" class="fixed bottom-6 inset-x-0 z-40 flex justify-center px-4 pointer-events-none transition-transform duration-200"
+     style="transform: translateY(calc(100% + 24px));">
+  <div class="pointer-events-auto bg-slate-900 text-white rounded-xl shadow-2xl px-4 py-3 flex flex-wrap items-center gap-3 max-w-full">
+    <span class="text-sm font-semibold whitespace-nowrap"><span id="bulk-count">0</span> selecionada(s)</span>
+    <form method="post" action="{{ url_for('financial.bulk_baixa_expenses') }}"
+          onsubmit="return submitBulk(this)">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="ids" id="bulk-ids" value="">
+      <input type="date" name="paid_date" value="{{ today.isoformat() }}"
+             class="rounded-lg px-2 py-1.5 text-xs text-slate-900 border-0">
+      <button type="submit"
+              class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 rounded-lg whitespace-nowrap">
+        <i class="fa-solid fa-circle-check mr-1"></i>Pagar
+      </button>
+    </form>
+    <button type="button" onclick="clearBulk()" class="text-slate-400 hover:text-white text-sm whitespace-nowrap px-2 py-2">
+      <i class="fa-solid fa-xmark mr-1"></i>Cancelar
+    </button>
+  </div>
+</div>
+
+<script>
+function toggleAll(el) {
+  document.querySelectorAll('.bulk-check').forEach(cb => { cb.checked = el.checked; });
+  updateBulkBar();
+}
+function updateBulkBar() {
+  const checked = document.querySelectorAll('.bulk-check:checked');
+  document.getElementById('bulk-count').textContent = checked.length;
+  document.getElementById('bulk-bar').style.transform = checked.length > 0 ? 'translateY(0)' : 'translateY(calc(100% + 24px))';
+}
+function clearBulk() {
+  document.querySelectorAll('.bulk-check').forEach(cb => { cb.checked = false; });
+  document.getElementById('bulk-select-all').checked = false;
+  updateBulkBar();
+}
+function submitBulk(form) {
+  const ids = Array.from(document.querySelectorAll('.bulk-check:checked')).map(cb => cb.value);
+  if (!ids.length) return false;
+  if (!confirm('Pagar ' + ids.length + ' despesa(s) com a data informada?')) return false;
+  document.getElementById('bulk-ids').value = JSON.stringify(ids);
+  return true;
+}
+</script>
 {% endblock %}

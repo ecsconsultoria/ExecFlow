@@ -1347,6 +1347,47 @@ def run_recurrences():
     return redirect(url_for("financial.expenses"))
 
 
+@financial_bp.route("/expenses/bulk-baixa", methods=["POST"])
+@login_required
+@require_permission("financial.manage")
+def bulk_baixa_expenses():
+    """Paga em lote as despesas selecionadas (somente pendentes)."""
+    import json as _json
+    raw_ids = request.form.get("ids", "[]")
+    try:
+        ids = _json.loads(raw_ids)
+    except ValueError:
+        ids = []
+    paid_date_str = (request.form.get("paid_date", "") or "").strip()
+    from datetime import date as _date
+    paid_date = _date.fromisoformat(paid_date_str) if paid_date_str else now_br().date()
+    method = (request.form.get("payment_method", "") or "").strip() or None
+
+    pagos = ignoradas = 0
+    for rid in ids:
+        try:
+            rid = int(rid)
+        except (TypeError, ValueError):
+            continue
+        r = _expense_base_query().filter(FinancialRecord.id == rid).first()
+        if r is None or r.status != "pendente":
+            ignoradas += 1
+            continue
+        r.status         = "pago"
+        r.paid_date      = paid_date
+        if method:
+            r.payment_method = method
+        log_activity("financial", r.id, current_user.company_id,
+                     f"Baixa em lote R$ {r.amount:.2f} ({paid_date.isoformat()})",
+                     current_user.id)
+        pagos += 1
+    db.session.commit()
+    flash(f"{pagos} despesa(s) paga(s) em lote"
+          + (f" — {ignoradas} ignorada(s) (não pendente)." if ignoradas else "."),
+          "success")
+    return redirect(url_for("financial.expenses"))
+
+
 @financial_bp.route("/expenses/<int:eid>/estornar", methods=["POST"])
 @login_required
 @require_permission("financial.manage")
