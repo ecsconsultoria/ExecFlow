@@ -1078,7 +1078,19 @@ def expenses():
         q = q.filter(FinancialRecord.cost_center_id == int(request.args["cost_center"]))
     if request.args.get("supplier"):
         q = q.filter(FinancialRecord.supplier_id == int(request.args["supplier"]))
+    recurring = request.args.get("recurring", "")
+    if recurring == "1":
+        q = q.filter(FinancialRecord.recurrence.isnot(None),
+                     FinancialRecord.recurrence != "")
     records = q.order_by(FinancialRecord.due_date.desc()).limit(500).all()
+
+    # Proximas ocorrencias das correntes ativas (elo atual, nao cancelado)
+    next_recurrences = (_expense_base_query()
+                        .filter(FinancialRecord.recurrence_active.is_(True))
+                        .filter(FinancialRecord.next_run.isnot(None))
+                        .filter(FinancialRecord.status != "cancelado")
+                        .order_by(FinancialRecord.next_run.asc())
+                        .all())
 
     def _sum(cond, extra=()):
         return (db.session.query(func.sum(FinancialRecord.amount))
@@ -1113,6 +1125,7 @@ def expenses():
     return render_template(
         "financial/expenses.html",
         records=records, today=today,
+        next_recurrences=next_recurrences,
         total_period=total_period, pending_total=pending_total,
         overdue_total=overdue_total, paid_total=paid_total,
         categories=categories, centers=centers, suppliers=suppliers,
@@ -1120,6 +1133,7 @@ def expenses():
         fcategory=request.args.get("category", ""),
         fcost_center=request.args.get("cost_center", ""),
         fsupplier=request.args.get("supplier", ""),
+        recurring=recurring,
         status_labels=_EXPENSE_STATUS_LABELS,
         period=request.args.get("period", "this_month"),
         date_from=request.args.get("date_from", ""),

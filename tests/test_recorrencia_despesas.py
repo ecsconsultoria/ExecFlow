@@ -138,6 +138,18 @@ def test_botao_rota(testing_app):
         assert FinancialRecord.query.filter_by(description="Consórcio").count() == 2
 
 
+def test_filter_recurring(testing_app):
+    """Filtro ?recurring=1 lista só as despesas recorrentes."""
+    cid, cat_id, cc_id = _seed_catalog(testing_app)
+    c = _login(testing_app)
+    _nova(testing_app, c, cid, cat_id, cc_id, recurrence="monthly", desc="Consórcio")
+    _nova(testing_app, c, cid, cat_id, cc_id, desc="Combustível avulso")
+    h = c.get("/financial/expenses?recurring=1").get_data(as_text=True)
+    assert "Consórcio" in h and "Combustível avulso" not in h
+    h2 = c.get("/financial/expenses").get_data(as_text=True)
+    assert "Consórcio" in h2 and "Combustível avulso" in h2
+
+
 def test_edit_recurrence(testing_app):
     """A edicao salva os campos de recorrencia (inclusive remover)."""
     cid, cat_id, cc_id = _seed_catalog(testing_app)
