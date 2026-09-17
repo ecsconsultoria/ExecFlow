@@ -122,7 +122,7 @@
       {% set is_overdue = (r.status == 'pendente' and r.due_date and r.due_date < today) %}
       <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30">
         <td class="px-3 py-2.5">
-          {% if r.status == 'pendente' %}<input type="checkbox" class="bulk-check rounded" value="{{ r.id }}" onchange="updateBulkBar()">{% endif %}
+          {% if r.status == 'pendente' and r.id %}<input type="checkbox" class="bulk-check rounded" value="{{ r.id }}" onchange="updateBulkBar()">{% endif %}
         </td>
         <td class="px-4 py-2.5 whitespace-nowrap">{{ r.emission_date.strftime('%d/%m/%Y') if r.emission_date else '—' }}</td>
         <td class="px-4 py-2.5 font-medium text-slate-700 dark:text-slate-200">
@@ -142,8 +142,6 @@
         <td class="px-4 py-2.5">
           {% if is_overdue %}
             <span class="px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">Vencida</span>
-          {% elif r.status == 'futuro' %}
-            <span class="px-2 py-0.5 rounded-full text-xs bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">Futura</span>
           {% elif r.status == 'pago' %}
             <span class="px-2 py-0.5 rounded-full text-xs bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">Paga</span>
           {% elif r.status == 'cancelado' %}
@@ -153,7 +151,16 @@
           {% endif %}
         </td>
         <td class="px-4 py-2.5 text-right whitespace-nowrap">
-          {% if has_perm('financial.manage') and r.status == 'pendente' %}
+          {% if has_perm('financial.manage') and r.status == 'pendente' and not r.id %}
+          {# ocorrência futura: pagamento antecipado materializa e paga #}
+          <form method="post" action="{{ url_for('financial.pay_antecipado') }}" class="inline"
+                onsubmit="return confirm('Pagar antecipadamente esta parcela?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="chain_id" value="{{ r.chain_id }}">
+            <input type="hidden" name="occ_date" value="{{ r.due_date.isoformat() }}">
+            <button type="submit" class="text-emerald-500 hover:opacity-70 px-1" title="Pagar antecipado"><i class="fa-solid fa-circle-check"></i></button>
+          </form>
+          {% elif has_perm('financial.manage') and r.status == 'pendente' %}
           <a href="{{ url_for('financial.edit_expense', eid=r.id) }}" class="text-blue-500 hover:text-blue-700 px-1" title="Editar"><i class="fa-solid fa-pen"></i></a>
           <form method="post" action="{{ url_for('financial.baixa_record', rid=r.id) }}" class="inline">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

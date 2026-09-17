@@ -1092,20 +1092,32 @@ def expenses():
                         .order_by(FinancialRecord.next_run.asc())
                         .all())
 
-    # Filtro "So recorrentes": as ocorrencias futuras entram na propria lista,
-    # ordenada por data de vencimento (crescente).
+    # Filtro "So recorrentes": TODAS as ocorrencias futuras de cada corrente
+    # entram na propria lista como despesas pendentes normais (mesmo badge,
+    # mesma data de vencimento), ordenadas por vencimento crescente. Sem
+    # limite de data: ate recurrence_until; sem "ate", mostra 24 ocorrencias.
     if recurring == "1" and next_recurrences:
         from types import SimpleNamespace
-        fut_rows = [SimpleNamespace(
-            id=None, status="futuro",
-            emission_date=None, due_date=nr.next_run,
-            description=nr.description, amount=nr.amount,
-            recurrence=nr.recurrence, recurrence_active=True,
-            next_run=None, recurrence_until=nr.recurrence_until,
-            notes=None,
-            category_ref=nr.category_ref, cost_center=nr.cost_center,
-            supplier=nr.supplier,
-        ) for nr in next_recurrences]
+        from ...services import recurrence_service as _rec
+        fut_rows = []
+        for nr in next_recurrences:
+            occ = nr.next_run
+            limite = nr.recurrence_until or (nr.next_run.replace(
+                year=nr.next_run.year + 2))  # horizonte p/ correntes sem fim
+            count = 0
+            while occ <= limite and count < 48:
+                fut_rows.append(SimpleNamespace(
+                    id=None, chain_id=nr.id, status="pendente",
+                    emission_date=occ, due_date=occ,
+                    description=nr.description, amount=nr.amount,
+                    recurrence=nr.recurrence, recurrence_active=True,
+                    next_run=None, recurrence_until=nr.recurrence_until,
+                    notes=None,
+                    category_ref=nr.category_ref, cost_center=nr.cost_center,
+                    supplier=nr.supplier,
+                ))
+                occ = _rec.next_emission(occ, nr.recurrence)
+                count += 1
         records = sorted(list(records) + fut_rows,
                          key=lambda r: r.due_date or date.max)
 
@@ -1422,6 +1434,46 @@ def bulk_baixa_expenses():
           + (f" — {ignoradas} ignorada(s) (não pendente)." if ignoradas else "."),
           "success")
     return redirect(url_for("financial.expenses"))
+
+
+@financial_bp.route("/expenses/pay-anticipado", methods=["POST"])
+@login_required
+@require_permission("financial.manage")
+def pay_antecipado():
+    """Paga antecipadamente uma ocorrência futura de despesa recorrente:
+    materializa a parcela (com a data de vencimento informada) e já a paga."""
+    from ...services import recurrence_service
+    chain_id = request.form.get("chain_id", type=int)
+    occ_str = (request.form.get("occ_date", "") or "").strip()
+    elo = _expense_base_query().filter(FinancialRecord.id == chain_id).first()
+    if elo is None or not elo.recurrence_active:
+        flash("Corrente recorrente não encontrada.", "warning")
+        return redirect(url_for("financial.expenses"))
+    try:
+        occ = date.fromisoformat(occ_str)
+    except ValueError:
+        flash("Data inválida.", "warning")
+        return redirect(url_for("financial.expenses"))
+    novo = FinancialRecord(
+        company_id=elo.company_id, type="expense", category=elo.category,
+        description=elo.description, amount=elo.amount, status="pago",
+        emission_date=occ, due_date=occ, paid_date=now_br().date(),
+        financial_category_id=elo.financial_category_id,
+        cost_center_id=elo.cost_center_id, supplier_id=elo.supplier_id,
+        recurrence=elo.recurrence, recurrence_until=elo.recurrence_until,
+        recurrence_active=True,
+        next_run=recurrence_service.next_emission(occ, elo.recurrence),
+    )
+    db.session.add(novo)
+    db.session.flush()
+    novo.reference = f"expense:{novo.id}"
+    elo.recurrence_active = False
+    log_activity("financial", novo.id, current_user.company_id,
+                 f"Baixa antecipada de recorrente '{novo.description}' R$ {novo.amount:.2f}",
+                 current_user.id)
+    db.session.commit()
+    flash("Pagamento antecipado registrado.", "success")
+    return redirect(url_for("financial.expenses", recurring="1"))
 
 
 @financial_bp.route("/expenses/<int:eid>/estornar", methods=["POST"])

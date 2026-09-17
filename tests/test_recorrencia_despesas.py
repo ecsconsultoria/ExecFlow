@@ -139,15 +139,44 @@ def test_botao_rota(testing_app):
 
 
 def test_filter_recurring(testing_app):
-    """Filtro ?recurring=1 lista só as despesas recorrentes."""
+    """Filtro ?recurring=1 lista só as despesas recorrentes, com as futuras
+    como pendentes normais (sem badge 'Futura')."""
     cid, cat_id, cc_id = _seed_catalog(testing_app)
     c = _login(testing_app)
-    _nova(testing_app, c, cid, cat_id, cc_id, recurrence="monthly", desc="Consórcio")
+    _nova(testing_app, c, cid, cat_id, cc_id, recurrence="monthly",
+          until="2026-12-10", desc="Consórcio")
     _nova(testing_app, c, cid, cat_id, cc_id, desc="Combustível avulso")
     h = c.get("/financial/expenses?recurring=1").get_data(as_text=True)
     assert "Consórcio" in h and "Combustível avulso" not in h
+    assert "Futura" not in h
+    # ocorrencias futuras: 14/09, 14/10, 14/11 (alem do registro existente)
+    assert h.count("14/09/2026") >= 1 and h.count("14/10/2026") >= 1 and h.count("14/11/2026") >= 1
     h2 = c.get("/financial/expenses").get_data(as_text=True)
     assert "Consórcio" in h2 and "Combustível avulso" in h2
+
+
+def test_pay_antecipado(testing_app):
+    """Pagamento antecipado materializa a ocorrencia futura e ja a paga."""
+    cid, cat_id, cc_id = _seed_catalog(testing_app)
+    c = _login(testing_app)
+    _nova(testing_app, c, cid, cat_id, cc_id, recurrence="monthly",
+          until="2026-12-10", desc="Consórcio")
+    with testing_app.app_context():
+        elo = FinancialRecord.query.filter_by(description="Consórcio").one()
+        chain_id = elo.id
+        occ = elo.next_run.isoformat()
+    r = c.post("/financial/expenses/pay-anticipado", data={
+        "chain_id": str(chain_id), "occ_date": occ,
+    }, follow_redirects=False)
+    assert r.status_code == 302
+    with testing_app.app_context():
+        novo = FinancialRecord.query.filter_by(
+            description="Consórcio", status="pago", due_date=date.fromisoformat(occ)).first()
+        assert novo is not None and novo.reference == f"expense:{novo.id}"
+        assert novo.recurrence_active is True
+        assert novo.next_run == recurrence_service.next_emission(date.fromisoformat(occ), "monthly")
+        elo = db.session.get(FinancialRecord, chain_id)
+        assert elo.recurrence_active is False
 
 
 def test_edit_recurrence(testing_app):
