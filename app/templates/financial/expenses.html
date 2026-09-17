@@ -156,7 +156,12 @@
             <button type="submit" class="text-red-500 hover:opacity-70 px-1" title="Cancelar"><i class="fa-solid fa-ban"></i></button>
           </form>
           {% elif r.status == 'pago' %}
-          <span class="text-xs text-slate-400">paga em {{ r.paid_date.strftime('%d/%m/%Y') if r.paid_date else '—' }}</span>
+          <span class="text-xs text-slate-400 mr-1">paga em {{ r.paid_date.strftime('%d/%m/%Y') if r.paid_date else '—' }}</span>
+          <form method="post" action="{{ url_for('financial.estornar_expense', eid=r.id) }}" class="inline"
+                onsubmit="return confirm('Estornar a baixa desta despesa? Ela volta a pendente.')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="text-amber-500 hover:opacity-70 px-1" title="Estornar baixa"><i class="fa-solid fa-rotate-left"></i></button>
+          </form>
           {% endif %}
         </td>
       </tr>
