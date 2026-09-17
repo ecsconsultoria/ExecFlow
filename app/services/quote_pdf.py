@@ -27,6 +27,24 @@ from reportlab.platypus import (
 BRAND_DARK   = colors.HexColor("#0b0b0b")   # preto Executive (V2)
 BRAND_GOLD   = colors.HexColor("#b88b2d")   # dourado Executive (V2)
 BRAND_LIGHT  = colors.HexColor("#F4F6F9")   # cinza claro (V2)
+
+
+def _register_web_font():
+    """Registra a fonte FontAwesome (icone de globo p/ o site no rodapé)."""
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    if "FontAwesome" in pdfmetrics.getRegisteredFontNames():
+        return
+    _path = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                         "static", "vendor", "webfonts", "fa-solid-900.ttf")
+    try:
+        pdfmetrics.registerFont(TTFont("FontAwesome", _path))
+    except Exception:
+        pass  # sem a fonte, o rodapé fica sem o ícone (não quebra o PDF)
+
+
+SITE_URL    = "https://www.executivecarsp.com"
+SITE_ICON   = ""  # fa-globe
 BRAND_GREEN  = colors.HexColor("#2e7d32")
 BRAND_RED    = colors.HexColor("#c62828")
 BRAND_BLUE   = colors.HexColor("#1565c0")
@@ -901,6 +919,27 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
         canvas.setFont("Helvetica", 7.5)
         canvas.setFillColor(colors.HexColor("#666666"))
         canvas.drawCentredString(_pw / 2, 9 * mm, _footer_line)
+        # Site com ícone + hiperlink, centralizado, abaixo do "Gerado"
+        from reportlab.pdfbase.pdfmetrics import stringWidth
+        _register_web_font()
+        try:
+            icon_w = stringWidth(SITE_ICON, "FontAwesome", 7.5)
+        except Exception:
+            icon_w = 0.0
+        url_w = stringWidth(SITE_URL, "Helvetica", 7.5)
+        gap = 2
+        x0 = (_pw - (icon_w + gap + url_w)) / 2
+        y_site = 4.5 * mm
+        if icon_w:
+            canvas.setFont("FontAwesome", 7.5)
+            canvas.setFillColor(colors.HexColor("#1565c0"))
+            canvas.drawString(x0, y_site, SITE_ICON)
+        x_url = x0 + icon_w + gap
+        canvas.setFont("Helvetica", 7.5)
+        canvas.setFillColor(colors.HexColor("#1565c0"))
+        canvas.drawString(x_url, y_site, SITE_URL)
+        canvas.linkURL(SITE_URL, (x_url, y_site - 1, x_url + url_w, y_site + 3),
+                       relative=1)
         canvas.restoreState()
 
     # ── Build PDF ─────────────────────────────────────────────────────────

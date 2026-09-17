@@ -26,7 +26,7 @@ from reportlab.lib.pagesizes import landscape as _landscape
 
 # Re-use brand constants + helpers from quote_pdf
 from . import quote_pdf as _qp
-from .quote_pdf import BRAND_DARK, BRAND_GOLD, BRAND_LIGHT, _fmt_brl, _fmt_phone_link, _fmt_time_12h, _get_vehicle_model, _sanitize_phone, _total_cell_text, _translate_payment_terms, _translate_service, _translate_vehicle, _translate_driver
+from .quote_pdf import BRAND_DARK, BRAND_GOLD, BRAND_LIGHT, SITE_URL, SITE_ICON, _register_web_font, _fmt_brl, _fmt_phone_link, _fmt_time_12h, _get_vehicle_model, _sanitize_phone, _total_cell_text, _translate_payment_terms, _translate_service, _translate_vehicle, _translate_driver
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -828,6 +828,27 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
         canvas.setFont("Helvetica", 7.5)
         canvas.setFillColor(colors.HexColor("#666666"))
         canvas.drawCentredString(_pw / 2, 9 * mm, _footer_line)
+        # Site com ícone + hiperlink, centralizado, abaixo do "Gerado"
+        from reportlab.pdfbase.pdfmetrics import stringWidth
+        _register_web_font()
+        try:
+            icon_w = stringWidth(SITE_ICON, "FontAwesome", 7.5)
+        except Exception:
+            icon_w = 0.0
+        url_w = stringWidth(SITE_URL, "Helvetica", 7.5)
+        gap = 2
+        x0 = (_pw - (icon_w + gap + url_w)) / 2
+        y_site = 4.5 * mm
+        if icon_w:
+            canvas.setFont("FontAwesome", 7.5)
+            canvas.setFillColor(colors.HexColor("#1565c0"))
+            canvas.drawString(x0, y_site, SITE_ICON)
+        x_url = x0 + icon_w + gap
+        canvas.setFont("Helvetica", 7.5)
+        canvas.setFillColor(colors.HexColor("#1565c0"))
+        canvas.drawString(x_url, y_site, SITE_URL)
+        canvas.linkURL(SITE_URL, (x_url, y_site - 1, x_url + url_w, y_site + 3),
+                       relative=1)
         canvas.restoreState()
 
     templates[0].onPage = _draw_footer

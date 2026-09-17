@@ -24,6 +24,9 @@ from .quote_pdf import (
     BRAND_DARK,
     BRAND_GOLD,
     BRAND_LIGHT,
+    SITE_URL,
+    SITE_ICON,
+    _register_web_font,
     _T as _QT,
     _billing_label,
     _fmt_brl,
@@ -714,6 +717,27 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         canvas.setFont("Helvetica", 7.5)
         canvas.setFillColor(colors.HexColor("#666666"))
         canvas.drawCentredString(_pw / 2, 9 * mm, _footer_line)
+        # Site com ícone + hiperlink, centralizado, abaixo do "Gerado"
+        from reportlab.pdfbase.pdfmetrics import stringWidth
+        _register_web_font()
+        try:
+            icon_w = stringWidth(SITE_ICON, "FontAwesome", 7.5)
+        except Exception:
+            icon_w = 0.0
+        url_w = stringWidth(SITE_URL, "Helvetica", 7.5)
+        gap = 2
+        x0 = (_pw - (icon_w + gap + url_w)) / 2
+        y_site = 4.5 * mm
+        if icon_w:
+            canvas.setFont("FontAwesome", 7.5)
+            canvas.setFillColor(colors.HexColor("#1565c0"))
+            canvas.drawString(x0, y_site, SITE_ICON)
+        x_url = x0 + icon_w + gap
+        canvas.setFont("Helvetica", 7.5)
+        canvas.setFillColor(colors.HexColor("#1565c0"))
+        canvas.drawString(x_url, y_site, SITE_URL)
+        canvas.linkURL(SITE_URL, (x_url, y_site - 1, x_url + url_w, y_site + 3),
+                       relative=1)
         canvas.restoreState()
 
     doc.build(story, onFirstPage=_draw_footer, onLaterPages=_draw_footer)
