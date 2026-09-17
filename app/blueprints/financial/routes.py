@@ -1092,6 +1092,23 @@ def expenses():
                         .order_by(FinancialRecord.next_run.asc())
                         .all())
 
+    # Filtro "So recorrentes": as ocorrencias futuras entram na propria lista,
+    # ordenada por data de vencimento (crescente).
+    if recurring == "1" and next_recurrences:
+        from types import SimpleNamespace
+        fut_rows = [SimpleNamespace(
+            id=None, status="futuro",
+            emission_date=None, due_date=nr.next_run,
+            description=nr.description, amount=nr.amount,
+            recurrence=nr.recurrence, recurrence_active=True,
+            next_run=None, recurrence_until=nr.recurrence_until,
+            notes=None,
+            category_ref=nr.category_ref, cost_center=nr.cost_center,
+            supplier=nr.supplier,
+        ) for nr in next_recurrences]
+        records = sorted(list(records) + fut_rows,
+                         key=lambda r: r.due_date or date.max)
+
     def _sum(cond, extra=()):
         return (db.session.query(func.sum(FinancialRecord.amount))
                 .filter(FinancialRecord.company_id == cid,
