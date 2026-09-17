@@ -547,9 +547,14 @@ def baixa_record(rid):
         import logging
         logging.exception("Erro na baixa financeira — operação revertida")
         flash("Erro ao registrar a baixa. Operação revertida — nada foi alterado.", "danger")
+        if r.type == "expense":
+            return redirect(url_for("financial.expenses"))
         return redirect(url_for("financial.index"))
 
     flash("Baixa registrada com sucesso.", "success")
+    # Despesa paga pela tela de Despesas: mantém o usuário nela
+    if r.type == "expense":
+        return redirect(url_for("financial.expenses"))
     return redirect(url_for("financial.index"))
 
 
