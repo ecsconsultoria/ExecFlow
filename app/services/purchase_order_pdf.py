@@ -693,6 +693,15 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
 
     if op_groups:
         story.append(PageBreak())
+        # Logotipo centralizado no cabeçalho (mesmo da página principal)
+        if logo_img:
+            logo_hdr = Table([[logo_img]], colWidths=[W])
+            logo_hdr.setStyle(TableStyle([
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ]))
+            story.append(logo_hdr)
         # Título da página de dados operacionais (uma vez, antes dos blocos).
         # É sempre o título grande — a placa receptivo tem página própria
         # (landscape), com o título "Meet & Greet" em _render_sign_page.
