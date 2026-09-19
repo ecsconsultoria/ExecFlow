@@ -725,7 +725,7 @@ def _build_receipt_pdf(order, payment, receipt_number: str, lang: str,
     # Linha 2: contato (website • telefone • WhatsApp) — dados de config
     # Linha 3: GERADO EM data/hora
     cnpj_lbl_footer = "CNPJ" if lang == "pt" else "TAX ID"
-    now_str = now_br().strftime("%m/%d/%Y %H:%M" if lang == "en" else "%d/%m/%Y %H:%M")
+    now_str = now_br().strftime("%m/%d/%Y %I:%M%p" if lang == "en" else "%d/%m/%Y %I:%M%p")
     tagline = _t("tagline", lang)
     _footer_tail = f" • {tagline}"
     if company_doc:

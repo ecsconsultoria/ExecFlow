@@ -44,7 +44,7 @@ def _fmt_datetime(d, lang: str = "pt") -> str:
     if d is None:
         return "–"
     try:
-        return d.strftime("%m/%d/%Y %H:%M" if lang == "en" else "%d/%m/%Y %H:%M")
+        return d.strftime("%m/%d/%Y %I:%M%p" if lang == "en" else "%d/%m/%Y %I:%M%p")
     except Exception:
         return str(d)
 
@@ -440,7 +440,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
                     m = item.service_time.minute
                     ampm = 'AM' if h < 12 else 'PM'
                     h12 = h if 1 <= h <= 12 else (h - 12 if h > 12 else 12)
-                    date_prefix += f' {h12}:{m:02d} {ampm}'
+                    date_prefix += f' {h12}:{m:02d}{ampm}'
             if date_prefix:
                 desc = f'{date_prefix} – {desc}'
 
@@ -825,7 +825,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
     cnpj_lbl_footer = "CNPJ" if lang == "pt" else "TAX ID"
     tax_part        = (f"{company_name} \u2022 {cnpj_lbl_footer} {company_doc}"
                        if company_doc else company_name)
-    now_str         = _dt.now().strftime("%m/%d/%Y %I:%M %p" if lang == "en" else "%d/%m/%Y %I:%M %p")
+    now_str         = _dt.now().strftime("%m/%d/%Y %I:%M%p" if lang == "en" else "%d/%m/%Y %I:%M%p")
     _footer_line    = f"{_t('generated', lang)} {now_str}   \u2022   {tax_part}"
     _lm, _rm, _pw  = 15 * mm, A4[0] - 15 * mm, A4[0]
 
