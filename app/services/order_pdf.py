@@ -59,6 +59,8 @@ _T: dict[str, dict[str, str]] = {
     "installment_no":   {"pt": "PARCELA",                  "en": "INSTALLMENT"},
     "due_date":         {"pt": "VENCIMENTO",               "en": "DUE DATE"},
     "amount_col":       {"pt": "VALOR (R$)",               "en": "AMOUNT (R$)"},
+    "subtotal_col":     {"pt": "SUBTOTAL",                 "en": "SUBTOTAL"},
+    "grand_total_lbl":  {"pt": "PREÇO TOTAL",              "en": "TOTAL PRICE"},
     "payment_status":   {"pt": "PAGAMENTO",               "en": "PAYMENT"},
     "status_paid":      {"pt": "PAGO",                     "en": "PAID"},
     "status_open":      {"pt": "PENDENTE",                 "en": "PENDING"},
@@ -307,7 +309,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         Paragraph(_t("service_col", lang), cell_hdr),
         Paragraph(_t("qty_col",     lang), cell_hdr),
         Paragraph(_t("unit_col",    lang), cell_hdr),
-        Paragraph(_t("total_col",   lang), cell_hdr),
+        Paragraph(_t("subtotal_col", lang), cell_hdr),
     ]]
     grand_total = 0.0
     for idx, item in enumerate(sorted(order.items, key=lambda x: x.sort_order or 0), 1):
@@ -349,7 +351,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
                 m = item.service_time.minute
                 ampm = 'AM' if h < 12 else 'PM'
                 h12 = h if 1 <= h <= 12 else (h - 12 if h > 12 else 12)
-                date_prefix += f' {h12}:{m:02d} {ampm}'
+                date_prefix += f' {h12}:{m:02d}{ampm}'
         if date_prefix:
             main_label = f'{date_prefix} – {main_label}'
 
@@ -372,22 +374,19 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
     # Track where item rows end (before adjustment rows)
     item_data_end = len(items_rows)
 
+    # Linha do total dos servicos: rotulo "PREÇO TOTAL" sob a coluna UNIT. e
+    # o valor (soma dos servicos) sob a coluna SUBTOTAL
+    items_rows.append([
+        Paragraph("", cell_body),
+        Paragraph("", cell_body),
+        Paragraph("", cell_body),
+        Paragraph(f"<b>{_t('grand_total_lbl', lang)}</b>", cell_bold_r),
+        Paragraph(f"<b>{_fmt_brl(grand_total)}</b>", cell_bold_r),
+    ])
+
     # Append discount row if applicable
     _adj_style_cmds: list = []
     if disc_amt:
-        # Subtotal row (original total before discount)
-        r = len(items_rows)
-        items_rows.append([
-            Paragraph(f"<i>{_t('subtotal', lang)}:</i>", cell_body_r),
-            "", "", "",
-            Paragraph(_fmt_brl(subtotal), cell_body_r),
-        ])
-        _adj_style_cmds += [
-            ("SPAN",          (0, r), (3, r)),
-            ("ALIGN",         (0, r), (-1, r), "RIGHT"),
-            ("TOPPADDING",    (0, r), (-1, r), 5),
-            ("BOTTOMPADDING", (0, r), (-1, r), 2),
-        ]
         # Discount row
         r = len(items_rows)
         items_rows.append([
