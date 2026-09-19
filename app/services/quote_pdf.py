@@ -906,7 +906,7 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
     story.append(Paragraph(_t("validity", lang), ctr_sm))
 
     # ── Footer as page callback (always at physical bottom) ───────────────
-    now_str  = datetime.now().strftime("%m/%d/%Y %H:%M" if lang == "en" else "%d/%m/%Y %H:%M")
+    now_str  = datetime.now().strftime("%m/%d/%Y %I:%M %p" if lang == "en" else "%d/%m/%Y %I:%M %p")
     tax_part = f"{company_name} \u2022 {_t('tax_id', lang)} {company_doc}" if company_doc else company_name
     _footer_line = f"{_t('generated', lang)} {now_str}   \u2022   {tax_part}"
     _lm, _rm, _pw = 15 * mm, A4[0] - 15 * mm, A4[0]

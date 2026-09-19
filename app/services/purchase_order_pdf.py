@@ -655,8 +655,8 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
     )
     # Título da página de dados operacionais — grande e centralizado (24pt)
     op_page_title_st = ParagraphStyle(
-        "po_op_page_title", fontName="Helvetica-Bold", fontSize=24,
-        textColor=BRAND_DARK, alignment=TA_CENTER, leading=28, spaceAfter=10,
+        "po_op_page_title", fontName="Helvetica-Bold", fontSize=16,
+        textColor=BRAND_DARK, alignment=TA_CENTER, leading=20, spaceAfter=10,
     )
 
     items_sorted = sorted(po.items, key=lambda it: (getattr(it, "sort_order", 0) or 0, it.id))
@@ -771,7 +771,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
                 safe = _fmt_phone_link(v, add_country=add_55)
             else:
                 safe = (v or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-            cells.append(Paragraph(f"<b>{label}:</b> {safe}", op_value_st))
+            cells.append(Paragraph(f"<b>{label}</b><br/>{safe}", op_value_st))
 
         if cells:
             while len(cells) % COLS != 0:
@@ -796,7 +796,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
             obs_label = _t(obs_entry[0], lang)
             obs_safe  = (obs_entry[1] or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
             obs_tbl = Table(
-                [[Paragraph(f"<b>{obs_label}:</b> {obs_safe}", op_value_st)]],
+                [[Paragraph(f"<b>{obs_label}</b><br/>{obs_safe}", op_value_st)]],
                 colWidths=[W],
             )
             obs_tbl.setStyle(TableStyle([
@@ -825,7 +825,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
     cnpj_lbl_footer = "CNPJ" if lang == "pt" else "TAX ID"
     tax_part        = (f"{company_name} \u2022 {cnpj_lbl_footer} {company_doc}"
                        if company_doc else company_name)
-    now_str         = _dt.now().strftime("%m/%d/%Y %H:%M" if lang == "en" else "%d/%m/%Y %H:%M")
+    now_str         = _dt.now().strftime("%m/%d/%Y %I:%M %p" if lang == "en" else "%d/%m/%Y %I:%M %p")
     _footer_line    = f"{_t('generated', lang)} {now_str}   \u2022   {tax_part}"
     _lm, _rm, _pw  = 15 * mm, A4[0] - 15 * mm, A4[0]
 

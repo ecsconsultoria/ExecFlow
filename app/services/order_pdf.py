@@ -566,10 +566,10 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         "op_title_c", fontName="Helvetica-Bold", fontSize=11,
         textColor=colors.white, alignment=TA_LEFT, leading=14,
     )
-    # Título da página de dados operacionais — grande e centralizado (24pt)
+    # Título da página de dados operacionais — centralizado (16pt)
     op_page_title_st = ParagraphStyle(
-        "op_page_title_c", fontName="Helvetica-Bold", fontSize=24,
-        textColor=BRAND_DARK, alignment=TA_CENTER, leading=28, spaceAfter=10,
+        "op_page_title_c", fontName="Helvetica-Bold", fontSize=16,
+        textColor=BRAND_DARK, alignment=TA_CENTER, leading=20, spaceAfter=10,
     )
 
     items_sorted = sorted(order.items, key=lambda it: (it.sort_order or 0, it.id))
@@ -683,7 +683,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
                 safe = _fmt_phone_link(v, add_country=add_55)
             else:
                 safe = (v or "").replace('\xa0', ' ').replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-            cells.append(Paragraph(f"<b>{label}:</b> {safe}", op_value_st))
+            cells.append(Paragraph(f"<b>{label}</b><br/>{safe}", op_value_st))
 
         # Preenche para múltiplo de COLS
         while len(cells) % COLS != 0:
@@ -714,7 +714,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
     from datetime import datetime as _dt
     cnpj_lbl_footer = "CNPJ" if lang == "pt" else "TAX ID"
     tax_part     = (f"{company_name} \u2022 {cnpj_lbl_footer} {company_doc}" if company_doc else company_name)
-    now_str      = _dt.now().strftime("%m/%d/%Y %H:%M" if lang == "en" else "%d/%m/%Y %H:%M")
+    now_str      = _dt.now().strftime("%m/%d/%Y %I:%M %p" if lang == "en" else "%d/%m/%Y %I:%M %p")
     _footer_line = f"{_t('generated', lang)} {now_str}   \u2022   {tax_part}"
     _lm, _rm, _pw = 15 * mm, A4[0] - 15 * mm, A4[0]
 
