@@ -459,14 +459,16 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
     #    Prazo Pagamento | Parcela | Vencimento | Valor | Pagamento ──────
     cell_total_gold = ParagraphStyle("ctg", fontSize=10, fontName="Helvetica-Bold",
                                       textColor=BRAND_GOLD, alignment=TA_CENTER, leading=12)
+    # Cabecalho compacto: os 7 rotulos cabem numa linha unica
+    cell_hdr_sm = ParagraphStyle("chs", parent=cell_hdr, fontSize=6, leading=7)
     pay_rows = [[
-        Paragraph(_t("included_col",    lang), cell_hdr),
-        Paragraph(_t("payment_col",     lang), cell_hdr),
-        Paragraph(_t("prazo_col",       lang), cell_hdr),
-        Paragraph(_t("installment_no",  lang), cell_hdr),
-        Paragraph(_t("due_date",        lang), cell_hdr),
-        Paragraph(_t("amount_col",      lang), cell_hdr),
-        Paragraph(_t("payment_status",  lang), cell_hdr),
+        Paragraph(_t("included_col",    lang), cell_hdr_sm),
+        Paragraph(_t("payment_col",     lang), cell_hdr_sm),
+        Paragraph(_t("prazo_col",       lang), cell_hdr_sm),
+        Paragraph(_t("installment_no",  lang), cell_hdr_sm),
+        Paragraph(_t("due_date",        lang), cell_hdr_sm),
+        Paragraph(_t("amount_col",      lang), cell_hdr_sm),
+        Paragraph(_t("payment_status",  lang), cell_hdr_sm),
     ]]
     # primeira linha de dados: faturamento/forma/prazo (uma vez)
     pay_rows.append([
