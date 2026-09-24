@@ -470,31 +470,35 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         Paragraph(_t("amount_col",      lang), cell_hdr_sm),
         Paragraph(_t("payment_status",  lang), cell_hdr_sm),
     ]]
-    # primeira linha de dados: faturamento/forma/prazo (uma vez)
-    pay_rows.append([
-        Paragraph(billing_lbl,            cell_body_c),
-        Paragraph(pay_method_lbl or "–", cell_body_c),
-        Paragraph(pay_terms_lbl,          cell_body_c),
-        Paragraph("", cell_body_c),
-        Paragraph("", cell_body_c),
-        Paragraph("", cell_body_c),
-        Paragraph("", cell_body_c),
-    ])
     sorted_pmts = sorted(order.payments, key=lambda p: p.installment_no) if order.payments else []
     total_pmts = len(sorted_pmts)
-    for pmt in sorted_pmts:
+
+    def _pmt_cells(pmt):
         is_paid      = pmt.is_paid
         status_label = _t("status_paid", lang) if is_paid else _t("status_open", lang)
         st_p = ParagraphStyle("sp", fontSize=9, fontName="Helvetica-Bold",
                                textColor=BRAND_DARK, alignment=TA_CENTER, leading=11)
-        pay_rows.append([
-            Paragraph("", cell_body_c),
-            Paragraph("", cell_body_c),
-            Paragraph("", cell_body_c),
+        return [
             Paragraph(f"{pmt.installment_no}/{total_pmts}", cell_body_c),
             Paragraph(_fmt_date(pmt.due_date, lang),        cell_body_c),
             Paragraph(_total_cell_text(pmt.amount or 0, lang, getattr(order, 'usd_rate', None)), cell_body_r),
             Paragraph(status_label, st_p),
+        ]
+
+    # primeira linha de dados: faturamento/forma/prazo + a PRIMEIRA parcela
+    primeira = _pmt_cells(sorted_pmts[0]) if sorted_pmts else [Paragraph("", cell_body_c)] * 4
+    pay_rows.append([
+        Paragraph(billing_lbl,            cell_body_c),
+        Paragraph(pay_method_lbl or "–", cell_body_c),
+        Paragraph(pay_terms_lbl,          cell_body_c),
+        *primeira,
+    ])
+    for pmt in sorted_pmts[1:]:
+        pay_rows.append([
+            Paragraph("", cell_body_c),
+            Paragraph("", cell_body_c),
+            Paragraph("", cell_body_c),
+            *_pmt_cells(pmt),
         ])
 
     pay_tbl = Table(pay_rows, colWidths=[W * 0.12, W * 0.16, W * 0.14,
@@ -513,9 +517,11 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
         ("ALIGN",         (5, 0), (5, -1), "RIGHT"),
     ])
-    for row_idx, pmt in enumerate(sorted_pmts, 2):
-        row_bg = BRAND_LIGHT if row_idx % 2 == 0 else colors.white
-        pay_style.add("BACKGROUND", (0, row_idx), (2, row_idx), row_bg)
+    for idx, pmt in enumerate(sorted_pmts):
+        row_idx = idx + 1   # a primeira parcela esta na linha 1
+        if row_idx >= 2:
+            row_bg = BRAND_LIGHT if row_idx % 2 == 0 else colors.white
+            pay_style.add("BACKGROUND", (0, row_idx), (2, row_idx), row_bg)
         st_bg = colors.HexColor("#2E7D32") if pmt.is_paid else colors.HexColor("#E65100")
         pay_style.add("BACKGROUND", (6, row_idx), (6, row_idx), st_bg)
     pay_tbl.setStyle(pay_style)
