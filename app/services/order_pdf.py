@@ -58,14 +58,14 @@ _T: dict[str, dict[str, str]] = {
     "payment_hdr":      {"pt": "PAGAMENTO",                "en": "PAYMENT"},
     "installment_no":   {"pt": "PARCELA",                  "en": "INSTALLMENT"},
     "due_date":         {"pt": "VENCIMENTO",               "en": "DUE DATE"},
-    "amount_col":       {"pt": "VALOR",                     "en": "AMOUNT"},
+    "amount_col":       {"pt": "VALOR PARCELA",             "en": "INSTALLMENT AMOUNT"},
     "subtotal_col":     {"pt": "SUBTOTAL",                 "en": "SUBTOTAL"},
     # Sobrescreve os rotulos do quote_pdf para a tabela unica de pagamento
     "included_col":     {"pt": "FATURAMENTO",              "en": "INVOICE"},
     "prazo_col":        {"pt": "PRAZO PAGAMENTO",          "en": "PAYMENT TERMS"},
     "grand_total_lbl":  {"pt": "PREÇO TOTAL",              "en": "TOTAL PRICE"},
     "payment_status":   {"pt": "PAGAMENTO",               "en": "PAYMENT"},
-    "status_paid":      {"pt": "PAGO",                     "en": "PAID"},
+    "status_paid":      {"pt": "Finalizado",               "en": "PAID"},
     "status_open":      {"pt": "PENDENTE",                 "en": "PENDING"},
     "obs_hdr":          {"pt": "OBSERVAÇÕES",              "en": "NOTES"},
     "vendor_lbl":       {"pt": "VENDEDOR",                 "en": "SALES REP."},
@@ -476,8 +476,9 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
     def _pmt_cells(pmt):
         is_paid      = pmt.is_paid
         status_label = _t("status_paid", lang) if is_paid else _t("status_open", lang)
-        st_p = ParagraphStyle("sp", fontSize=9, fontName="Helvetica-Bold",
-                               textColor=BRAND_DARK, alignment=TA_CENTER, leading=11)
+        # mesmo tamanho de fonte das demais celulas (8pt)
+        st_p = ParagraphStyle("sp", fontSize=8, fontName="Helvetica-Bold",
+                               textColor=BRAND_DARK, alignment=TA_CENTER, leading=10)
         return [
             Paragraph(f"{pmt.installment_no}/{total_pmts}", cell_body_c),
             Paragraph(_fmt_date(pmt.due_date, lang),        cell_body_c),
@@ -501,8 +502,8 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
             *_pmt_cells(pmt),
         ])
 
-    pay_tbl = Table(pay_rows, colWidths=[W * 0.12, W * 0.16, W * 0.14,
-                                         W * 0.13, W * 0.12, W * 0.18, W * 0.15],
+    pay_tbl = Table(pay_rows, colWidths=[W * 0.12, W * 0.16, W * 0.19,
+                                         W * 0.12, W * 0.11, W * 0.14, W * 0.16],
                     repeatRows=1)
     pay_style = TableStyle([
         ("BACKGROUND",    (0, 0), (-1, 0), BRAND_DARK),
