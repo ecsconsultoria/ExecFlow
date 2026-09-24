@@ -32,6 +32,7 @@ from .quote_pdf import (
     _fmt_brl,
     _fmt_phone_link,
     _fmt_time_12h,
+    _fmt_usd_raw,
     _sanitize_phone,
     _total_cell_text,
     _total_cell_aligned,
@@ -95,6 +96,18 @@ _T: dict[str, dict[str, str]] = {
 def _t(key: str, lang: str) -> str:
     entry = _T.get(key, {})
     return entry.get(lang) or entry.get("pt") or key
+
+
+def _price_brl_usd(brl: float, style, usd_rate):
+    """Preço em R$ e, com cotação USD, o valor em USD ABAIXO, em fonte menor
+    e sem barra."""
+    base = _fmt_brl(brl)
+    if usd_rate and usd_rate > 0:
+        usd_val = brl / usd_rate
+        return Paragraph(
+            f"{base}<br/><font size='6' color='#888888'>USD {_fmt_usd_raw(usd_val)}</font>",
+            style)
+    return Paragraph(base, style)
 
 
 def _fmt_date(d, lang: str = "pt") -> str:
@@ -313,6 +326,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         Paragraph(_t("subtotal_col", lang), cell_hdr),
     ]]
     grand_total = 0.0
+    usd_rate = getattr(order, 'usd_rate', None)
     for idx, item in enumerate(sorted(order.items, key=lambda x: x.sort_order or 0), 1):
         service_name_raw  = item.description or "–"
         driver_type_raw   = item.driver_name or ""
@@ -368,8 +382,8 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
             Paragraph(str(idx),                       cell_body_c),
             svc_para,
             Paragraph(str(item.quantity or 1),        cell_body_c),
-            Paragraph(_fmt_brl(item.unit_price or 0), cell_body_r),
-            Paragraph(_fmt_brl(total),                cell_body_r),
+            _price_brl_usd(item.unit_price or 0, cell_body_r, usd_rate),
+            _price_brl_usd(total,                cell_body_r, usd_rate),
         ])
 
     # Track where item rows end (before adjustment rows)
@@ -382,7 +396,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         Paragraph("", cell_body),
         Paragraph("", cell_body),
         Paragraph(f"<b>{_t('grand_total_lbl', lang)}</b>", cell_bold_r),
-        Paragraph(f"<b>{_fmt_brl(grand_total)}</b>", cell_bold_r),
+        _price_brl_usd(grand_total, cell_bold_r, usd_rate),
     ])
 
     # Append discount row if applicable
@@ -482,7 +496,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         return [
             Paragraph(f"{pmt.installment_no}/{total_pmts}", cell_body_c),
             Paragraph(_fmt_date(pmt.due_date, lang),        cell_body_c),
-            Paragraph(_total_cell_text(pmt.amount or 0, lang, getattr(order, 'usd_rate', None)), cell_body_r),
+            _price_brl_usd(pmt.amount or 0, cell_body_r, usd_rate),
             Paragraph(status_label, st_p),
         ]
 
