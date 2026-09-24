@@ -539,6 +539,13 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
             pay_style.add("BACKGROUND", (0, row_idx), (2, row_idx), row_bg)
         st_bg = colors.HexColor("#2E7D32") if pmt.is_paid else colors.HexColor("#E65100")
         pay_style.add("BACKGROUND", (6, row_idx), (6, row_idx), st_bg)
+    # Com mais de uma parcela, Faturamento/Forma de Pagamento/Prazo Pagamento
+    # fazem merge vertical entre as linhas (uma unica celula alta)
+    if len(sorted_pmts) > 1:
+        last_row = len(pay_rows) - 1
+        for col in (0, 1, 2):
+            pay_style.add("SPAN", (col, 1), (col, last_row))
+        pay_style.add("VALIGN", (0, 1), (2, last_row), "MIDDLE")
     pay_tbl.setStyle(pay_style)
     story.append(pay_tbl)
     story.append(Spacer(1, 4 * mm))
