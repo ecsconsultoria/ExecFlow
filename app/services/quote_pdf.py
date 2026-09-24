@@ -88,6 +88,7 @@ _T: dict[str, dict[str, str]] = {
     "unit_col":         {"pt": "UNIT.",                    "en": "UNIT."},
     "overtime_col":     {"pt": "HORA EXTRA",               "en": "OVERTIME"},
     "total_col":        {"pt": "PREÇO TOTAL",              "en": "TOTAL PRICE"},
+    "subtotal_col":     {"pt": "SUBTOTAL",                 "en": "SUBTOTAL"},
     "payment_col":      {"pt": "FORMA DE PAGAMENTO",       "en": "PAYMENT METHOD"},
     "included_col":     {"pt": "FATURAMENTO FISCAL",        "en": "INVOICE"},
     "prazo_col":        {"pt": "PRAZO DE PAGAMENTO",        "en": "PAYMENT TERMS"},
@@ -598,7 +599,7 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
     small     = ParagraphStyle("sm", fontSize=8,  textColor=colors.HexColor("#666"), leading=11)
     italic_sm = ParagraphStyle("is", fontSize=8, fontName="Helvetica-Oblique",
                                 textColor=colors.HexColor("#666"), leading=10)
-    sec_hdr   = ParagraphStyle("sh", fontSize=9, fontName="Helvetica-Bold",
+    sec_hdr   = ParagraphStyle("sh", fontSize=8, fontName="Helvetica-Bold",
                                 textColor=BRAND_DARK, leading=12, spaceBefore=3, spaceAfter=3)
     bullet_st       = ParagraphStyle("bs",       fontSize=8, textColor=BRAND_DARK, leading=12, leftIndent=8)
     bullet_tight_st = ParagraphStyle("bs_tight", fontSize=8, textColor=BRAND_DARK, leading=12, leftIndent=0)
@@ -606,7 +607,7 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
                                 alignment=TA_CENTER, leading=12)
     footer_st = ParagraphStyle("fs", fontSize=7.5, textColor=colors.HexColor("#666"),
                                 alignment=TA_CENTER, leading=11)
-    cell_hdr  = ParagraphStyle("ch", fontSize=7, fontName="Helvetica-Bold",
+    cell_hdr  = ParagraphStyle("ch", fontSize=8, fontName="Helvetica-Bold",
                                 textColor=colors.white, leading=10, alignment=TA_CENTER)
     cell_hdr_l = ParagraphStyle("chl", parent=cell_hdr, alignment=TA_LEFT)
     cell_body  = ParagraphStyle("cb", fontSize=8, textColor=BRAND_DARK, leading=11)
@@ -720,7 +721,7 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
         Paragraph(_t("service_col",  lang), cell_hdr),
         Paragraph(_t("qty_col",      lang), cell_hdr),
         Paragraph(_t("unit_col",     lang), cell_hdr),
-        Paragraph(_t("total_col",    lang), cell_hdr),
+        Paragraph(_t("subtotal_col", lang), cell_hdr),
     ]]
 
     grand_total = 0.0

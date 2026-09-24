@@ -252,7 +252,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
     sub_st          = ParagraphStyle("ss",  fontSize=9,  fontName="Helvetica-Bold",
                                      textColor=BRAND_GOLD, alignment=TA_CENTER, spaceAfter=6)
     normal          = ParagraphStyle("ns",  fontSize=8,  textColor=BRAND_DARK, leading=12)
-    sec_hdr         = ParagraphStyle("sh",  fontSize=9,  fontName="Helvetica-Bold",
+    sec_hdr         = ParagraphStyle("sh",  fontSize=8,  fontName="Helvetica-Bold",
                                      textColor=BRAND_DARK, leading=12, spaceBefore=3, spaceAfter=3)
     cell_hdr        = ParagraphStyle("ch",  fontSize=8,  fontName="Helvetica-Bold",
                                      textColor=colors.white, leading=10, alignment=TA_CENTER)
@@ -599,7 +599,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
     payments_list = list(po.payments) if getattr(po, "payments", None) else []
 
     # Cabecalho compacto: os 6 rotulos cabem numa linha unica
-    cell_hdr_sm = ParagraphStyle("chs", parent=cell_hdr, fontSize=6, leading=7)
+    cell_hdr_sm = ParagraphStyle("chs", parent=cell_hdr, fontSize=8, leading=10)
     pay_rows = [[
         Paragraph(_t("payment_col",    lang), cell_hdr_sm),
         Paragraph(_t("prazo_col",      lang), cell_hdr_sm),
@@ -697,8 +697,8 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
         textColor=BRAND_DARK, leading=11, spaceAfter=0,
     )
     op_title_st = ParagraphStyle(
-        "po_op_title", fontName="Helvetica-Bold", fontSize=11,
-        textColor=colors.white, alignment=TA_LEFT, leading=14,
+        "po_op_title", fontName="Helvetica-Bold", fontSize=8,
+        textColor=colors.white, alignment=TA_LEFT, leading=10,
     )
     # Título da página de dados operacionais — grande e centralizado (24pt)
     op_page_title_st = ParagraphStyle(

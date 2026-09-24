@@ -157,11 +157,11 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
                                  textColor=BRAND_GOLD, alignment=TA_CENTER, spaceAfter=6)
     normal     = ParagraphStyle("ns", fontSize=8, textColor=BRAND_DARK, leading=12)
     small      = ParagraphStyle("sm", fontSize=8, textColor=colors.HexColor("#666"), leading=11)
-    sec_hdr    = ParagraphStyle("sh", fontSize=9, fontName="Helvetica-Bold",
+    sec_hdr    = ParagraphStyle("sh", fontSize=8, fontName="Helvetica-Bold",
                                  textColor=BRAND_DARK, leading=12, spaceBefore=3, spaceAfter=3)
     footer_st  = ParagraphStyle("fs", fontSize=7.5, textColor=colors.HexColor("#666"),
                                  alignment=TA_CENTER, leading=11)
-    cell_hdr   = ParagraphStyle("ch", fontSize=7, fontName="Helvetica-Bold",
+    cell_hdr   = ParagraphStyle("ch", fontSize=8, fontName="Helvetica-Bold",
                                  textColor=colors.white, leading=10, alignment=TA_CENTER)
     cell_hdr_l = ParagraphStyle("chl", parent=cell_hdr, alignment=TA_LEFT)
     cell_body  = ParagraphStyle("cb", fontSize=8, textColor=BRAND_DARK, leading=11)
@@ -493,7 +493,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
     cell_total_gold = ParagraphStyle("ctg", fontSize=10, fontName="Helvetica-Bold",
                                       textColor=BRAND_GOLD, alignment=TA_CENTER, leading=12)
     # Cabecalho compacto: os 7 rotulos cabem numa linha unica
-    cell_hdr_sm = ParagraphStyle("chs", parent=cell_hdr, fontSize=6, leading=7)
+    cell_hdr_sm = ParagraphStyle("chs", parent=cell_hdr, fontSize=8, leading=10)
     pay_rows = [[
         Paragraph(_t("included_col",    lang), cell_hdr_sm),
         Paragraph(_t("payment_col",     lang), cell_hdr_sm),
@@ -536,8 +536,8 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
             *_pmt_cells(pmt),
         ])
 
-    pay_tbl = Table(pay_rows, colWidths=[W * 0.12, W * 0.16, W * 0.19,
-                                         W * 0.12, W * 0.11, W * 0.14, W * 0.16],
+    pay_tbl = Table(pay_rows, colWidths=[W * 0.13, W * 0.17, W * 0.18,
+                                         W * 0.11, W * 0.11, W * 0.14, W * 0.16],
                     repeatRows=1)
     pay_style = TableStyle([
         ("BACKGROUND",    (0, 0), (-1, 0), BRAND_DARK),
@@ -595,16 +595,16 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
     # Omitidos no PDF após faturamento (dados operacionais são do despacho,
     # não pertencem ao documento fiscal).
     op_label_st = ParagraphStyle(
-        "op_label_c", fontName="Helvetica-Bold", fontSize=7,
-        textColor=colors.HexColor("#64748b"), leading=9, spaceAfter=0,
+        "op_label_c", fontName="Helvetica-Bold", fontSize=8,
+        textColor=colors.HexColor("#64748b"), leading=10, spaceAfter=0,
     )
     op_value_st = ParagraphStyle(
         "op_value_c", fontName="Helvetica", fontSize=8,
         textColor=BRAND_DARK, leading=11, spaceAfter=0,
     )
     op_title_st = ParagraphStyle(
-        "op_title_c", fontName="Helvetica-Bold", fontSize=11,
-        textColor=colors.white, alignment=TA_LEFT, leading=14,
+        "op_title_c", fontName="Helvetica-Bold", fontSize=8,
+        textColor=colors.white, alignment=TA_LEFT, leading=10,
     )
     # Título da página de dados operacionais — centralizado (16pt)
     op_page_title_st = ParagraphStyle(
