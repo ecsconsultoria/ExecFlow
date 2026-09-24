@@ -251,7 +251,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
                                      textColor=BRAND_DARK, alignment=TA_CENTER, spaceAfter=1)
     sub_st          = ParagraphStyle("ss",  fontSize=9,  fontName="Helvetica-Bold",
                                      textColor=BRAND_GOLD, alignment=TA_CENTER, spaceAfter=6)
-    normal          = ParagraphStyle("ns",  fontSize=9,  textColor=BRAND_DARK, leading=13)
+    normal          = ParagraphStyle("ns",  fontSize=8,  textColor=BRAND_DARK, leading=12)
     sec_hdr         = ParagraphStyle("sh",  fontSize=9,  fontName="Helvetica-Bold",
                                      textColor=BRAND_DARK, leading=12, spaceBefore=3, spaceAfter=3)
     cell_hdr        = ParagraphStyle("ch",  fontSize=8,  fontName="Helvetica-Bold",
@@ -277,7 +277,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
         except Exception:
             pass
 
-    info_st = ParagraphStyle("inf", fontSize=8.5, textColor=BRAND_DARK,
+    info_st = ParagraphStyle("inf", fontSize=8, textColor=BRAND_DARK,
                              alignment=TA_RIGHT, leading=13)
     def _clean(v):
         if v is None:
@@ -693,8 +693,8 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
 
     # ── Dados operacionais por item — formato compacto, agrupados ──────────
     op_value_st = ParagraphStyle(
-        "po_op_value", fontName="Helvetica", fontSize=7.5,
-        textColor=BRAND_DARK, leading=10, spaceAfter=0,
+        "po_op_value", fontName="Helvetica", fontSize=8,
+        textColor=BRAND_DARK, leading=11, spaceAfter=0,
     )
     op_title_st = ParagraphStyle(
         "po_op_title", fontName="Helvetica-Bold", fontSize=11,

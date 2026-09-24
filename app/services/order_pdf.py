@@ -155,7 +155,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
                                  textColor=BRAND_DARK, alignment=TA_CENTER, spaceAfter=1)
     sub_st     = ParagraphStyle("ss", fontSize=9, fontName="Helvetica-Bold",
                                  textColor=BRAND_GOLD, alignment=TA_CENTER, spaceAfter=6)
-    normal     = ParagraphStyle("ns", fontSize=9, textColor=BRAND_DARK, leading=13)
+    normal     = ParagraphStyle("ns", fontSize=8, textColor=BRAND_DARK, leading=12)
     small      = ParagraphStyle("sm", fontSize=8, textColor=colors.HexColor("#666"), leading=11)
     sec_hdr    = ParagraphStyle("sh", fontSize=9, fontName="Helvetica-Bold",
                                  textColor=BRAND_DARK, leading=12, spaceBefore=3, spaceAfter=3)
@@ -167,7 +167,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
     cell_body  = ParagraphStyle("cb", fontSize=8, textColor=BRAND_DARK, leading=11)
     cell_body_c = ParagraphStyle("cbc", parent=cell_body, alignment=TA_CENTER)
     cell_body_r = ParagraphStyle("cbr", parent=cell_body, alignment=TA_RIGHT)
-    cell_bold_r = ParagraphStyle("cbr2", fontSize=9, fontName="Helvetica-Bold",
+    cell_bold_r = ParagraphStyle("cbr2", fontSize=8, fontName="Helvetica-Bold",
                                   textColor=BRAND_DARK, alignment=TA_RIGHT, leading=11)
     cell_bold_total = ParagraphStyle("cbt", fontSize=10, fontName="Helvetica-Bold",
                                       textColor=colors.HexColor("#0d9488"),
@@ -599,8 +599,8 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         textColor=colors.HexColor("#64748b"), leading=9, spaceAfter=0,
     )
     op_value_st = ParagraphStyle(
-        "op_value_c", fontName="Helvetica", fontSize=7.5,
-        textColor=BRAND_DARK, leading=10, spaceAfter=0,
+        "op_value_c", fontName="Helvetica", fontSize=8,
+        textColor=BRAND_DARK, leading=11, spaceAfter=0,
     )
     op_title_st = ParagraphStyle(
         "op_title_c", fontName="Helvetica-Bold", fontSize=11,
