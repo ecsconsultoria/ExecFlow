@@ -488,7 +488,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
 
             svc_lines = [f"<b>{desc}</b>"]
             if cat_display:
-                svc_lines.append(f'<font color="#334155" size="7.5">{cat_display}</font>')
+                svc_lines.append(f'<font color="#334155" size="8">{cat_display}</font>')
             total = item.total_cost or round((item.unit_cost or 0) * (item.quantity or 1), 2)
             items_rows.append([
                 Paragraph(str(idx),                                    cell_body_c),

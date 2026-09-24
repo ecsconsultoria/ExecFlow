@@ -391,7 +391,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
 
         svc_lines = [f"<b>{main_label}</b>"]
         if sub_label:
-            svc_lines.append(f'<font color="#334155" size="7.5">{sub_label}</font>')
+            svc_lines.append(f'<font color="#334155" size="8">{sub_label}</font>')
         svc_para = Paragraph("<br/>".join(svc_lines), cell_body)
 
         total = item.total_price or round((item.unit_price or 0) * (item.quantity or 1), 2)
