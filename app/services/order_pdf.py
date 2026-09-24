@@ -155,19 +155,19 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
                                  textColor=BRAND_DARK, alignment=TA_CENTER, spaceAfter=1)
     sub_st     = ParagraphStyle("ss", fontSize=9, fontName="Helvetica-Bold",
                                  textColor=BRAND_GOLD, alignment=TA_CENTER, spaceAfter=6)
-    normal     = ParagraphStyle("ns", fontSize=8, textColor=BRAND_DARK, leading=12)
-    small      = ParagraphStyle("sm", fontSize=8, textColor=colors.HexColor("#666"), leading=11)
-    sec_hdr    = ParagraphStyle("sh", fontSize=8, fontName="Helvetica-Bold",
+    normal     = ParagraphStyle("ns", fontSize=7, textColor=BRAND_DARK, leading=12)
+    small      = ParagraphStyle("sm", fontSize=7, textColor=colors.HexColor("#666"), leading=11)
+    sec_hdr    = ParagraphStyle("sh", fontSize=7, fontName="Helvetica-Bold",
                                  textColor=BRAND_DARK, leading=12, spaceBefore=3, spaceAfter=3)
     footer_st  = ParagraphStyle("fs", fontSize=7.5, textColor=colors.HexColor("#666"),
                                  alignment=TA_CENTER, leading=11)
-    cell_hdr   = ParagraphStyle("ch", fontSize=8, fontName="Helvetica-Bold",
+    cell_hdr   = ParagraphStyle("ch", fontSize=7, fontName="Helvetica-Bold",
                                  textColor=colors.white, leading=10, alignment=TA_CENTER)
     cell_hdr_l = ParagraphStyle("chl", parent=cell_hdr, alignment=TA_LEFT)
-    cell_body  = ParagraphStyle("cb", fontSize=8, textColor=BRAND_DARK, leading=11)
+    cell_body  = ParagraphStyle("cb", fontSize=7, textColor=BRAND_DARK, leading=11)
     cell_body_c = ParagraphStyle("cbc", parent=cell_body, alignment=TA_CENTER)
     cell_body_r = ParagraphStyle("cbr", parent=cell_body, alignment=TA_RIGHT)
-    cell_bold_r = ParagraphStyle("cbr2", fontSize=8, fontName="Helvetica-Bold",
+    cell_bold_r = ParagraphStyle("cbr2", fontSize=7, fontName="Helvetica-Bold",
                                   textColor=BRAND_DARK, alignment=TA_RIGHT, leading=11)
     cell_bold_total = ParagraphStyle("cbt", fontSize=10, fontName="Helvetica-Bold",
                                       textColor=colors.HexColor("#0d9488"),
@@ -247,7 +247,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
     pos_destino = [p for p in getattr(order, "purchase_orders", [])
                    if getattr(p, "deleted_at", None) is None]
     if len(pos_destino) > 1:
-        po_link_st = ParagraphStyle("pol", parent=cell_body_c, fontSize=6.5, leading=9)
+        po_link_st = ParagraphStyle("pol", parent=cell_body_c, fontSize=7, leading=9)
     else:
         po_link_st = cell_body_c
     po_links = [f'<a href="{_app_base_url()}/po/{p.id}" color="#1565c0">{p.number}</a>'
@@ -391,7 +391,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
 
         svc_lines = [f"<b>{main_label}</b>"]
         if sub_label:
-            svc_lines.append(f'<font color="#334155" size="8">{sub_label}</font>')
+            svc_lines.append(f'<font color="#334155" size="7">{sub_label}</font>')
         svc_para = Paragraph("<br/>".join(svc_lines), cell_body)
 
         total = item.total_price or round((item.unit_price or 0) * (item.quantity or 1), 2)
@@ -493,7 +493,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
     cell_total_gold = ParagraphStyle("ctg", fontSize=10, fontName="Helvetica-Bold",
                                       textColor=BRAND_GOLD, alignment=TA_CENTER, leading=12)
     # Cabecalho compacto: os 7 rotulos cabem numa linha unica
-    cell_hdr_sm = ParagraphStyle("chs", parent=cell_hdr, fontSize=8, leading=10)
+    cell_hdr_sm = ParagraphStyle("chs", parent=cell_hdr, fontSize=7, leading=10)
     pay_rows = [[
         Paragraph(_t("included_col",    lang), cell_hdr_sm),
         Paragraph(_t("payment_col",     lang), cell_hdr_sm),
@@ -511,7 +511,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         status_label = _t("status_paid", lang) if is_paid else _t("status_open", lang)
         # mesmo tamanho de fonte das demais celulas (8pt), texto BRANCO
         # (igual ao PO) sobre o sombreado do status
-        st_p = ParagraphStyle("sp", fontSize=8, fontName="Helvetica-Bold",
+        st_p = ParagraphStyle("sp", fontSize=7, fontName="Helvetica-Bold",
                                textColor=colors.white, alignment=TA_CENTER, leading=10)
         return [
             Paragraph(f"{pmt.installment_no}/{total_pmts}", cell_body_c),
@@ -595,15 +595,15 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
     # Omitidos no PDF após faturamento (dados operacionais são do despacho,
     # não pertencem ao documento fiscal).
     op_label_st = ParagraphStyle(
-        "op_label_c", fontName="Helvetica-Bold", fontSize=8,
+        "op_label_c", fontName="Helvetica-Bold", fontSize=7,
         textColor=colors.HexColor("#64748b"), leading=10, spaceAfter=0,
     )
     op_value_st = ParagraphStyle(
-        "op_value_c", fontName="Helvetica", fontSize=8,
+        "op_value_c", fontName="Helvetica", fontSize=7,
         textColor=BRAND_DARK, leading=11, spaceAfter=0,
     )
     op_title_st = ParagraphStyle(
-        "op_title_c", fontName="Helvetica-Bold", fontSize=8,
+        "op_title_c", fontName="Helvetica-Bold", fontSize=7,
         textColor=colors.white, alignment=TA_LEFT, leading=10,
     )
     # Título da página de dados operacionais — centralizado (16pt)

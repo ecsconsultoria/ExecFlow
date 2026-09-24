@@ -247,7 +247,7 @@ def _total_cell_text(brl_total: float, lang: str, usd_rate) -> str:
 
 def _total_cell_aligned(brl_total: float, usd_rate):
     """Retorna Flowable para célula de total no RFQ — 2 linhas alinhadas à direita."""
-    style_brl = ParagraphStyle("tbrl", fontSize=8, fontName="Helvetica-Bold",
+    style_brl = ParagraphStyle("tbrl", fontSize=7, fontName="Helvetica-Bold",
                                 textColor=BRAND_DARK, alignment=TA_RIGHT)
     style_usd = ParagraphStyle("tusd", fontSize=7, fontName="Helvetica",
                                 textColor=colors.HexColor("#888888"), alignment=TA_RIGHT)
@@ -595,25 +595,25 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
                                 textColor=BRAND_DARK, alignment=TA_CENTER, spaceAfter=1)
     sub_st    = ParagraphStyle("ss", fontSize=9, fontName="Helvetica-Bold",
                                 textColor=BRAND_GOLD, alignment=TA_CENTER, spaceAfter=6)
-    normal    = ParagraphStyle("ns", fontSize=8,  textColor=BRAND_DARK, leading=12)
-    small     = ParagraphStyle("sm", fontSize=8,  textColor=colors.HexColor("#666"), leading=11)
-    italic_sm = ParagraphStyle("is", fontSize=8, fontName="Helvetica-Oblique",
+    normal    = ParagraphStyle("ns", fontSize=7,  textColor=BRAND_DARK, leading=12)
+    small     = ParagraphStyle("sm", fontSize=7,  textColor=colors.HexColor("#666"), leading=11)
+    italic_sm = ParagraphStyle("is", fontSize=7, fontName="Helvetica-Oblique",
                                 textColor=colors.HexColor("#666"), leading=10)
-    sec_hdr   = ParagraphStyle("sh", fontSize=8, fontName="Helvetica-Bold",
+    sec_hdr   = ParagraphStyle("sh", fontSize=7, fontName="Helvetica-Bold",
                                 textColor=BRAND_DARK, leading=12, spaceBefore=3, spaceAfter=3)
-    bullet_st       = ParagraphStyle("bs",       fontSize=8, textColor=BRAND_DARK, leading=12, leftIndent=8)
-    bullet_tight_st = ParagraphStyle("bs_tight", fontSize=8, textColor=BRAND_DARK, leading=12, leftIndent=0)
-    ctr_sm    = ParagraphStyle("cs", fontSize=8, textColor=colors.HexColor("#666"),
+    bullet_st       = ParagraphStyle("bs",       fontSize=7, textColor=BRAND_DARK, leading=12, leftIndent=8)
+    bullet_tight_st = ParagraphStyle("bs_tight", fontSize=7, textColor=BRAND_DARK, leading=12, leftIndent=0)
+    ctr_sm    = ParagraphStyle("cs", fontSize=7, textColor=colors.HexColor("#666"),
                                 alignment=TA_CENTER, leading=12)
     footer_st = ParagraphStyle("fs", fontSize=7.5, textColor=colors.HexColor("#666"),
                                 alignment=TA_CENTER, leading=11)
-    cell_hdr  = ParagraphStyle("ch", fontSize=8, fontName="Helvetica-Bold",
+    cell_hdr  = ParagraphStyle("ch", fontSize=7, fontName="Helvetica-Bold",
                                 textColor=colors.white, leading=10, alignment=TA_CENTER)
     cell_hdr_l = ParagraphStyle("chl", parent=cell_hdr, alignment=TA_LEFT)
-    cell_body  = ParagraphStyle("cb", fontSize=8, textColor=BRAND_DARK, leading=11)
+    cell_body  = ParagraphStyle("cb", fontSize=7, textColor=BRAND_DARK, leading=11)
     cell_body_c = ParagraphStyle("cbc", parent=cell_body, alignment=TA_CENTER)
     cell_body_r = ParagraphStyle("cbr", parent=cell_body, alignment=TA_RIGHT)
-    cell_bold_r = ParagraphStyle("cbr2", fontSize=8, fontName="Helvetica-Bold",
+    cell_bold_r = ParagraphStyle("cbr2", fontSize=7, fontName="Helvetica-Bold",
                                   textColor=BRAND_DARK, alignment=TA_RIGHT, leading=11)
 
     story = []
@@ -786,7 +786,7 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
 
         svc_lines = [f'<b>{main_label}</b>']
         if sub_label:
-            svc_lines.append(f'<font color="#334155" size="8">{sub_label}</font>')
+            svc_lines.append(f'<font color="#334155" size="7">{sub_label}</font>')
         svc_para = Paragraph("<br/>".join(svc_lines), cell_body)
 
         qty     = it.quantity or 1

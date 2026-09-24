@@ -251,13 +251,13 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
                                      textColor=BRAND_DARK, alignment=TA_CENTER, spaceAfter=1)
     sub_st          = ParagraphStyle("ss",  fontSize=9,  fontName="Helvetica-Bold",
                                      textColor=BRAND_GOLD, alignment=TA_CENTER, spaceAfter=6)
-    normal          = ParagraphStyle("ns",  fontSize=8,  textColor=BRAND_DARK, leading=12)
-    sec_hdr         = ParagraphStyle("sh",  fontSize=8,  fontName="Helvetica-Bold",
+    normal          = ParagraphStyle("ns",  fontSize=7,  textColor=BRAND_DARK, leading=12)
+    sec_hdr         = ParagraphStyle("sh",  fontSize=7,  fontName="Helvetica-Bold",
                                      textColor=BRAND_DARK, leading=12, spaceBefore=3, spaceAfter=3)
-    cell_hdr        = ParagraphStyle("ch",  fontSize=8,  fontName="Helvetica-Bold",
+    cell_hdr        = ParagraphStyle("ch",  fontSize=7,  fontName="Helvetica-Bold",
                                      textColor=colors.white, leading=10, alignment=TA_CENTER)
     cell_hdr_l      = ParagraphStyle("chl", parent=cell_hdr, alignment=TA_LEFT)
-    cell_body       = ParagraphStyle("cb",  fontSize=8,  textColor=BRAND_DARK, leading=11)
+    cell_body       = ParagraphStyle("cb",  fontSize=7,  textColor=BRAND_DARK, leading=11)
     cell_body_c     = ParagraphStyle("cbc", parent=cell_body, alignment=TA_CENTER)
     cell_body_r     = ParagraphStyle("cbr", parent=cell_body, alignment=TA_RIGHT)
 
@@ -277,7 +277,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
         except Exception:
             pass
 
-    info_st = ParagraphStyle("inf", fontSize=8, textColor=BRAND_DARK,
+    info_st = ParagraphStyle("inf", fontSize=7, textColor=BRAND_DARK,
                              alignment=TA_RIGHT, leading=13)
     def _clean(v):
         if v is None:
@@ -488,7 +488,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
 
             svc_lines = [f"<b>{desc}</b>"]
             if cat_display:
-                svc_lines.append(f'<font color="#334155" size="8">{cat_display}</font>')
+                svc_lines.append(f'<font color="#334155" size="7">{cat_display}</font>')
             total = item.total_cost or round((item.unit_cost or 0) * (item.quantity or 1), 2)
             items_rows.append([
                 Paragraph(str(idx),                                    cell_body_c),
@@ -599,7 +599,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
     payments_list = list(po.payments) if getattr(po, "payments", None) else []
 
     # Cabecalho compacto: os 6 rotulos cabem numa linha unica
-    cell_hdr_sm = ParagraphStyle("chs", parent=cell_hdr, fontSize=8, leading=10)
+    cell_hdr_sm = ParagraphStyle("chs", parent=cell_hdr, fontSize=7, leading=10)
     pay_rows = [[
         Paragraph(_t("payment_col",    lang), cell_hdr_sm),
         Paragraph(_t("prazo_col",      lang), cell_hdr_sm),
@@ -615,7 +615,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
     def _pmt_cells(pmt):
         status_label = _t("status_paid", lang) if pmt.is_paid else _t("status_open", lang)
         # mesmo tamanho de fonte das demais celulas (8pt)
-        st_p = ParagraphStyle("sp", fontSize=8, fontName="Helvetica-Bold",
+        st_p = ParagraphStyle("sp", fontSize=7, fontName="Helvetica-Bold",
                               textColor=colors.white, alignment=TA_CENTER, leading=10)
         return [
             Paragraph(f"{pmt.installment_no}/{total_pmts}", cell_body_c),
@@ -693,11 +693,11 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
 
     # ── Dados operacionais por item — formato compacto, agrupados ──────────
     op_value_st = ParagraphStyle(
-        "po_op_value", fontName="Helvetica", fontSize=8,
+        "po_op_value", fontName="Helvetica", fontSize=7,
         textColor=BRAND_DARK, leading=11, spaceAfter=0,
     )
     op_title_st = ParagraphStyle(
-        "po_op_title", fontName="Helvetica-Bold", fontSize=8,
+        "po_op_title", fontName="Helvetica-Bold", fontSize=7,
         textColor=colors.white, alignment=TA_LEFT, leading=10,
     )
     # Título da página de dados operacionais — grande e centralizado (24pt)
