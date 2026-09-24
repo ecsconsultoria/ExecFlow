@@ -26,7 +26,7 @@ from reportlab.lib.pagesizes import landscape as _landscape
 
 # Re-use brand constants + helpers from quote_pdf
 from . import quote_pdf as _qp
-from .quote_pdf import BRAND_DARK, BRAND_GOLD, BRAND_LIGHT, SITE_URL, SITE_ICON, _register_web_font, _fmt_brl, _fmt_phone_link, _fmt_time_12h, _get_vehicle_model, _sanitize_phone, _total_cell_text, _translate_payment_terms, _translate_service, _translate_vehicle, _translate_driver
+from .quote_pdf import BRAND_DARK, BRAND_GOLD, BRAND_LIGHT, SITE_URL, SITE_ICON, _register_web_font, _fmt_brl, _fmt_phone_link, _fmt_time_12h, _fmt_usd_raw, _get_vehicle_model, _sanitize_phone, _total_cell_text, _translate_payment_terms, _translate_service, _translate_vehicle, _translate_driver
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -71,9 +71,12 @@ _LABELS: dict[str, dict[str, str]] = {
     "total_price_col": {"pt": "PREÇO TOTAL",                "en": "TOTAL PRICE"},
     "installment_no":  {"pt": "PARCELA",                    "en": "INSTALLMENT"},
     "due_date":        {"pt": "VENCIMENTO",                 "en": "DUE DATE"},
-    "amount_col":      {"pt": "VALOR (R$)",                 "en": "AMOUNT (R$)"},
+    "amount_col":      {"pt": "VALOR PARCELA",              "en": "AMOUNT"},
+    "subtotal_col":    {"pt": "SUBTOTAL",                   "en": "SUBTOTAL"},
+    "grand_total_lbl": {"pt": "PREÇO TOTAL",                "en": "TOTAL PRICE"},
+    "prazo_col":       {"pt": "PRAZO PAGAMENTO",            "en": "PAYMENT TERMS"},
     "payment_status":  {"pt": "PAGAMENTO",                  "en": "PAYMENT"},
-    "status_paid":     {"pt": "PAGO",                       "en": "PAID"},
+    "status_paid":     {"pt": "Finalizado",                 "en": "PAID"},
     "status_open":     {"pt": "PENDENTE",                   "en": "PENDING"},
     "notes_hdr":       {"pt": "OBSERVAÇÕES",                "en": "NOTES"},
     "approved_by":     {"pt": "APROVADO POR",               "en": "APPROVED BY"},
@@ -100,6 +103,18 @@ _LABELS: dict[str, dict[str, str]] = {
     "op_pax":          {"pt": "PASSAGEIROS",                  "en": "PAX"},
     "op_obs":          {"pt": "OBSERVAÇÕES",                  "en": "NOTES"},
 }
+
+
+def _price_brl_usd(brl: float, style, usd_rate):
+    """Preço em R$ e, com cotação USD, o valor em USD ABAIXO, em fonte menor
+    e sem barra."""
+    base = _fmt_brl(brl)
+    if usd_rate and usd_rate > 0:
+        usd_val = brl / usd_rate
+        return Paragraph(
+            f"{base}<br/><font size='6' color='#888888'>USD {_fmt_usd_raw(usd_val)}</font>",
+            style)
+    return Paragraph(base, style)
 
 
 def _t(key: str, lang: str) -> str:
@@ -417,9 +432,10 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
         Paragraph(_t("service_col", lang), cell_hdr),
         Paragraph(_t("qty_col",     lang), cell_hdr),
         Paragraph(_t("unit_col",    lang), cell_hdr),
-        Paragraph(_t("total_col",   lang), cell_hdr),
+        Paragraph(_t("subtotal_col", lang), cell_hdr),
     ]]
 
+    usd_rate = getattr(po, 'usd_rate', None)
     if getattr(po, "items", None):
         for idx, item in enumerate(sorted(po.items, key=lambda x: getattr(x, "sort_order", 0) or 0), 1):
             service_name_raw = item.description or (item.service.name if getattr(item, "service", None) else "–")
@@ -463,8 +479,8 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
                 Paragraph(str(idx),                                    cell_body_c),
                 Paragraph("<br/>".join(svc_lines),                     cell_body),
                 Paragraph(str(item.quantity or 1),                     cell_body_c),
-                Paragraph(_fmt_brl(item.unit_cost or 0),               cell_body_r),
-                Paragraph(_fmt_brl(total),                             cell_body_r),
+                _price_brl_usd(item.unit_cost or 0, cell_body_r, usd_rate),
+                _price_brl_usd(total,               cell_body_r, usd_rate),
             ])
     else:
         service  = getattr(po, "service", None)
@@ -473,12 +489,24 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
             Paragraph("1",                                             cell_body_c),
             Paragraph(f"<b>{svc_name}</b>",                            cell_body),
             Paragraph(str(getattr(po, "pax_count", None) or 1),        cell_body_c),
-            Paragraph(_fmt_brl(getattr(po, "amount", None) or 0),      cell_body_r),
-            Paragraph(_fmt_brl(subtotal),                              cell_body_r),
+            _price_brl_usd(getattr(po, "amount", None) or 0, cell_body_r, usd_rate),
+            _price_brl_usd(subtotal,                           cell_body_r, usd_rate),
         ])
 
     item_data_end      = len(items_rows)
-    _adj_style_cmds: list = []
+
+    # Linha do total dos servicos: rotulo "PREÇO TOTAL" sob a coluna UNIT. e
+    # o valor (soma dos servicos) sob a coluna SUBTOTAL
+    items_rows.append([
+        Paragraph("", cell_body),
+        Paragraph("", cell_body),
+        Paragraph("", cell_body),
+        Paragraph(f"<b>{_t('grand_total_lbl', lang)}</b>", cell_body_r),
+        _price_brl_usd(subtotal, cell_body_r, usd_rate),
+    ])
+
+    # As celulas vazias da linha do total nao devem existir: junta as 3 primeiras
+    _adj_style_cmds: list = [("SPAN", (0, item_data_end), (2, item_data_end))]
 
     if disc_amt:
         r = len(items_rows)
@@ -549,80 +577,84 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
     story.append(items_tbl)
     story.append(Spacer(1, 3 * mm))
 
-    # ── Payment summary table ────────────────────────────────────────────────
+    # ── Tabela única de pagamento: Forma de Pagamento | Prazo Pagamento |
+    #    Parcela | Vencimento | Valor Parcela | Pagamento ───────────────────
     pay_method_raw = (getattr(po, "payment_method", None) or "").strip()
     pay_terms_raw  = (getattr(po, "payment_terms",  None) or "–").strip()
+    payments_list = list(po.payments) if getattr(po, "payments", None) else []
 
-    pay_sum_tbl = Table(
-        [[Paragraph(_t("payment_col",    lang),  cell_hdr),
-          Paragraph(_t("prazo_col",       lang),  cell_hdr),
-          Paragraph(_t("total_price_col", lang),  cell_hdr)],
-         [Paragraph(_pay_method_label(pay_method_raw, lang), cell_body_c),
-          Paragraph(_pay_terms_label(pay_terms_raw, lang),   cell_body_c),
-          Paragraph(f"<b>{_total_cell_text(computed, lang, getattr(po, 'usd_rate', None))}</b>",
-                    ParagraphStyle("ctg2", fontSize=10, fontName="Helvetica-Bold",
-                                   textColor=BRAND_GOLD, alignment=TA_CENTER, leading=12))]],
-        colWidths=[W * 0.36, W * 0.28, W * 0.36],
-    )
-    pay_sum_tbl.setStyle(TableStyle([
+    # Cabecalho compacto: os 6 rotulos cabem numa linha unica
+    cell_hdr_sm = ParagraphStyle("chs", parent=cell_hdr, fontSize=6, leading=7)
+    pay_rows = [[
+        Paragraph(_t("payment_col",    lang), cell_hdr_sm),
+        Paragraph(_t("prazo_col",      lang), cell_hdr_sm),
+        Paragraph(_t("installment_no", lang), cell_hdr_sm),
+        Paragraph(_t("due_date",       lang), cell_hdr_sm),
+        Paragraph(_t("amount_col",     lang), cell_hdr_sm),
+        Paragraph(_t("payment_status", lang), cell_hdr_sm),
+    ]]
+
+    sorted_pmts = sorted(payments_list, key=lambda p: p.installment_no)
+    total_pmts  = len(sorted_pmts)
+
+    def _pmt_cells(pmt):
+        status_label = _t("status_paid", lang) if pmt.is_paid else _t("status_open", lang)
+        # mesmo tamanho de fonte das demais celulas (8pt)
+        st_p = ParagraphStyle("sp", fontSize=8, fontName="Helvetica-Bold",
+                              textColor=colors.white, alignment=TA_CENTER, leading=10)
+        return [
+            Paragraph(f"{pmt.installment_no}/{total_pmts}", cell_body_c),
+            Paragraph(_fmt_date(pmt.due_date, lang),        cell_body_c),
+            _price_brl_usd(pmt.amount or 0, cell_body_r, usd_rate),
+            Paragraph(status_label, st_p),
+        ]
+
+    # primeira linha de dados: forma/prazo + a PRIMEIRA parcela
+    primeira = _pmt_cells(sorted_pmts[0]) if sorted_pmts else [Paragraph("", cell_body_c)] * 4
+    pay_rows.append([
+        Paragraph(_pay_method_label(pay_method_raw, lang), cell_body_c),
+        Paragraph(_pay_terms_label(pay_terms_raw, lang),   cell_body_c),
+        *primeira,
+    ])
+    for pmt in sorted_pmts[1:]:
+        pay_rows.append([
+            Paragraph("", cell_body_c),
+            Paragraph("", cell_body_c),
+            *_pmt_cells(pmt),
+        ])
+
+    pay_tbl = Table(pay_rows, colWidths=[W * 0.18, W * 0.20, W * 0.12,
+                                         W * 0.14, W * 0.16, W * 0.20],
+                    repeatRows=1)
+    pay_style = TableStyle([
         ("BACKGROUND",    (0, 0), (-1, 0), BRAND_DARK),
         ("BACKGROUND",    (0, 1), (-1, 1), BRAND_LIGHT),
         ("BOX",           (0, 0), (-1, -1), 1.5, BRAND_GOLD),
         ("INNERGRID",     (0, 0), (-1, -1), 0.5, BRAND_GOLD),
         ("TOPPADDING",    (0, 0), (-1, -1), 5),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-        ("LEFTPADDING",   (0, 0), (-1, -1), 6),
-        ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 4),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 4),
         ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
         ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
-    ]))
-    story.append(pay_sum_tbl)
+        ("ALIGN",         (4, 0), (4, -1), "RIGHT"),
+    ])
+    for idx, pmt in enumerate(sorted_pmts):
+        row_idx = idx + 1   # a primeira parcela esta na linha 1
+        if row_idx >= 2:
+            row_bg = BRAND_LIGHT if row_idx % 2 == 0 else colors.white
+            pay_style.add("BACKGROUND", (0, row_idx), (1, row_idx), row_bg)
+        st_bg = colors.HexColor("#2E7D32") if pmt.is_paid else colors.HexColor("#E65100")
+        pay_style.add("BACKGROUND", (5, row_idx), (5, row_idx), st_bg)
+    # Com mais de uma parcela, Forma/Prazo fazem merge vertical entre as linhas
+    if len(sorted_pmts) > 1:
+        last_row = len(pay_rows) - 1
+        for col in (0, 1):
+            pay_style.add("SPAN", (col, 1), (col, last_row))
+        pay_style.add("VALIGN", (0, 1), (1, last_row), "MIDDLE")
+    pay_tbl.setStyle(pay_style)
+    story.append(pay_tbl)
     story.append(Spacer(1, 4 * mm))
-
-    # ── Installments table ───────────────────────────────────────────────────
-    payments_list = list(po.payments) if getattr(po, "payments", None) else []
-    if payments_list:
-        sorted_pmts = sorted(payments_list, key=lambda p: p.installment_no)
-        total_pmts  = len(sorted_pmts)
-        inst_rows   = [[
-            Paragraph(_t("installment_no", lang), cell_hdr),
-            Paragraph(_t("due_date",        lang), cell_hdr),
-            Paragraph(_t("amount_col",      lang), cell_hdr),
-            Paragraph(_t("payment_status",  lang), cell_hdr),
-        ]]
-        for pmt in sorted_pmts:
-            status_label = _t("status_paid", lang) if pmt.is_paid else _t("status_open", lang)
-            st_p = ParagraphStyle("sp", fontSize=7, fontName="Helvetica-Bold",
-                                  textColor=colors.white, alignment=TA_CENTER, leading=10)
-            inst_rows.append([
-                Paragraph(f"{pmt.installment_no}/{total_pmts}", cell_body_c),
-                Paragraph(_fmt_date(pmt.due_date, lang),        cell_body_c),
-                Paragraph(_total_cell_text(pmt.amount or 0, lang, getattr(po, 'usd_rate', None)), cell_body_r),
-                Paragraph(status_label,                         st_p),
-            ])
-
-        inst_tbl = Table(inst_rows,
-                         colWidths=[W * 0.14, W * 0.27, W * 0.31, W * 0.28],
-                         repeatRows=1)
-        inst_style = TableStyle([
-            ("BACKGROUND",    (0, 0), (-1, 0), BRAND_DARK),
-            ("BOX",           (0, 0), (-1, -1), 1.5, BRAND_GOLD),
-            ("INNERGRID",     (0, 0), (-1, -1), 0.5, BRAND_GOLD),
-            ("TOPPADDING",    (0, 0), (-1, -1), 5),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-            ("LEFTPADDING",   (0, 0), (-1, -1), 4),
-            ("RIGHTPADDING",  (0, 0), (-1, -1), 4),
-            ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
-            ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
-        ])
-        for row_idx, pmt in enumerate(sorted_pmts, 1):
-            row_bg = BRAND_LIGHT if row_idx % 2 == 1 else colors.white
-            inst_style.add("BACKGROUND", (0, row_idx), (2, row_idx), row_bg)
-            st_bg = colors.HexColor("#2E7D32") if pmt.is_paid else colors.HexColor("#E65100")
-            inst_style.add("BACKGROUND", (3, row_idx), (3, row_idx), st_bg)
-        inst_tbl.setStyle(inst_style)
-        story.append(inst_tbl)
-        story.append(Spacer(1, 4 * mm))
 
     # ── Notes ────────────────────────────────────────────────────────────────
     obs = getattr(po, "notes", None) or ""
