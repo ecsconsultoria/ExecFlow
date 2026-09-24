@@ -26,6 +26,7 @@ from .quote_pdf import (
     BRAND_LIGHT,
     SITE_URL,
     SITE_ICON,
+    _app_base_url,
     _register_web_font,
     _T as _QT,
     _billing_label,
@@ -70,6 +71,7 @@ _T: dict[str, dict[str, str]] = {
     "status_open":      {"pt": "PENDENTE",                 "en": "PENDING"},
     "obs_hdr":          {"pt": "OBSERVAÇÕES",              "en": "NOTES"},
     "vendor_lbl":       {"pt": "VENDEDOR",                 "en": "SALES REP."},
+    "po_destino":       {"pt": "PO DESTINO",               "en": "DESTINATION PO"},
     "billing_lbl":      {"pt": "FATURAMENTO",              "en": "BILLING"},
     "prazo_lbl":        {"pt": "PRAZO",                    "en": "TERMS"},
     "page_lbl":         {"pt": "PÁGINA",                   "en": "PAGE"},
@@ -241,22 +243,39 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
     }
     status_val = _STATUS_LABELS_ORD.get(order.status or "novo", {}).get(lang, order.status or "–")
 
+    # POs de destino desta SO (hiperlinks p/ abrir cada PO)
+    pos_destino = [p for p in getattr(order, "purchase_orders", [])
+                   if getattr(p, "deleted_at", None) is None]
+    if len(pos_destino) > 1:
+        po_link_st = ParagraphStyle("pol", parent=cell_body_c, fontSize=6.5, leading=9)
+    else:
+        po_link_st = cell_body_c
+    po_links = [f'<a href="{_app_base_url()}/po/{p.id}" color="#1565c0">{p.number}</a>'
+                for p in pos_destino]
+    po_cell = ", ".join(po_links) if po_links else "–"
+
     order_col_labels = [
         _t("emission",    lang),
         _t("delivery",    lang),
         _t("vendor_lbl",  lang),
+        _t("po_destino",  lang),
         "STATUS",
     ]
     order_col_values = [
         _fmt_date(order.emission_date, lang),
         _fmt_date(order.delivery_datetime, lang),
         vendor_name or "–",
+        po_cell,
         status_val,
     ]
     order_meta_tbl = Table(
         [[Paragraph(h, cell_hdr) for h in order_col_labels],
-         [Paragraph(v, cell_body_c) for v in order_col_values]],
-        colWidths=[W * 0.16, W * 0.32, W * 0.30, W * 0.22],
+         [Paragraph(order_col_values[0], cell_body_c),
+          Paragraph(order_col_values[1], cell_body_c),
+          Paragraph(order_col_values[2], cell_body_c),
+          Paragraph(po_cell, po_link_st),
+          Paragraph(status_val, cell_body_c)]],
+        colWidths=[W * 0.15, W * 0.19, W * 0.20, W * 0.22, W * 0.24],
     )
     order_meta_tbl.setStyle(TableStyle([
         ("BACKGROUND",    (0, 0), (-1, 0), BRAND_DARK),

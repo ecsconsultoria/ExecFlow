@@ -45,6 +45,19 @@ def _register_web_font():
 
 SITE_URL    = "https://www.executivecarsp.com"
 SITE_ICON   = ""  # fa-globe
+
+
+def _app_base_url():
+    """URL base da aplicação p/ hiperlinks internos nos PDFs (SO/PO)."""
+    base = ""
+    try:
+        from flask import current_app
+        base = (current_app.config.get("BASE_URL") or "").strip()
+    except Exception:
+        base = ""
+    if not base or "localhost" in base:
+        base = "https://execflow-erp.onrender.com"
+    return base.rstrip("/")
 BRAND_GREEN  = colors.HexColor("#2e7d32")
 BRAND_RED    = colors.HexColor("#c62828")
 BRAND_BLUE   = colors.HexColor("#1565c0")

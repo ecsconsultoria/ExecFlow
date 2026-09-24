@@ -26,7 +26,7 @@ from reportlab.lib.pagesizes import landscape as _landscape
 
 # Re-use brand constants + helpers from quote_pdf
 from . import quote_pdf as _qp
-from .quote_pdf import BRAND_DARK, BRAND_GOLD, BRAND_LIGHT, SITE_URL, SITE_ICON, _register_web_font, _fmt_brl, _fmt_phone_link, _fmt_time_12h, _fmt_usd_raw, _get_vehicle_model, _sanitize_phone, _total_cell_text, _translate_payment_terms, _translate_service, _translate_vehicle, _translate_driver
+from .quote_pdf import BRAND_DARK, BRAND_GOLD, BRAND_LIGHT, SITE_URL, SITE_ICON, _app_base_url, _register_web_font, _fmt_brl, _fmt_phone_link, _fmt_time_12h, _fmt_usd_raw, _get_vehicle_model, _sanitize_phone, _total_cell_text, _translate_payment_terms, _translate_service, _translate_vehicle, _translate_driver
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -54,7 +54,8 @@ def _fmt_datetime(d, lang: str = "pt") -> str:
 _LABELS: dict[str, dict[str, str]] = {
     "doc_title":       {"pt": "PEDIDO DE COMPRA",          "en": "PURCHASE ORDER"},
     "po_no":           {"pt": "Nº PC/PO",                  "en": "PO No."},
-    "linked_so":       {"pt": "SO VINCULADO",               "en": "LINKED SO"},
+    "linked_so":       {"pt": "SO ORIGEM",                  "en": "SOURCE SO"},
+    "delivery":        {"pt": "DATA DE ENTREGA",            "en": "DELIVERY DATE"},
     "payment":         {"pt": "FORMA PGTO.",                "en": "PAYMENT"},
     "supplier_lbl":    {"pt": "FORNECEDOR",                 "en": "SUPPLIER"},
     "supplier_hdr":    {"pt": "FORNECEDOR",                 "en": "SUPPLIER"},
@@ -89,7 +90,7 @@ _LABELS: dict[str, dict[str, str]] = {
     # Título da página de dados operacionais (aparece uma vez, no topo da página)
     "op_page_title":   {"pt": "DETALHES DA AGENDA",           "en": "SCHEDULE DETAILS"},
     "op_driver":       {"pt": "MOTORISTA",                    "en": "DRIVER"},
-    "op_driver_phone": {"pt": "TELEFONE DO MOTORISTA",        "en": "DRIVER PHONE"},
+    "op_driver_phone": {"pt": "TELEFONE DO MOTORISTA",        "en": "MOBILE"},
     "op_modelo":       {"pt": "MODELO",                        "en": "MODEL"},
     "op_plate":        {"pt": "PLACA",                        "en": "PLATE"},
     "op_pickup":       {"pt": "DATA / HORA DE EMBARQUE",       "en": "PICKUP DATE/TIME"},
@@ -342,19 +343,33 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
     status_val = _STATUS_LABELS.get(po.status or "rascunho", {}).get(lang, po.status or "–")
 
     linked_so_num = ""
+    linked_so_id = None
     if getattr(po, "order", None):
         linked_so_num = po.order.number
+        linked_so_id = po.order.id
     elif getattr(po, "service_order", None):
         linked_so_num = po.service_order.number
+
+    # SO ORIGEM com hiperlink (abre o SO)
+    if linked_so_num and linked_so_id:
+        so_url = f"{_app_base_url()}/orders/{linked_so_id}"
+        so_cell = f'<a href="{so_url}" color="#1565c0">{linked_so_num}</a>'
+    else:
+        so_cell = linked_so_num or "–"
+
+    delivery_val = _fmt_date(getattr(po, "delivery_date", None), lang)
 
     meta_tbl = Table(
         [[Paragraph(h, cell_hdr) for h in [
             _t("emission", lang),
-            _t("linked_so", lang), _t("vendor_lbl", lang), "STATUS"]],
+            _t("linked_so", lang),
+            _t("delivery", lang),
+            _t("vendor_lbl", lang),
+            "STATUS"]],
          [Paragraph(v, cell_body_c) for v in [
             _fmt_date(po.created_at, lang) if getattr(po, "created_at", None) else "–",
-            linked_so_num or "–", buyer_name or "–", status_val]]],
-        colWidths=[W * 0.22, W * 0.26, W * 0.26, W * 0.26],
+            so_cell, delivery_val, buyer_name or "–", status_val]]],
+        colWidths=[W * 0.16, W * 0.20, W * 0.18, W * 0.26, W * 0.20],
     )
     meta_tbl.setStyle(TableStyle([
         ("BACKGROUND",    (0, 0), (-1, 0), BRAND_DARK),
