@@ -58,7 +58,7 @@ _T: dict[str, dict[str, str]] = {
     "payment_hdr":      {"pt": "PAGAMENTO",                "en": "PAYMENT"},
     "installment_no":   {"pt": "PARCELA",                  "en": "INSTALLMENT"},
     "due_date":         {"pt": "VENCIMENTO",               "en": "DUE DATE"},
-    "amount_col":       {"pt": "VALOR PARCELA",             "en": "INSTALLMENT AMOUNT"},
+    "amount_col":       {"pt": "VALOR PARCELA",             "en": "AMOUNT"},
     "subtotal_col":     {"pt": "SUBTOTAL",                 "en": "SUBTOTAL"},
     # Sobrescreve os rotulos do quote_pdf para a tabela unica de pagamento
     "included_col":     {"pt": "FATURAMENTO",              "en": "INVOICE"},
