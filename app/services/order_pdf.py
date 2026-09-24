@@ -490,9 +490,10 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
     def _pmt_cells(pmt):
         is_paid      = pmt.is_paid
         status_label = _t("status_paid", lang) if is_paid else _t("status_open", lang)
-        # mesmo tamanho de fonte das demais celulas (8pt)
+        # mesmo tamanho de fonte das demais celulas (8pt), texto BRANCO
+        # (igual ao PO) sobre o sombreado do status
         st_p = ParagraphStyle("sp", fontSize=8, fontName="Helvetica-Bold",
-                               textColor=BRAND_DARK, alignment=TA_CENTER, leading=10)
+                               textColor=colors.white, alignment=TA_CENTER, leading=10)
         return [
             Paragraph(f"{pmt.installment_no}/{total_pmts}", cell_body_c),
             Paragraph(_fmt_date(pmt.due_date, lang),        cell_body_c),
@@ -537,7 +538,8 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         if row_idx >= 2:
             row_bg = BRAND_LIGHT if row_idx % 2 == 0 else colors.white
             pay_style.add("BACKGROUND", (0, row_idx), (2, row_idx), row_bg)
-        st_bg = colors.HexColor("#2E7D32") if pmt.is_paid else colors.HexColor("#E65100")
+        # sombreados um pouco mais claros para todos os status
+        st_bg = colors.HexColor("#388E3C") if pmt.is_paid else colors.HexColor("#F57C00")
         pay_style.add("BACKGROUND", (6, row_idx), (6, row_idx), st_bg)
     # Com mais de uma parcela, Faturamento/Forma de Pagamento/Prazo Pagamento
     # fazem merge vertical entre as linhas (uma unica celula alta)
