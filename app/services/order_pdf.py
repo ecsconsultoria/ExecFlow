@@ -257,25 +257,25 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
     order_col_labels = [
         _t("emission",    lang),
         _t("delivery",    lang),
-        _t("vendor_lbl",  lang),
         _t("po_destino",  lang),
+        _t("vendor_lbl",  lang),
         "STATUS",
     ]
     order_col_values = [
         _fmt_date(order.emission_date, lang),
         _fmt_date(order.delivery_datetime, lang),
-        vendor_name or "–",
         po_cell,
+        vendor_name or "–",
         status_val,
     ]
     order_meta_tbl = Table(
         [[Paragraph(h, cell_hdr) for h in order_col_labels],
          [Paragraph(order_col_values[0], cell_body_c),
           Paragraph(order_col_values[1], cell_body_c),
-          Paragraph(order_col_values[2], cell_body_c),
           Paragraph(po_cell, po_link_st),
+          Paragraph(vendor_name or "–", cell_body_c),
           Paragraph(status_val, cell_body_c)]],
-        colWidths=[W * 0.15, W * 0.19, W * 0.20, W * 0.22, W * 0.24],
+        colWidths=[W * 0.15, W * 0.19, W * 0.22, W * 0.20, W * 0.24],
     )
     order_meta_tbl.setStyle(TableStyle([
         ("BACKGROUND",    (0, 0), (-1, 0), BRAND_DARK),

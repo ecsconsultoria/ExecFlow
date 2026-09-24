@@ -362,14 +362,14 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
     meta_tbl = Table(
         [[Paragraph(h, cell_hdr) for h in [
             _t("emission", lang),
-            _t("linked_so", lang),
             _t("delivery", lang),
+            _t("linked_so", lang),
             _t("vendor_lbl", lang),
             "STATUS"]],
          [Paragraph(v, cell_body_c) for v in [
             _fmt_date(po.created_at, lang) if getattr(po, "created_at", None) else "–",
-            so_cell, delivery_val, buyer_name or "–", status_val]]],
-        colWidths=[W * 0.16, W * 0.20, W * 0.18, W * 0.26, W * 0.20],
+            delivery_val, so_cell, buyer_name or "–", status_val]]],
+        colWidths=[W * 0.16, W * 0.18, W * 0.20, W * 0.26, W * 0.20],
     )
     meta_tbl.setStyle(TableStyle([
         ("BACKGROUND",    (0, 0), (-1, 0), BRAND_DARK),
@@ -399,7 +399,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
             _t("supplier_lbl", lang),
             "CONTATO" if lang == "pt" else "CONTACT",
             "EMAIL",
-            "CELULAR" if lang == "pt" else "PHONE",
+            "CELULAR" if lang == "pt" else "MOBILE",
             "CNPJ/CPF" if lang == "pt" else "TAX ID"]],
          [Paragraph(v, cell_body_c) for v in [
             sup_name, sup_contact, sup_email, sup_phone, sup_doc]]],
