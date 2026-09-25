@@ -370,9 +370,13 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
             sub_parts.append(cat_name_disp)
         sub_label = " – ".join(sub_parts)
 
-        vehicle_model = _get_vehicle_model(cat_name_raw, lang) or vehicle_desc
+        # modelo preenchido manualmente substitui o automatico da categoria;
+        # quando preenchido, aparece SEMPRE (mesmo sem categoria/motorista)
+        vehicle_model = vehicle_desc or _get_vehicle_model(cat_name_raw, lang)
         if vehicle_model and sub_label:
             sub_label = f'{sub_label} ({vehicle_model})'
+        elif vehicle_model:
+            sub_label = vehicle_model
 
         date_prefix = ''
         if item.service_date:

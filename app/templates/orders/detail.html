@@ -1421,6 +1421,17 @@
             <option value="Bilíngue">Bilíngue</option>
           </select>
         </div>
+        <div>
+          <label class="lbl">Modelo Veículo <span class="text-slate-400 font-normal text-[10px]">(vazio = automático pela categoria)</span></label>
+          <input type="text" name="vehicle_description" list="so-modelos"
+                 placeholder="Ex: Mercedes Sprinter ou Similar"
+                 class="fi text-sm">
+          <datalist id="so-modelos">
+            {% for cat in categories %}
+            {% if cat.description %}<option value="{{ cat.description }}"></option>{% endif %}
+            {% endfor %}
+          </datalist>
+        </div>
         <div class="grid grid-cols-2 gap-2">
           <div>
             <label class="lbl">Data <span class="text-slate-400 font-normal text-[10px]">(opcional)</span></label>
