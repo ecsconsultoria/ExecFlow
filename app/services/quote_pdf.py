@@ -763,7 +763,9 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
             sub_parts.append(cat_name_disp)
         sub_label = " – ".join(sub_parts)
 
-        vehicle_model_raw = vehicle_desc or _get_vehicle_model(cat_name_raw, lang)
+        # modelo: manual -> descricao cadastrada na categoria -> dicionario fixo
+        cat_desc = (it.category.description or "") if it.category else ""
+        vehicle_model_raw = vehicle_desc or cat_desc or _get_vehicle_model(cat_name_raw, lang)
         vehicle_model = _translate_vehicle_desc(vehicle_model_raw, lang)
         if vehicle_model and sub_label:
             sub_label = f'{sub_label} ({vehicle_model})'

@@ -482,7 +482,9 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
             if cat_name:
                 sub_parts.append(cat_name)
             cat_display = " – ".join(sub_parts)
-            vehicle_model = item.vehicle_description or _get_vehicle_model(cat_name_raw, lang) or ''
+            # modelo: manual -> descricao cadastrada na categoria -> dicionario fixo
+            cat_desc = (item.category.description or "") if item.category else ""
+            vehicle_model = item.vehicle_description or cat_desc or _get_vehicle_model(cat_name_raw, lang) or ''
             if vehicle_model and cat_display:
                 cat_display = f'{cat_display} ({vehicle_model})'
 
