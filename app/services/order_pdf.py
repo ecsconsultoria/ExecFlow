@@ -507,8 +507,8 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         Paragraph(_t("payment_col",     lang), cell_hdr_sm),
         Paragraph(_t("prazo_col",       lang), cell_hdr_sm),
         Paragraph(_t("installment_no",  lang), cell_hdr_sm),
-        Paragraph(_t("due_date",        lang), cell_hdr_sm),
         Paragraph(_t("amount_col",      lang), cell_hdr_sm),
+        Paragraph(_t("due_date",        lang), cell_hdr_sm),
         Paragraph(_t("payment_status",  lang), cell_hdr_sm),
     ]]
     sorted_pmts = sorted(order.payments, key=lambda p: p.installment_no) if order.payments else []
@@ -523,8 +523,8 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
                                textColor=colors.white, alignment=TA_CENTER, leading=10)
         return [
             Paragraph(f"{pmt.installment_no}/{total_pmts}", cell_body_c),
-            Paragraph(_fmt_date(pmt.due_date, lang),        cell_body_c),
             _price_brl_usd(pmt.amount or 0, cell_body_r, usd_rate),
+            Paragraph(_fmt_date(pmt.due_date, lang),        cell_body_c),
             Paragraph(status_label, st_p),
         ]
 
@@ -545,7 +545,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         ])
 
     pay_tbl = Table(pay_rows, colWidths=[W * 0.13, W * 0.17, W * 0.18,
-                                         W * 0.11, W * 0.11, W * 0.14, W * 0.16],
+                                         W * 0.14, W * 0.11, W * 0.11, W * 0.16],
                     repeatRows=1)
     pay_style = TableStyle([
         ("BACKGROUND",    (0, 0), (-1, 0), BRAND_DARK),
@@ -558,7 +558,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         ("RIGHTPADDING",  (0, 0), (-1, -1), 4),
         ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
         ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
-        ("ALIGN",         (5, 0), (5, -1), "RIGHT"),
+        ("ALIGN",         (4, 0), (4, -1), "RIGHT"),
     ])
     for idx, pmt in enumerate(sorted_pmts):
         row_idx = idx + 1   # a primeira parcela esta na linha 1
