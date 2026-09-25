@@ -674,6 +674,8 @@ def update_item(item: OrderItem, data: dict) -> None:
         item.driver_name = (data.get("driver_name") or "").strip() or None
     if "description" in data:
         item.description = (data.get("description") or "").strip()
+    if "vehicle_description" in data:
+        item.vehicle_description = (data.get("vehicle_description") or "").strip() or None
     if "service_date" in data:
         raw = (data.get("service_date") or "").strip()
         try:

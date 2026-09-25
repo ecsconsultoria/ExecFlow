@@ -340,6 +340,7 @@
   editDriver:  '',
   editServiceDate: '',
   editServiceTime: '',
+  editVehicleDesc: '',
   editItemUrl: '',
   opItemUrl:   '',
   opItemNo:    '',
@@ -359,7 +360,7 @@
   discType:    '{{ order.discount_type or 'R$' }}',
   usarHora:    {{ 'true' if (order.delivery_datetime and (order.delivery_datetime.hour or order.delivery_datetime.minute)) else 'false' }},
   showOpSO:    {{ 'true' if (order.driver_name or order.vehicle_model or order.pickup_location or order.passenger_name) else 'false' }},
-  openEditItem(id, desc, qty, unit, cat, driver, sdate, stime) {
+  openEditItem(id, desc, qty, unit, cat, driver, sdate, stime, vdesc) {
     this.editItemId  = id;
     this.editDesc    = desc;
     this.editQty     = qty;
@@ -368,6 +369,7 @@
     this.editDriver   = driver || '';
     this.editServiceDate = sdate || '';
     this.editServiceTime = stime || '';
+    this.editVehicleDesc = vdesc || '';
     this.editItemUrl = '/orders/items/' + id + '/update';
     this.showEditItemModal = true;
   },
@@ -649,7 +651,8 @@
                       '{{ item.category_id or '' }}',
                       '{{ (item.driver_name or '') | replace("'", "\\'") }}',
                       '{{ item.service_date.isoformat() if item.service_date else '' }}',
-                      '{{ item.service_time.strftime('%H:%M') if item.service_time else '' }}'
+                      '{{ item.service_time.strftime('%H:%M') if item.service_time else '' }}',
+                      '{{ (item.vehicle_description or '') | replace("'", "\\'") }}'
                     )"
                     class="p-1.5 rounded text-sky-500 hover:bg-sky-50 dark:hover:bg-sky-900/20"
                     title="Editar item">
@@ -1512,6 +1515,12 @@
           <div>
             <label class="lbl">Hora</label>
             <input type="time" name="service_time" x-model="editServiceTime" class="fi text-sm">
+          </div>
+          <div class="col-span-2">
+            <label class="lbl">Modelo Veículo</label>
+            <input type="text" name="vehicle_description" x-model="editVehicleDesc" list="so-modelos"
+                   placeholder="Ex: Mercedes Sprinter ou Similar"
+                   class="fi text-sm">
           </div>
           <div>
             <label class="lbl">Quantidade</label>
