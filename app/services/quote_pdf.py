@@ -89,10 +89,10 @@ _T: dict[str, dict[str, str]] = {
     "overtime_col":     {"pt": "HORA EXTRA",               "en": "OVERTIME"},
     "total_col":        {"pt": "PREÇO TOTAL",              "en": "TOTAL PRICE"},
     "subtotal_col":     {"pt": "SUBTOTAL",                 "en": "SUBTOTAL"},
-    "payment_col":      {"pt": "FORMA DE PAGAMENTO",       "en": "PAYMENT METHOD"},
+    "payment_col":      {"pt": "FORMA PAGAMENTO",          "en": "PAYMENT METHOD"},
     "included_col":     {"pt": "FATURAMENTO FISCAL",        "en": "INVOICE"},
-    "prazo_col":        {"pt": "PRAZO DE PAGAMENTO",        "en": "PAYMENT TERMS"},
-    "total_price_col":  {"pt": "VALOR TOTAL",              "en": "TOTAL PRICE"},
+    "prazo_col":        {"pt": "PRAZO PAGAMENTO",            "en": "PAYMENT TERMS"},
+    "total_price_col":  {"pt": "PREÇO TOTAL",              "en": "TOTAL PRICE"},
     "incluso_hdr":      {"pt": "Serviços Inclusos",        "en": "Included Services"},
     "info_hdr":         {"pt": "Informações Importantes",  "en": "Important Information"},
     "add_info":         {"pt": "Informações Importantes",   "en": "Important Information"},
@@ -245,8 +245,9 @@ def _total_cell_text(brl_total: float, lang: str, usd_rate) -> str:
     return base
 
 
-def _total_cell_aligned(brl_total: float, usd_rate):
-    """Retorna Flowable para célula de total no RFQ — 2 linhas alinhadas à direita."""
+def _total_cell_aligned(brl_total: float, usd_rate, col_w: float = 90):
+    """Retorna Flowable para célula de total no RFQ — 2 linhas alinhadas à direita.
+    col_w: largura da coluna externa em pontos (padrão 90 mantém SO/PO intactos)."""
     style_brl = ParagraphStyle("tbrl", fontSize=7, fontName="Helvetica-Bold",
                                 textColor=BRAND_DARK, alignment=TA_RIGHT)
     style_usd = ParagraphStyle("tusd", fontSize=7, fontName="Helvetica",
@@ -256,7 +257,7 @@ def _total_cell_aligned(brl_total: float, usd_rate):
         inner = Table([
             [Paragraph(_fmt_brl(brl_total),          style_brl)],
             [Paragraph("USD " + _fmt_usd_raw(usd_val), style_usd)],
-        ], colWidths=[90])
+        ], colWidths=[col_w])
         inner.setStyle(TableStyle([
             ("TOPPADDING",    (0, 0), (-1, -1), 1),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
@@ -715,7 +716,7 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
     story.append(Spacer(1, 4 * mm))
 
     # ── Items table ───────────────────────────────────────────────────────
-    i_col_w = [W * 0.05, W * 0.51, W * 0.08, W * 0.17, W * 0.19]
+    i_col_w = [W * 0.05, W * 0.56, W * 0.08, W * 0.17, W * 0.14]
     items_rows = [[
         Paragraph(_t("hash_col",     lang), cell_hdr_l),
         Paragraph(_t("service_col",  lang), cell_hdr),
@@ -836,8 +837,10 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
         items_style.add("BACKGROUND", (0, row_idx), (-1, row_idx), bg)
     items_tbl.setStyle(items_style)
     story.append(items_tbl)
+    # Mesmo espaco de 4mm usado entre a tabela do cliente e a de servicos
+    story.append(Spacer(1, 4 * mm))
 
-    # ── Summary row: payment method | fiscal billing | total ─────────────────
+    # ── Summary row: fiscal billing | payment method | terms | total ─────────
     billing_label = _billing_label(quote.billing_type or "recibo", lang)
     # Show payment method (PIX / DINHEIRO / etc.) if available
     pay_method       = (quote.payment_method or "").strip()
@@ -850,18 +853,20 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
     fiscal_cell_text  = billing_label
     payment_cell_text = pay_method_lbl if pay_method_lbl else "–"
     prazo_cell_text   = _translate_payment_terms((quote.payment_terms or "–").strip(), lang)
+    # Larguras: PRAZO PAGAMENTO = coluna UNIT (17%), PREÇO TOTAL = coluna SUBTOTAL (14%)
     summary_tbl = Table(
         [
-            [Paragraph(_t("payment_col",     lang), cell_hdr),
-             Paragraph(_t("included_col",    lang), cell_hdr),
+            [Paragraph(_t("included_col",    lang), cell_hdr),
+             Paragraph(_t("payment_col",     lang), cell_hdr),
              Paragraph(_t("prazo_col",       lang), cell_hdr),
              Paragraph(_t("total_price_col", lang), cell_hdr)],
-            [Paragraph(_title_case(payment_cell_text), cell_body_c),
-             Paragraph(_title_case(fiscal_cell_text),   cell_body_c),
+            [Paragraph(_title_case(fiscal_cell_text),   cell_body_c),
+             Paragraph(_title_case(payment_cell_text), cell_body_c),
              Paragraph(_title_case(prazo_cell_text),    cell_body_c),
-             _total_cell_aligned(grand_total, getattr(quote, "usd_rate", None))],
+             _total_cell_aligned(grand_total, getattr(quote, "usd_rate", None),
+                                 col_w=(W * 0.14) - 12)],
         ],
-        colWidths=[W * 0.27, W * 0.27, W * 0.24, W * 0.22],
+        colWidths=[W * 0.345, W * 0.345, W * 0.17, W * 0.14],
     )
     summary_tbl.setStyle(TableStyle([
         ("BACKGROUND",    (0, 0), (-1, 0),  BRAND_DARK),

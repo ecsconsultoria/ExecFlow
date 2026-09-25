@@ -77,7 +77,7 @@ _LABELS: dict[str, dict[str, str]] = {
     "grand_total_lbl": {"pt": "PREÇO TOTAL",                "en": "TOTAL PRICE"},
     "prazo_col":       {"pt": "PRAZO PAGAMENTO",            "en": "PAYMENT TERMS"},
     "payment_status":  {"pt": "PAGAMENTO",                  "en": "PAYMENT"},
-    "status_paid":     {"pt": "Finalizado",                 "en": "PAID"},
+    "status_paid":     {"pt": "Efetuado",                  "en": "PAID"},
     "status_open":     {"pt": "PENDENTE",                   "en": "PENDING"},
     "notes_hdr":       {"pt": "OBSERVAÇÕES",                "en": "NOTES"},
     "approved_by":     {"pt": "APROVADO POR",               "en": "APPROVED BY"},
@@ -369,7 +369,8 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
          [Paragraph(v, cell_body_c) for v in [
             _fmt_date(po.created_at, lang) if getattr(po, "created_at", None) else "–",
             delivery_val, so_cell, buyer_name or "–", status_val]]],
-        colWidths=[W * 0.16, W * 0.18, W * 0.20, W * 0.26, W * 0.20],
+        # STATUS e COMPRADOR = 18% (STATUS reduzido ~10%; COMPRADOR igualado)
+        colWidths=[W * 0.19, W * 0.21, W * 0.24, W * 0.18, W * 0.18],
     )
     meta_tbl.setStyle(TableStyle([
         ("BACKGROUND",    (0, 0), (-1, 0), BRAND_DARK),
@@ -394,16 +395,17 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
     sup_phone   = _sanitize_phone(getattr(supplier, "phone", None) or "–")
     sup_doc     = getattr(supplier, "document", None) or "–"
 
+    # Ordem: FORNECEDOR | CNPJ/CPF | EMAIL | CONTATO | CELULAR
     sup_tbl = Table(
         [[Paragraph(h, cell_hdr) for h in [
             _t("supplier_lbl", lang),
-            "CONTATO" if lang == "pt" else "CONTACT",
+            "CNPJ/CPF" if lang == "pt" else "TAX ID",
             "EMAIL",
-            "CELULAR" if lang == "pt" else "MOBILE",
-            "CNPJ/CPF" if lang == "pt" else "TAX ID"]],
+            "CONTATO" if lang == "pt" else "CONTACT",
+            "CELULAR" if lang == "pt" else "MOBILE"]],
          [Paragraph(v, cell_body_c) for v in [
-            sup_name, sup_contact, sup_email, sup_phone, sup_doc]]],
-        colWidths=[W * 0.22, W * 0.17, W * 0.23, W * 0.16, W * 0.22],
+            sup_name, sup_doc, sup_email, sup_contact, sup_phone]]],
+        colWidths=[W * 0.22, W * 0.18, W * 0.25, W * 0.17, W * 0.18],
     )
     sup_tbl.setStyle(TableStyle([
         ("BACKGROUND",    (0, 0), (-1, 0), BRAND_DARK),
@@ -441,7 +443,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
         disc_row_lbl = f"{_t('discount', lang)} ({_fmt_brl(discount_v)})" if discount_v else ""
 
     # ── Items table ──────────────────────────────────────────────────────────
-    i_col_w   = [W * 0.05, W * 0.52, W * 0.07, W * 0.17, W * 0.19]
+    i_col_w   = [W * 0.05, W * 0.52, W * 0.07, W * 0.18, W * 0.18]  # UNIT e SUBTOTAL = STATUS (18%)
     items_rows = [[
         Paragraph(_t("hash_col",    lang), cell_hdr),
         Paragraph(_t("service_col", lang), cell_hdr),
@@ -595,7 +597,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
     story.append(Spacer(1, 3 * mm))
 
     # ── Tabela única de pagamento: Forma de Pagamento | Prazo Pagamento |
-    #    Parcela | Vencimento | Valor Parcela | Pagamento ───────────────────
+    #    Parcela | Valor Parcela | Vencimento | Pagamento ────────────────────
     pay_method_raw = (getattr(po, "payment_method", None) or "").strip()
     pay_terms_raw  = (getattr(po, "payment_terms",  None) or "–").strip()
     payments_list = list(po.payments) if getattr(po, "payments", None) else []
@@ -606,8 +608,8 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
         Paragraph(_t("payment_col",    lang), cell_hdr_sm),
         Paragraph(_t("prazo_col",      lang), cell_hdr_sm),
         Paragraph(_t("installment_no", lang), cell_hdr_sm),
-        Paragraph(_t("due_date",       lang), cell_hdr_sm),
         Paragraph(_t("amount_col",     lang), cell_hdr_sm),
+        Paragraph(_t("due_date",       lang), cell_hdr_sm),
         Paragraph(_t("payment_status", lang), cell_hdr_sm),
     ]]
 
@@ -621,8 +623,8 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
                               textColor=colors.white, alignment=TA_CENTER, leading=10)
         return [
             Paragraph(f"{pmt.installment_no}/{total_pmts}", cell_body_c),
-            Paragraph(_fmt_date(pmt.due_date, lang),        cell_body_c),
             _price_brl_usd(pmt.amount or 0, cell_body_r, usd_rate),
+            Paragraph(_fmt_date(pmt.due_date, lang),        cell_body_c),
             Paragraph(status_label, st_p),
         ]
 
@@ -641,7 +643,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
         ])
 
     pay_tbl = Table(pay_rows, colWidths=[W * 0.18, W * 0.20, W * 0.12,
-                                         W * 0.14, W * 0.16, W * 0.20],
+                                         W * 0.18, W * 0.14, W * 0.18],  # VALOR PARCELA e PAGAMENTO = STATUS (18%)
                     repeatRows=1)
     pay_style = TableStyle([
         ("BACKGROUND",    (0, 0), (-1, 0), BRAND_DARK),
@@ -654,7 +656,7 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
         ("RIGHTPADDING",  (0, 0), (-1, -1), 4),
         ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
         ("ALIGN",         (0, 0), (-1, -1), "CENTER"),
-        ("ALIGN",         (4, 0), (4, -1), "RIGHT"),
+        ("ALIGN",         (3, 0), (3, -1), "RIGHT"),
     ])
     for idx, pmt in enumerate(sorted_pmts):
         row_idx = idx + 1   # a primeira parcela esta na linha 1

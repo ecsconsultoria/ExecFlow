@@ -67,7 +67,7 @@ _T: dict[str, dict[str, str]] = {
     "prazo_col":        {"pt": "PRAZO PAGAMENTO",          "en": "PAYMENT TERMS"},
     "grand_total_lbl":  {"pt": "PREÇO TOTAL",              "en": "TOTAL PRICE"},
     "payment_status":   {"pt": "PAGAMENTO",               "en": "PAYMENT"},
-    "status_paid":      {"pt": "Finalizado",               "en": "PAID"},
+    "status_paid":      {"pt": "Efetuado",                 "en": "PAID"},
     "status_open":      {"pt": "PENDENTE",                 "en": "PENDING"},
     "obs_hdr":          {"pt": "OBSERVAÇÕES",              "en": "NOTES"},
     "vendor_lbl":       {"pt": "VENDEDOR",                 "en": "SALES REP."},
@@ -278,7 +278,8 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
           Paragraph(po_cell, po_link_st),
           Paragraph(vendor_name or "–", cell_body_c),
           Paragraph(status_val, cell_body_c)]],
-        colWidths=[W * 0.15, W * 0.19, W * 0.22, W * 0.20, W * 0.24],
+        # STATUS = 16% (mesma largura da coluna PAGAMENTO da tabela de pagamento)
+        colWidths=[W * 0.17, W * 0.21, W * 0.24, W * 0.22, W * 0.16],
     )
     order_meta_tbl.setStyle(TableStyle([
         ("BACKGROUND",    (0, 0), (-1, 0), BRAND_DARK),
@@ -307,7 +308,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
          Paragraph(_sanitize_phone((order.client.whatsapp if order.client and order.client.whatsapp else (order.client.phone if order.client else None)) or getattr(order, "celular", None) or order.phone or "–"), cell_body_c)],
     ]
     client_tbl = Table(client_tbl_data,
-                       colWidths=[W * 0.28, W * 0.24, W * 0.30, W * 0.18])
+                       colWidths=[W * 0.28, W * 0.24, W * 0.32, W * 0.16])  # CELULAR = PAGAMENTO (16%)
     client_tbl.setStyle(TableStyle([
         ("BACKGROUND",    (0, 0), (-1, 0), BRAND_DARK),
         ("BACKGROUND",    (0, 1), (-1, 1), BRAND_LIGHT),
@@ -339,7 +340,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         disc_row_lbl = f"{_t('discount', lang)} ({_fmt_brl(discount_v)})" if discount_v else ""
 
     # ── Items table (same style as quote PDF) ─────────────────────────────
-    i_col_w = [W * 0.05, W * 0.52, W * 0.07, W * 0.17, W * 0.19]
+    i_col_w = [W * 0.05, W * 0.55, W * 0.07, W * 0.17, W * 0.16]  # SUBTOTAL = PAGAMENTO (16%)
     items_rows = [[
         Paragraph(_t("hash_col",    lang), cell_hdr),
         Paragraph(_t("service_col", lang), cell_hdr),
@@ -502,12 +503,15 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
                                       textColor=BRAND_GOLD, alignment=TA_CENTER, leading=12)
     # Cabecalho compacto: os 7 rotulos cabem numa linha unica
     cell_hdr_sm = ParagraphStyle("chs", parent=cell_hdr, fontSize=7, leading=10)
+    # PT: "VALOR PARCELA" em fonte menor para caber em linha unica na coluna
+    cell_hdr_amount_pt = ParagraphStyle("chsx", parent=cell_hdr, fontSize=5.5, leading=9)
+    amount_hdr_st = cell_hdr_amount_pt if lang == "pt" else cell_hdr_sm
     pay_rows = [[
         Paragraph(_t("included_col",    lang), cell_hdr_sm),
         Paragraph(_t("payment_col",     lang), cell_hdr_sm),
         Paragraph(_t("prazo_col",       lang), cell_hdr_sm),
         Paragraph(_t("installment_no",  lang), cell_hdr_sm),
-        Paragraph(_t("amount_col",      lang), cell_hdr_sm),
+        Paragraph(_t("amount_col",      lang), amount_hdr_st),
         Paragraph(_t("due_date",        lang), cell_hdr_sm),
         Paragraph(_t("payment_status",  lang), cell_hdr_sm),
     ]]
