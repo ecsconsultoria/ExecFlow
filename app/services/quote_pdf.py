@@ -804,8 +804,8 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
         if show_usd:
             usd_unit = price / usd_rate
             usd_total = total / usd_rate
-            unit_cell += f'<br/><font size="7" color="#888888">$ {usd_unit:,.2f}</font>'
-            total_cell += f'<br/><font size="7" color="#888888">$ {usd_total:,.2f}</font>'
+            unit_cell += f'<br/><font size="7" color="#888888">USD {usd_unit:,.2f}</font>'
+            total_cell += f'<br/><font size="7" color="#888888">USD {usd_total:,.2f}</font>'
 
         items_rows.append([
             Paragraph(str(idx),                  cell_body_c),
