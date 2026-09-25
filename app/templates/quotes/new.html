@@ -314,7 +314,7 @@
               <tr>
                 <th class="px-3 py-2 text-center font-semibold text-slate-500 uppercase tracking-wide w-8">#</th>
                 <th class="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wide">Serviço</th>
-                <th class="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wide hidden sm:table-cell">Categoria</th>
+                <th class="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wide hidden sm:table-cell">Modelo Veículo</th>
                 <th class="px-3 py-2 text-right font-semibold text-slate-500 uppercase tracking-wide w-16">Qtd</th>
                 <th class="px-3 py-2 text-right font-semibold text-slate-500 uppercase tracking-wide w-24">Unit.</th>
                 <th class="px-3 py-2 text-right font-semibold text-slate-500 uppercase tracking-wide w-24">Total</th>
@@ -337,14 +337,14 @@
                     </div>
                   </td>
                   <td class="px-3 py-2 text-slate-500 hidden sm:table-cell">
-                    <select x-model.number="item.category_id" @change="setCategory(item, $event.target.value)"
-                            title="Categoria"
-                            class="border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded px-1 py-0.5 text-xs max-w-[150px] focus:outline-none focus:ring-1 focus:ring-blue-400">
-                      <option value="">–</option>
-                      <template x-for="cat in catalog" :key="cat.id">
-                        <option :value="cat.id" x-text="cat.name"></option>
+                    <input type="text" x-model="item.vehicle_description" list="rfq-modelos"
+                           placeholder="Modelo do veículo" title="Modelo do veículo (preenchimento manual)"
+                           class="border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded px-1.5 py-0.5 text-xs w-[190px] focus:outline-none focus:ring-1 focus:ring-blue-400">
+                    <datalist id="rfq-modelos">
+                      <template x-for="m in vehicleModels()" :key="m">
+                        <option :value="m"></option>
                       </template>
-                    </select>
+                    </datalist>
                   </td>
                   <td class="px-3 py-2 text-right text-slate-500">
                     <input type="number" min="1" step="1" x-model.number="item.quantity"
@@ -577,10 +577,10 @@ function quoteBuilder() {
       this.cart.splice(j, 0, item);
     },
 
-    setCategory(item, catId) {
-      const cat = this.catalog.find(c => c.id == catId);
-      item.category_name = cat ? cat.name : '';
-      if (cat) { item.vehicle_description = cat.description || ''; }
+    vehicleModels() {
+      const models = new Set();
+      this.catalog.forEach(cat => { if (cat.description) models.add(cat.description); });
+      return [...models].sort();
     },
 
     exportCartExcel() { exportCartExcel(); },
@@ -645,7 +645,7 @@ function quoteBuilder() {
         service_id:          svc.service_id,
         category_id:         cat.id,
         category_name:       cat.name,
-        vehicle_description: cat.description || '',
+        vehicle_description: '',
         name:                svc.name,
         driver_type:         svc.driver_type || '',
         service_date:        svcDate,
