@@ -209,7 +209,10 @@ def _render_sign_page(story: list, text: str, img_path: str, img_pos: str):
             img_tbl.setStyle(TableStyle([("ALIGN", (0, 0), (-1, -1), "CENTER")]))
             story.append(img_tbl)
     elif img_flowable:
-        story.append(Spacer(1, 22 * mm))
+        # 12mm: com imagem "centro" (140mm de altura), titulo + espacador +
+        # padding + imagem cabem no frame landscape (170mm). Com 22mm estourava
+        # e a imagem caia na pagina seguinte (fora da pagina do Meet & Greet).
+        story.append(Spacer(1, 12 * mm))
         img_tbl = Table([[img_flowable]], colWidths=[ls_W_val])
         img_tbl.setStyle(TableStyle([("ALIGN", (0, 0), (-1, -1), "CENTER")]))
         story.append(img_tbl)
