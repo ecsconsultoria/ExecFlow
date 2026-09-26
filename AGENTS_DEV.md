@@ -11,7 +11,7 @@
 | Python | 3.11 |
 | Banco | SQLite (`instance/DB_V2.db`) |
 | Servidor | Flask dev server |
-| Porta | 5004 |
+| Porta | 5003 |
 | Debug | Ativado (`DEBUG=True`) |
 | CSRF | Ativado (`WTF_CSRF_ENABLED=True`) |
 | SO | Windows 11 |
@@ -22,7 +22,7 @@
 
 ```bash
 # 1. Clonar / entrar no projeto
-cd ExecFlow_ERP_V2
+cd ExecFlow_ERP_V3
 
 # 2. Criar e ativar venv
 python -m venv venv
@@ -37,8 +37,8 @@ copy .env.example .env
 # Editar .env se necessário (SQLite é o default)
 
 # 5. Rodar
-python app_v2.py
-# Acessar: http://127.0.0.1:5004
+python ExecFlow.py
+# Acessar: http://127.0.0.1:5003
 ```
 
 ---
@@ -49,7 +49,7 @@ python app_v2.py
 SECRET_KEY=dev-secret-key-not-for-production
 FLASK_ENV=development
 DATABASE_URL=sqlite:///DB_V2.db
-BASE_URL=http://localhost:5004
+BASE_URL=http://localhost:5003  # (fallback do config.py ainda é 5004)
 ```
 
 ---
@@ -68,7 +68,7 @@ BASE_URL=http://localhost:5004
 ```bash
 # Deletar e recriar
 del instance\DB_V2.db
-python app_v2.py   # Recria com seed data
+python ExecFlow.py   # Recria com seed data
 ```
 
 ### Acessar Dados Diretamente
@@ -108,7 +108,7 @@ flask db downgrade -1
 flask db history
 ```
 
-**IMPORTANTE:** As migrações são aplicadas automaticamente no boot (`app_v2.py` chama `_db_upgrade()`). Não é necessário rodar manualmente em dev.
+**IMPORTANTE:** As migrações são aplicadas automaticamente no boot (`ExecFlow.py` chama `_db_upgrade()`). Não é necessário rodar manualmente em dev.
 
 ### Schema Patches (Hotfix)
 
@@ -226,7 +226,7 @@ Use este checklist para qualquer correção de bug, seja trivial ou complexa.
 - [ ] **Reproduza localmente:**
   ```bash
   # 1. Garanta que o banco está limpo ou use um estado conhecido
-  python app_v2.py
+  python ExecFlow.py
   # 2. Execute os passos exatos para reproduzir
   # 3. Confirme que o erro acontece
   ```

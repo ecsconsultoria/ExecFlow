@@ -6,7 +6,7 @@
 
 ## 1. Visão Geral
 
-**ExecFlow_ERP_V2** é um ERP web para gestão de orçamentos e operações de transporte executivo (empresa: Executive Car SP). Stack:
+**ExecFlow_ERP_V3** é um ERP web para gestão de orçamentos e operações de transporte executivo (empresa: Executive Car SP). Stack:
 
 | Camada | Tecnologia |
 |--------|-----------|
@@ -26,8 +26,8 @@
 ## 2. Estrutura de Diretórios
 
 ```
-ExecFlow_ERP_V2/
-├── app_v2.py                 # Entry point — cria app, roda migrações
+ExecFlow_ERP_V3/
+├── ExecFlow.py                # Entry point — cria app, roda migrações (dev: porta 5003)
 ├── config.py                 # Config classes: Dev / Prod / Test
 ├── requirements.txt          # Dependências de produção
 ├── requirements-dev.txt      # Dependências de dev + teste
@@ -44,11 +44,11 @@ ExecFlow_ERP_V2/
 │   ├── templates/            # 32 templates Jinja2
 │   └── static/               # CSS, JS, fontes, uploads
 │
-├── migrations/               # Alembic (11 versões)
-├── tests/                    # 6 arquivos de teste (85 testes)
+├── migrations/               # Alembic (18 versões)
+├── tests/                    # 30 arquivos de teste (330 testes; 6 falhas pré-existentes)
 ├── tools/                    # tailwindcss.exe, smoke tests
 ├── instance/                 # DB_V2.db (SQLite runtime)
-└── docs/                     # Documentação detalhada
+└── docs/                     # Documentação (canônicos na raiz; histórico em docs/Arquivados/)
 ```
 
 ---
@@ -151,6 +151,8 @@ Quote (Orçamento)
 - `OperationCost` — Custos operacionais (vinculados à ServiceOrder)
 - `SupplierPayment` — Pagamentos a fornecedores (vinculados à ServiceOrder)
 - `FinancialEntry` — Lançamentos financeiros genéricos (V4)
+
+> ⚠️ **V4 MORTO (desde 28/08/2026):** as tabelas V4 (`financial_entries`, `revenue_entries`, `operation_costs`, `supplier_payments`) estão com 0 linhas e NÃO são usadas pelo fluxo vivo. **Ledger único do sistema = `FinancialRecord`** (`type`: revenue/cost/expense). Não crie código que escreva no V4.
 
 ---
 
@@ -312,7 +314,7 @@ Controller (rota)
 
 ### 8.3 Após a Implementação
 
-- Execute `pytest tests/ -v` (todos os 85 testes devem passar)
+- Execute `pytest tests/ -v` (baseline: 330 testes, 6 falhas pré-existentes em `test_decorators_and_audit.py` — verificar que não há falhas novas)
 - Execute validação multi-tenant (§9)
 - Execute validação RBAC (§10)
 - Execute validação financeira (§11)
@@ -546,7 +548,7 @@ Use este procedimento **sempre** que uma alteração for destinada a produção:
 
 ```
 FASE 1: PRÉ-DEPLOY (local)
-  1. pytest tests/ -v                    # 85 testes devem passar
+  1. pytest tests/ -v                    # suíte passa (6 falhas pré-existentes esperadas)
   2. Teste manual dos fluxos alterados
   3. Verifique migrações pendentes
 
@@ -614,6 +616,8 @@ FASE 3: PRODUÇÃO
 | [AGENTS_PROD.md](AGENTS_PROD.md) | Guia de produção + regras rígidas + checklist de deploy |
 | [docs/architecture.md](docs/architecture.md) | Arquitetura completa do sistema |
 | [docs/business_rules.md](docs/business_rules.md) | Regras de negócio e fluxos |
+| [docs/AUDITORIA_FINANCEIRA.md](docs/AUDITORIA_FINANCEIRA.md) | Auditoria do financeiro real (28/08/2026) — fonte de verdade |
+| [docs/RECONCILIACAO_FINANCEIRA.md](docs/RECONCILIACAO_FINANCEIRA.md) | Baseline de dados e decisões de restauração (28/08/2026) |
 | [docs/development.md](docs/development.md) | Guia de desenvolvimento local |
 | [docs/production.md](docs/production.md) | Guia de ambiente de produção |
 | [docs/deployment.md](docs/deployment.md) | Processo de deploy |
@@ -632,7 +636,7 @@ FASE 3: PRODUÇÃO
 - [ ] Verifiquei se é problema de permissão (RBAC)
 - [ ] Verifiquei se é problema de `parse_brl()` (valor monetário)
 - [ ] Corrigi com alteração mínima
-- [ ] Todos os 85 testes passam (`pytest tests/ -v`)
+- [ ] Suíte passa (`pytest tests/ -v`) — exceto as 6 falhas pré-existentes em `test_decorators_and_audit.py`
 - [ ] Testei manualmente no browser
 - [ ] Verifiquei se o bug não existe em arquivos similares (ex: mesmo padrão em purchase_orders e orders)
 - [ ] `log_activity()` se for operação sensível
@@ -659,7 +663,7 @@ FASE 3: PRODUÇÃO
 - [ ] Validei RBAC (§10)
 - [ ] Validei impacto financeiro (§11, se aplicável)
 - [ ] Testes escritos (mínimo: acesso autorizado, acesso negado, tenant isolation)
-- [ ] Todos os 85 testes passam
+- [ ] Suíte passa — exceto as 6 falhas pré-existentes em `test_decorators_and_audit.py`
 
 ### 15.3 Refatoração
 
@@ -671,7 +675,7 @@ FASE 3: PRODUÇÃO
 - [ ] Não mudei assinatura de funções públicas (ou atualizei todos os callers)
 - [ ] Não alterei transações (commit/rollback permanecem equivalentes)
 - [ ] Extraí lógica repetida para utility/services
-- [ ] Todos os 85 testes passam sem modificação (ou testes atualizados justificadamente)
+- [ ] Suíte passa sem modificação, exceto as 6 falhas pré-existentes (ou testes atualizados justificadamente)
 - [ ] Testei manualmente os fluxos afetados
 
 ---

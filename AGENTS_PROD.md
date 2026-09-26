@@ -23,10 +23,10 @@
 ## 2. Procfile (Render)
 
 ```
-web: gunicorn app_v2:app
+web: gunicorn ExecFlow:app --workers 1 --threads 2 --timeout 60 --max-requests 100 --max-requests-jitter 20 --access-logfile - --error-logfile -
 ```
 
-O Gunicorn é iniciado com configurações padrão do Render. O `app_v2.py`:
+O Gunicorn é iniciado com configurações padrão do Render. O `ExecFlow.py`:
 1. Cria o app via factory
 2. Aplica migrações pendentes automaticamente (`flask db upgrade`)
 3. Em produção, chama `gc.collect()` e `gc.freeze()` para reduzir pressão de memória
@@ -169,7 +169,7 @@ O Render monitora a porta do serviço. O endpoint raiz `/` redireciona para `/da
   - [ ] Equipe notificada com antecedência
 
 - [ ] **Para todos os tipos:**
-  - [ ] `pytest tests/ -v` passa em todos os 85 testes
+  - [ ] `pytest tests/ -v` passa exceto as 6 falhas pré-existentes (`test_decorators_and_audit.py`) — verificar que não há falhas NOVAS
   - [ ] Código revisado (PR aprovado)
   - [ ] Testado manualmente em ambiente local com `FLASK_ENV=production`
   - [ ] Variáveis de ambiente verificadas (sem "change-me-in-production")
@@ -179,7 +179,7 @@ O Render monitora a porta do serviço. O endpoint raiz `/` redireciona para `/da
 
 - [ ] **Deploy manual ou automático:**
   - Render Dashboard → Deploy → Deploy latest commit
-  - Ou: push na branch `main` (auto-deploy)
+  - Ou: push na branch `v3` (auto-deploy)
 
 - [ ] **Monitorar logs durante o boot:**
   - [ ] Sem erros de migração (`flask db upgrade` concluiu)
@@ -273,7 +273,7 @@ Se qualquer smoke test falhar:
    - [ ] `UPLOAD_FOLDER` é um disco persistente do Render
 
 2. **Verificar código:**
-   - [ ] `pytest tests/ -v` passa em todos os 85 testes
+   - [ ] `pytest tests/ -v` passa exceto as 6 falhas pré-existentes (`test_decorators_and_audit.py`) — verificar que não há falhas NOVAS
    - [ ] Migrações foram testadas em staging
    - [ ] Backup do banco foi feito antes de migrações destrutivas
 
