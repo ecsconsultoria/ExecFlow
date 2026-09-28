@@ -1,4 +1,7 @@
 {% extends "base.html" %}
+{% from "components/input.html" import input, select with context %}
+{% from "components/button.html" import btn with context %}
+{% from "components/card.html" import card with context %}
 {% block title %}{{ 'Editar' if vehicle else 'Novo' }} Veículo{% endblock %}
 {% block page_title %}
   <a href="{{ url_for('vehicles.index') }}" class="text-slate-400 hover:text-blue-500 mr-2 text-sm"><i class="fa-solid fa-arrow-left"></i></a>
@@ -6,45 +9,23 @@
 {% endblock %}
 
 {% block content %}
-<div class="max-w-lg mx-auto bg-white dark:bg-slate-800 rounded-xl shadow-sm p-6">
+{% call card(class='max-w-lg mx-auto', padding='p-6') %}
   <form method="post" class="space-y-4">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="grid grid-cols-2 gap-4">
-      <div>
-        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Placa *</label>
-        <input name="plate" required value="{{ vehicle.plate if vehicle else '' }}"
-               class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-      </div>
-      <div>
-        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Ano</label>
-        <input type="number" name="year" value="{{ vehicle.year if vehicle else '' }}"
-               class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-      </div>
-      <div>
-        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Marca</label>
-        <input name="make" value="{{ vehicle.make if vehicle else '' }}"
-               class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-      </div>
-      <div>
-        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Modelo</label>
-        <input name="model" value="{{ vehicle.model if vehicle else '' }}"
-               class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-      </div>
+      {{ input('plate', label='Placa *', required=True, value=vehicle.plate if vehicle else '') }}
+      {{ input('year', label='Ano', type='number', value=vehicle.year if vehicle else '') }}
+      {{ input('make', label='Marca', value=vehicle.make if vehicle else '') }}
+      {{ input('model', label='Modelo', value=vehicle.model if vehicle else '') }}
     </div>
-    <div>
-      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Categoria</label>
-      <select name="category_id" class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none">
-        <option value="">– Selecione –</option>
-        {% for cat in categories %}
-        <option value="{{ cat.id }}" {% if vehicle and vehicle.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div>
-      <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cor</label>
-      <input name="color" value="{{ vehicle.color if vehicle else '' }}"
-             class="w-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-    </div>
+    {% set ns = namespace(options=[('', '– Selecione –')]) %}
+    {% for cat in categories %}
+      {% set ns.options = ns.options + [(cat.id, cat.name)] %}
+    {% endfor %}
+    {{ select('category_id', label='Categoria',
+               options=ns.options,
+               selected=vehicle.category_id if vehicle and vehicle.category_id else '') }}
+    {{ input('color', label='Cor', value=vehicle.color if vehicle else '') }}
     <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
       <input type="checkbox" name="is_active" value="1"
              {% if (not vehicle) or vehicle.is_active %}checked{% endif %}
@@ -52,10 +33,9 @@
       Ativo
     </label>
     <div class="flex justify-end gap-3 pt-2">
-      <a href="{{ url_for('vehicles.index') }}"
-         class="px-4 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700">Cancelar</a>
-      <button class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-6 py-2 rounded-lg">Salvar</button>
+      {{ btn('Cancelar', href=url_for('vehicles.index'), variant='outline', size='md') }}
+      {{ btn('Salvar', variant='primary', type='submit', size='md') }}
     </div>
   </form>
-</div>
+{% endcall %}
 {% endblock %}
