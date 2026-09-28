@@ -22,10 +22,12 @@ Ser o único responsável pelas regras e módulos financeiros do sistema e valid
 
 - `app/services/`: `financial_service.py`, `margin_service.py`, `dre_service.py`, `cash_flow_service.py`, `ar_ap_service.py`, `payment_history_service.py`, `recurrence_service.py`
 - `app/blueprints/financial/**`
-- `app/models/financial.py`
+- `app/models/financial.py`, `app/models/financial_catalog.py`, `app/models/payment_receipt.py`
 - `app/utils/helpers.py` (`parse_brl` e formatação monetária)
 - Regras de receita/custo/margem, despesas, categorias financeiras, centros de custo
 - Testes próprios em `tests/`
+
+> Alterações **estruturais** nesses modelos que exijam migration dependem do DATABASE (FINANCE propõe; DATABASE cria a migration). O BACKEND pode **ler**, mas **não alterar** esses modelos sem coordenação/revisão do FINANCE.
 
 ## Regras financeiras vigentes (NÃO alterar sem autorização explícita)
 
@@ -35,6 +37,12 @@ Ser o único responsável pelas regras e módulos financeiros do sistema e valid
 4. **V4 está MORTO** (0 linhas) e **não deve ser reativado** — proibido escrever em `financial_entries`, `revenue_entries`, `operation_costs`, `supplier_payments`.
 5. Despesa geral = FR `type='expense'` com categoria financeira + centro de custo obrigatórios.
 6. Todo parsing monetário via `parse_brl()`.
+7. **DRE** — reconhecimento/classificação por **competência/emissão**.
+8. **Contas a Pagar** — análise por **data de vencimento**.
+9. **Caixa realizado** — pela **data efetiva de pagamento** (`paid_date`).
+10. **Caixa projetado** — pela **data de vencimento**.
+
+Nenhum agente pode alterar essas regras silenciosamente — mudança de regra de negócio exige autorização e revisão explícitas.
 
 ## Responsabilidade de validação
 

@@ -44,6 +44,7 @@ O BACKEND é responsável pela implementação **estrutural e funcional** de SO/
 
 - `migrations/**` (nunca editar diretamente — coordenar com DATABASE)
 - `app/blueprints/financial/**`, serviços financeiros, `app/models/financial.py`, `app/utils/helpers.py`
+- `ExecFlow.py` e `config.py` (ownership exclusivo do ORCHESTRATOR — somente leitura)
 - Templates (delegar ao FRONTEND/UI)
 - Banco de dados (exceto leitura em dev)
 

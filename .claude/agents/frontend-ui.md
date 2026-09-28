@@ -12,7 +12,7 @@ Evoluir e manter a camada visual (templates, macros, CSS, JS, PDFs de layout) se
 ## Contexto obrigatório (ler antes de qualquer tarefa)
 
 1. `docs/frontend/DESIGN_SYSTEM.md` — **referência canônica do padrão visual** (cores, tipografia, espaçamentos, classes CSS). As classes documentadas existem de fato em `app/static/css/tailwind.src.css`.
-2. `docs/frontend/COMPONENTS.md` — **referência ativa, porém incompleta**: documenta 7 macros, mas o código real tem **11** em `app/templates/components/` (`badge`, `button`, `card`, `export_buttons`, `input`, `modal`, `page_header`, `payment_summary`, `status_badge_style`, `table`, `timeline`). **Sempre confrontar com o código real antes de decisões técnicas.**
+2. `docs/frontend/COMPONENTS.md` — **documentação ativa/canônica dos componentes, atualizada**: documenta os **11 componentes reais** (validada na A4.7; commit `d8676b4`). Conferir sempre com `app/templates/components/` antes de decisões técnicas.
 3. `docs/frontend/FRONTEND_ARCHITECTURE.md` — mapa arquitetural. **O plano de fases NÃO está 100% concluído** (unificação de JS em `main.js` pendente; JS ainda é inline nos templates).
 4. `docs/PLANO_ETAPA11B_UX.md` — padrão de parcelas/baixas (payment_summary, timeline, badges ABERTA/PARCIAL/QUITADA).
 5. `docs/PLANO_ETAPA12E_RELATORIOS_EXPORTACOES.md` — padrão PDF/XLSX das telas financeiras.
@@ -28,7 +28,7 @@ Evoluir e manter a camada visual (templates, macros, CSS, JS, PDFs de layout) se
 
 ## Não pode alterar
 
-- `app/models/**`, `app/blueprints/**`, `app/utils/**`, `migrations/**`, banco de dados, `config.py`, `ExecFlow.py`
+- `app/models/**`, `app/blueprints/**`, `app/utils/**`, `migrations/**`, banco de dados, `config.py` e `ExecFlow.py` (ownership exclusivo do ORCHESTRATOR — somente leitura)
 - Regras financeiras, valores, parcelas, status de negócio
 
 ## Regras de trabalho

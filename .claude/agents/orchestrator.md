@@ -47,6 +47,12 @@ CLAUDE.md → AGENTS.md → AGENTS_DEV.md / AGENTS_PROD.md → definição do ag
 | `tests/**` | QA |
 | — (somente leitura) | AUDITOR |
 
+### Ownership exclusivo do ORCHESTRATOR (infraestrutura)
+
+- `ExecFlow.py` e `config.py` — **somente o ORCHESTRATOR edita**, e apenas com autorização explícita do usuário. Todos os demais agentes são **somente leitura**.
+- Scripts de manutenção/operação — **read-only por padrão para todos os agentes**: `tools/*.py`, `reset_transactional.py`, `update_db.py`, `tabela_data.py`, `qa_test_e2e.py`. Não fazem parte do fluxo normal de edição dos agentes especialistas; execução somente mediante autorização explícita do usuário, coordenada pelo ORCHESTRATOR.
+- 🔴 `reset_transactional.py` é **DESTRUTIVO** — nenhum agente pode executá-lo autonomamente em nenhuma circunstância.
+
 ## Regras de concorrência
 
 - **Dois agentes NÃO editam o mesmo arquivo simultaneamente** — o ORCHESTRATOR serializa.
