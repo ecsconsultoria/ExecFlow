@@ -423,6 +423,9 @@
           </label>
         </template>
       </div>
+      <p class="text-xs font-mono text-slate-600 dark:text-slate-300 mt-2"
+         x-show="inclusions.filter(i => i.included).length > 0"
+         x-text="inclusions.filter(i => i.included).map(i => i.text_pt).join(' | ')"></p>
       <div class="card-divider my-3"></div>
       <div>
         <label class="lbl">Observações</label>
