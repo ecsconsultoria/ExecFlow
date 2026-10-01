@@ -122,6 +122,17 @@
     </a>
     {% endif %}
 
+    {# Duplicar #}
+    {% if has_perm('quote.create') %}
+    <form method="post" action="{{ url_for('quotes.duplicate', qid=quote.id) }}" class="inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" title="Duplicar orçamento (nova RFQ com a data de hoje)"
+              class="h-8 px-3 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition-colors bg-teal-600 hover:bg-teal-700 text-white">
+        <i class="fa-solid fa-copy text-[11px]"></i> Duplicar
+      </button>
+    </form>
+    {% endif %}
+
     {% set _em = (quote.client.email if quote.client and quote.client.email else quote.email) %}
     {% set _ph = (quote.client.whatsapp if quote.client and quote.client.whatsapp else quote.phone) %}
 

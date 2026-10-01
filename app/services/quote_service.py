@@ -1,6 +1,6 @@
 """QuoteService — criação e atualização de orçamentos."""
 import json
-from datetime import date, time
+from datetime import date, time, timedelta
 from ..models.quote  import Quote, QuoteItem, QuoteInclusion
 from ..extensions    import db
 from ..utils         import now_br
@@ -244,3 +244,70 @@ class QuoteService:
         quote.updated_at   = now_br()
         db.session.commit()
         return quote
+
+    @staticmethod
+    def duplicate_quote(quote: Quote, created_by: int | None = None) -> Quote:
+        """Duplica uma RFQ (de qualquer status) — número novo com a data do dia,
+        todos os dados copiados (cliente, itens, inclusões, condições)."""
+        today = now_br().date()
+        offset = None
+        if quote.valid_until and quote.created_at:
+            offset = (quote.valid_until - quote.created_at.date()).days
+        new_q = Quote(
+            company_id     = quote.company_id,
+            number         = _next_number(quote.company_id),
+            client_id      = quote.client_id,
+            client_name    = quote.client_name or "",
+            contact_name   = quote.contact_name or "",
+            email          = quote.email or "",
+            phone          = quote.phone or "",
+            language       = quote.language or "pt",
+            billing_type   = quote.billing_type or "recibo",
+            payment_method = quote.payment_method or "",
+            payment_terms  = quote.payment_terms  or "",
+            obs            = quote.obs or "",
+            usd_rate       = quote.usd_rate,
+            valid_until    = (today + timedelta(days=offset)) if offset is not None else None,
+            total_amount   = quote.total_amount or 0,
+            status         = "pendente",
+            created_by     = created_by,
+        )
+        db.session.add(new_q)
+        db.session.flush()
+
+        for it in sorted(quote.items, key=lambda x: x.sort_order or 0):
+            db.session.add(QuoteItem(
+                quote_id            = new_q.id,
+                service_id          = it.service_id,
+                category_id         = it.category_id,
+                description         = it.description,
+                vehicle_description = it.vehicle_description,
+                driver_name         = it.driver_name,
+                state_code          = it.state_code,
+                ref_note            = it.ref_note,
+                service_date        = it.service_date,
+                service_time        = it.service_time,
+                quantity            = it.quantity,
+                unit_price          = it.unit_price,
+                hour_extra          = it.hour_extra,
+                total_price         = it.total_price,
+                sort_order          = it.sort_order,
+                price_base          = it.price_base,
+                price_nf            = it.price_nf,
+                price_cartao        = it.price_cartao,
+                price_nf_cartao     = it.price_nf_cartao,
+                km_extra            = it.km_extra,
+                km_extra_rate       = it.km_extra_rate,
+            ))
+
+        for inc in sorted(quote.inclusions, key=lambda x: x.sort_order or 0):
+            db.session.add(QuoteInclusion(
+                quote_id   = new_q.id,
+                text_pt    = inc.text_pt,
+                text_en    = inc.text_en or "",
+                included   = inc.included,
+                sort_order = inc.sort_order,
+            ))
+
+        db.session.commit()
+        return new_q

@@ -448,3 +448,16 @@ def delete(qid):
     db.session.commit()
     flash("Orçamento removido.", "info")
     return redirect(url_for("quotes.index"))
+
+
+@quotes_bp.route("/<int:qid>/duplicate", methods=["POST"])
+@login_required
+@require_permission("quote.create")
+def duplicate(qid):
+    quote = Quote.query.filter_by(id=qid, company_id=current_user.company_id, deleted_at=None).first_or_404()
+    new_quote = QuoteService.duplicate_quote(quote, current_user.id)
+    log_activity("quote", new_quote.id, current_user.company_id,
+                 f"Duplicada a partir de {quote.number}", current_user.id)
+    db.session.commit()
+    flash(f"RFQ duplicada: {new_quote.number}", "success")
+    return redirect(url_for("quotes.edit", qid=new_quote.id))
