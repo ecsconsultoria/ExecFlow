@@ -894,8 +894,7 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
         ]
     else:
         incluso_list = _INCLUSO.get(lang, _INCLUSO["pt"])
-    for item in incluso_list:
-        story.append(Paragraph(f"• {item}", bullet_st))
+    story.append(Paragraph(" | ".join(incluso_list), bullet_st))
     story.append(Spacer(1, 4 * mm))
 
     # ── Additional info (obs) ─────────────────────────────────────────────
