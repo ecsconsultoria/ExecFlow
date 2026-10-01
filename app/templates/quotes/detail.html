@@ -385,7 +385,7 @@
         <td class="px-3 py-2">
           <p class="font-semibold text-slate-700 dark:text-slate-200 leading-tight">
             {% if item.service_date %}<span class="text-slate-400 font-normal mr-1">{{ item.service_date.strftime('%d/%m') }}{% if item.service_time %} {{ item.service_time.strftime('%H:%M') }}{% endif %}</span>{% elif item.ref_note %}<span class="text-slate-400 font-normal mr-1">[{{ item.ref_note }}]</span>{% endif %}
-            {{ item.service.name if item.service else item.description }}
+            {{ item.description or (item.service.name if item.service else '–') }}
           </p>
         </td>
         <td class="px-3 py-2 text-slate-500 hidden sm:table-cell">{{ item.category.name if item.category else '–' }}</td>

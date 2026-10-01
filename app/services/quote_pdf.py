@@ -728,7 +728,9 @@ def generate_quote_pdf(quote, lang: str = "pt") -> io.BytesIO:
     grand_total = 0.0
     for idx, it in enumerate(sorted(quote.items, key=lambda x: x.sort_order or 0), 1):
         # --- Resolve names ---------------------------------------------------
-        service_name_raw = (it.service.name if it.service else None) or it.description or "–"
+        # Texto editado pelo usuário (lápis na RFQ) tem prioridade sobre o
+        # nome do serviço — reflete sempre no PDF.
+        service_name_raw = it.description or (it.service.name if it.service else None) or "–"
         driver_type_raw  = it.driver_name or ""  # stored as Bilíngue/Monolíngue
         vehicle_desc     = it.vehicle_description or ""
         ref_note         = it.ref_note or ""
