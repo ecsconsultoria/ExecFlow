@@ -331,14 +331,16 @@
                     @drop="dropAt(idx)">
                   <td class="px-3 py-2 text-slate-400 text-center" x-text="idx + 1"></td>
                   <td class="px-3 py-2">
-                    <p class="font-semibold text-slate-700 dark:text-slate-200 leading-tight" x-text="item.name"></p>
-                    <p class="text-slate-400 mt-0.5 leading-tight"
-                       x-text="(item.driver_type ? item.driver_type + ' – ' : '') + item.category_name"></p>
-                    <div class="flex items-center gap-1 mt-1">
+                    <div class="flex items-center gap-2">
                       <input type="date" x-model="item.service_date" title="Data do serviço"
-                             class="w-[104px] border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded px-1 py-0.5 text-[11px] text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-400">
+                             class="w-[104px] shrink-0 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded px-1 py-0.5 text-[11px] text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-400">
                       <input type="time" x-model="item.service_time" title="Hora do serviço"
-                             class="w-[76px] border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded px-1 py-0.5 text-[11px] text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-400">
+                             class="w-[76px] shrink-0 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded px-1 py-0.5 text-[11px] text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-400">
+                      <div class="min-w-0">
+                        <p class="font-semibold text-slate-700 dark:text-slate-200 leading-tight" x-text="item.name"></p>
+                        <p class="text-slate-400 mt-0.5 leading-tight"
+                           x-text="(item.driver_type ? item.driver_type + ' – ' : '') + item.category_name"></p>
+                      </div>
                     </div>
                   </td>
                   <td class="px-3 py-2 text-slate-500 hidden sm:table-cell">
