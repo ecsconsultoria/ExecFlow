@@ -323,7 +323,12 @@
             </thead>
             <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
               <template x-for="(item, idx) in cart" :key="idx">
-                <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-700/30">
+                <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-700/30"
+                    draggable="true"
+                    @dragstart="onDragStart($event, idx)"
+                    @dragend="dragIdx = null"
+                    @dragover.prevent
+                    @drop="dropAt(idx)">
                   <td class="px-3 py-2 text-slate-400 text-center" x-text="idx + 1"></td>
                   <td class="px-3 py-2">
                     <p class="font-semibold text-slate-700 dark:text-slate-200 leading-tight" x-text="item.name"></p>
@@ -361,17 +366,11 @@
                       x-text="fmtBRL(item.unit_price * item.quantity)"></td>
                   <td class="px-3 py-2">
                     <div class="flex items-center justify-end gap-1">
-                      <button @click="moveItem(idx, -1)" :disabled="idx === 0"
-                              :class="idx === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-slate-100 dark:hover:bg-slate-700'"
-                              class="p-1.5 rounded text-slate-400 transition-colors"
-                              title="Mover para cima">
-                        <i class="fa-solid fa-arrow-up text-xs"></i>
-                      </button>
-                      <button @click="moveItem(idx, 1)" :disabled="idx === cart.length - 1"
-                              :class="idx === cart.length - 1 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-slate-100 dark:hover:bg-slate-700'"
-                              class="p-1.5 rounded text-slate-400 transition-colors"
-                              title="Mover para baixo">
-                        <i class="fa-solid fa-arrow-down text-xs"></i>
+                      <button type="button"
+                              @mousedown="dragEnabled = true" @mouseup="dragEnabled = false"
+                              class="drag-handle p-1.5 rounded text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-grab active:cursor-grabbing"
+                              title="Arraste para reordenar">
+                        <i class="fa-solid fa-grip-vertical text-xs"></i>
                       </button>
                       <button @click="cart.splice(idx, 1)"
                               class="p-1.5 rounded text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
@@ -482,6 +481,8 @@ function quoteBuilder() {
     filterDriver:  '',
     filterState:   '',
     cart:      [],
+    dragIdx:   null,
+    dragEnabled: false,
     qtyMap:    {},
     svcDateMap: {},
     svcTimeMap: {},
@@ -575,6 +576,20 @@ function quoteBuilder() {
       if (j < 0 || j >= this.cart.length) return;
       const item = this.cart.splice(idx, 1)[0];
       this.cart.splice(j, 0, item);
+    },
+
+    // Drag-and-drop (pela alça) — mesmo padrão da OS
+    onDragStart(e, idx) {
+      if (!this.dragEnabled) { e.preventDefault(); return; }
+      this.dragEnabled = false;
+      this.dragIdx = idx;
+      e.dataTransfer.effectAllowed = 'move';
+    },
+    dropAt(idx) {
+      if (this.dragIdx === null || this.dragIdx === idx) return;
+      const item = this.cart.splice(this.dragIdx, 1)[0];
+      this.cart.splice(idx, 0, item);
+      this.dragIdx = null;
     },
 
     vehicleModels() {
