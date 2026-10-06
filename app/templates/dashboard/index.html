@@ -26,7 +26,7 @@
 {% block content %}
 
 {# ── ROW A — Executive KPI Band ───────────────────────────────────────────── #}
-<div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-5">
+<div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 mb-5">
 
   {# Receita SO #}
   <a href="{{ url_for('orders.index') }}"
@@ -55,6 +55,18 @@
       <p class="text-xs text-slate-500 dark:text-slate-400 truncate">Custos Diretos</p>
     </div>
     <p class="text-base font-extrabold text-rose-600 dark:text-rose-400 leading-none font-mono">{{ po_cost_month|currency }}</p>
+  </a>
+
+  {# À Receber #}
+  <a href="{{ url_for('financial.receivables') }}"
+     class="group bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm hover:shadow-md hover:ring-1 hover:ring-emerald-200 dark:hover:ring-emerald-700 transition-all col-span-1">
+    <div class="flex items-center gap-2 mb-1">
+      <div class="w-7 h-7 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center shrink-0">
+        <i class="fa-solid fa-hand-holding-dollar text-emerald-600 dark:text-emerald-400 text-xs"></i>
+      </div>
+      <p class="text-xs text-slate-500 dark:text-slate-400 truncate">À Receber</p>
+    </div>
+    <p class="text-base font-extrabold text-emerald-700 dark:text-emerald-400 leading-none font-mono">{{ ar_open_total|currency }}</p>
   </a>
 
   {# Margem R$ #}

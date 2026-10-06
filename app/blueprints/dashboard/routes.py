@@ -316,8 +316,13 @@ def index():
 
     # ── AR/AP (Etapa 8B) — fonte única: ar_ap_service (vencimento no período) ─
     from ...services.ar_ap_service import receivable_rows, payable_rows
-    pending_receivables = receivable_rows(cid, p_start, p_end)[:20]
+    _ar_rows = receivable_rows(cid, p_start, p_end)
+    pending_receivables = _ar_rows[:20]
     pending_payables = payable_rows(cid, p_start, p_end)[:20]
+    # Quadro "À Receber": saldo em aberto de SOs abertos/faturados com
+    # vencimento no período selecionado (mesma fonte do painel AR)
+    ar_open_total = round(sum(r.amount for r in _ar_rows
+                              if r.order and r.order.status in ("aberto", "faturado")), 2)
 
     # ── Alerts ────────────────────────────────────────────────────────────────
     overdue_recv_count = sum(1 for p in pending_receivables if p.is_overdue)
@@ -402,6 +407,7 @@ def index():
         # receivables / payables
         pending_receivables=pending_receivables,
         pending_payables=pending_payables,
+        ar_open_total=ar_open_total,
         # alerts
         alerts=alerts,
         # legacy
