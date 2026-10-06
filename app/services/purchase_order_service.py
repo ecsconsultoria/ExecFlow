@@ -732,6 +732,16 @@ def update_item(item: POItem, data: dict) -> POItem:
             item.service_time = _time.fromisoformat(raw) if raw else None
         except ValueError:
             item.service_time = None
+    if "service_date" in data or "service_time" in data:
+        # Data/hora do servico alterada: replica no pickup do item e no item
+        # espelhado da SO de origem (bidirecional PO<->SO).
+        if item.service_date:
+            from datetime import datetime as _dt
+            t = item.service_time if item.service_time else _time(0, 0)
+            item.op_pickup_datetime = _dt.combine(item.service_date, t)
+        elif "service_date" in data:
+            item.op_pickup_datetime = None
+        _sync_order_item_from_po_item(item)
     item.total_cost = round((item.unit_cost or 0) * (item.quantity or 1), 2)
     db.session.flush()
     return item
@@ -752,6 +762,26 @@ def _parse_item_pickup_datetime(data: dict):
         return datetime.fromisoformat(f"{date_str}T{time_str or '00:00'}")
     except (TypeError, ValueError):
         return None
+
+
+def _sync_order_item_from_po_item(item: POItem) -> None:
+    """Replica data/hora do servico e pickup do item da PO no item espelhado
+    da SO de origem (bidirecional PO<->SO)."""
+    po = item.purchase_order
+    if not po or not po.order_id:
+        return
+    from ..models.order import OrderItem
+    oi = (OrderItem.query
+          .filter_by(order_id=po.order_id)
+          .filter(OrderItem.sort_order == (item.sort_order or 0))
+          .first())
+    if oi is None:
+        return
+    if item.service_id and oi.service_id and item.service_id != oi.service_id:
+        return
+    oi.service_date       = item.service_date
+    oi.service_time       = item.service_time
+    oi.op_pickup_datetime = item.op_pickup_datetime
 
 
 def update_item_operational(item: POItem, data: dict, apply_to_all: bool = False) -> None:
@@ -783,5 +813,17 @@ def update_item_operational(item: POItem, data: dict, apply_to_all: bool = False
     for target in targets:
         for field, value in base_payload.items():
             setattr(target, field, value)
+
+    if "op_pickup_date" in data or "op_pickup_time" in data:
+        # Pickup alterado: replica data/hora no servico do item e no item
+        # espelhado da SO de origem (bidirecional PO<->SO).
+        for target in targets:
+            if pickup_dt:
+                target.service_date = pickup_dt.date()
+                target.service_time = pickup_dt.time()
+            elif "op_pickup_date" in data:
+                target.service_date = None
+                target.service_time = None
+            _sync_order_item_from_po_item(target)
 
     db.session.flush()
