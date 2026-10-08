@@ -510,9 +510,9 @@ def baixa_record(rid):
                 db.session.flush()
                 order = op.order
                 if order and all(p.is_paid for p in order.payments) and order.status not in ("concluido", "cancelado"):
-                    # Regra 10/2026: baixa total NÃO conclui — mantém 'faturado';
-                    # conclusão só pela regra (datas passadas OU agenda concluída)
-                    order.status = "faturado"
+                    # Regra 10/2026: baixa NÃO altera o status do pedido (nem
+                    # conclui, nem fatura) — a conclusão só acontece pela regra
+                    # (faturado + datas passadas OU agenda concluída)
                     from ...services import order_service as _os
                     if _os._should_complete(order):
                         order.status    = "concluido"
