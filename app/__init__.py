@@ -193,12 +193,18 @@ def _ensure_schema_columns():
         # ── orders: other_costs_label column added 2026-05-24 ─────────────────
         if 'orders' in table_names:
             existing_o = {c['name'] for c in insp.get_columns('orders')}
-            if 'other_costs_label' not in existing_o:
-                with db.engine.begin() as conn:
-                    conn.execute(_text(
-                        "ALTER TABLE orders ADD COLUMN other_costs_label VARCHAR(200) DEFAULT ''"
-                    ))
-                log.info('Schema patch applied: orders.other_costs_label')
+            _new_order_cols = [
+                ('other_costs_label', "VARCHAR(200) DEFAULT ''"),
+                ('inclusions_json', 'TEXT'),
+                ('include_cancel_policy', 'BOOLEAN DEFAULT TRUE'),
+            ]
+            with db.engine.begin() as conn:
+                for _col_name, _col_type in _new_order_cols:
+                    if _col_name not in existing_o:
+                        conn.execute(_text(
+                            f'ALTER TABLE orders ADD COLUMN {_col_name} {_col_type}'
+                        ))
+                        log.info('Schema patch applied: orders.%s', _col_name)
 
         # ── order_items: operational item columns (SO por item) ──────────────
         if 'order_items' in table_names:
@@ -215,6 +221,7 @@ def _ensure_schema_columns():
                 ('op_passenger_phone', 'VARCHAR(50)'),
                 ('op_flight_number', 'VARCHAR(50)'),
                 ('op_notes', 'VARCHAR(500)'),
+                ('op_completed_at', 'TIMESTAMP'),
             ]
             with db.engine.begin() as conn:
                 for col_name, col_type in new_item_cols:

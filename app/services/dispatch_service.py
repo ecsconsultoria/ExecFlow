@@ -11,6 +11,7 @@ from sqlalchemy.orm import joinedload
 
 from ..extensions import db
 from ..models import Order, OrderItem, Client, ServiceOrder
+from ..utils import now_br
 
 
 # ── Status labels ────────────────────────────────────────────────────────────
@@ -41,6 +42,9 @@ def derive_dispatch_status(item, order):
     if order.status == 'concluido':
         return 'concluido'
     if order.status == 'faturado':
+        # item concluído na agenda (Concluir por card) → concluido
+        if getattr(item, "op_completed_at", None):
+            return 'concluido'
         return 'em_execucao'
     if not item.op_driver_name:
         return 'pendente_escala'
@@ -201,6 +205,7 @@ def get_item_detail(item_id):
                        else (order.client_name or '–')),
         'pickup_datetime': (item.op_pickup_datetime.isoformat()
                            if item.op_pickup_datetime else None),
+        'completed': getattr(item, "op_completed_at", None) is not None,
         'pickup_location': item.op_pickup_location or '',
         'dropoff_location': item.op_dropoff_location or '',
         'driver_name': item.op_driver_name or '',
@@ -241,10 +246,22 @@ def update_item_vehicle(item_id, vehicle_model, vehicle_plate=''):
     return True
 
 
+def _item_date_is_today(item) -> bool:
+    """Ações do despacho (iniciar/concluir/cancelar) só valem para o card da
+    data selecionada = data do serviço de HOJE (10/2026)."""
+    dt = getattr(item, "op_pickup_datetime", None)
+    if not dt:
+        return False
+    from ..utils import now_br
+    return dt.date() == now_br().date()
+
+
 def start_item_service(item_id):
-    """Inicia serviço: SO aberto → faturado."""
+    """Inicia serviço: SO aberto → faturado (somente no dia do serviço)."""
     item = OrderItem.query.options(joinedload(OrderItem.order)).get(item_id)
     if not item or not item.order:
+        return False
+    if not _item_date_is_today(item):
         return False
     if item.order.status == 'aberto':
         item.order.status = 'faturado'
@@ -254,27 +271,41 @@ def start_item_service(item_id):
 
 
 def complete_item_service(item_id):
-    """Conclui serviço: SO faturado → concluido."""
+    """Conclui o SERVIÇO DO ITEM (card) — não conclui mais o pedido inteiro.
+    O pedido só é concluído pela regra quando todos os itens da agenda
+    estiverem concluídos e todas as parcelas pagas."""
     item = OrderItem.query.options(joinedload(OrderItem.order)).get(item_id)
     if not item or not item.order:
         return False
-    if item.order.status == 'faturado':
-        item.order.status = 'concluido'
+    if not _item_date_is_today(item):
+        return False
+    order = item.order
+    if order.status == 'faturado':
+        if getattr(item, "op_completed_at", None) is None:
+            item.op_completed_at = now_br()
+        from .order_service import _should_complete
+        if _should_complete(order):
+            order.status    = "concluido"
+            order.closed_at = now_br()
         db.session.commit()
         return True
     return False
 
 
 def cancel_item_from_dispatch(item_id):
-    """Remove dados operacionais do item (volta a Pend. Escala)."""
+    """Remove dados operacionais do item (volta a Pend. Escala) — somente no
+    dia do serviço."""
     item = OrderItem.query.get(item_id)
     if not item:
+        return False
+    if not _item_date_is_today(item):
         return False
     item.op_driver_name = None
     item.op_driver_phone = None
     item.op_vehicle_model = None
     item.op_vehicle_plate = None
     item.op_pickup_datetime = None
+    item.op_completed_at = None
     db.session.commit()
     return True
 

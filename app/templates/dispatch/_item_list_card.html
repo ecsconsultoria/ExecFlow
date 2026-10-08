@@ -24,11 +24,10 @@
 
   {# Data e Hora do Serviço + status #}
   <div class="flex items-start justify-between gap-2 mb-2">
-    <p class="text-xs text-slate-700 dark:text-slate-200 leading-tight">
-      <span class="font-semibold text-slate-500">Data e Hora do Serviço:</span>
-      <span class="font-bold text-slate-800 dark:text-slate-100">
-        {{ dp[2] ~ '/' ~ dp[1] ~ '/' ~ dp[0] if dp|length == 3 else '–' }}{% if item.time %} às {{ item.time }}{% endif %}
-      </span>
+    <p class="text-xs leading-tight">
+      <span class="font-bold text-slate-800 dark:text-slate-100">Data {{ dp[2] }}/{{ dp[1] }}/{{ dp[0] if dp|length == 3 else '–' }}</span>
+      <span class="text-slate-300 dark:text-slate-600 mx-1">|</span>
+      <span class="font-bold text-slate-800 dark:text-slate-100">Hora {{ item.time or '--:--' }}</span>
     </p>
     <span class="text-[9px] font-semibold px-2 py-0.5 rounded-full {{ badge_map.get(s, '') }} whitespace-nowrap shrink-0">{{ status_labels.get(s, s) }}</span>
   </div>

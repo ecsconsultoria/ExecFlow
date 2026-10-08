@@ -257,21 +257,9 @@
   </div>
   <div class="p-4">
     {% if items_data %}
-    <div class="space-y-5">
-      {% for day_str, day_items in items_by_date|dictsort %}
-      {% set _dp = day_str.split('-') %}
-      <div>
-        <div class="flex items-center gap-2 mb-2">
-          <span class="text-xs font-bold text-slate-600 dark:text-slate-300 whitespace-nowrap">{{ _dp[2] }}/{{ _dp[1] }}</span>
-          <span class="text-[10px] text-slate-400 whitespace-nowrap">{{ day_items|length }} serviço(s)</span>
-          <div class="flex-1 border-t border-slate-100 dark:border-slate-700"></div>
-        </div>
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-2">
-          {% for item in day_items|sort(attribute='time') %}
-          {% include 'dispatch/_item_list_card.html' %}
-          {% endfor %}
-        </div>
-      </div>
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-2">
+      {% for item in items_data|sort(attribute='time')|sort(attribute='date_iso') %}
+      {% include 'dispatch/_item_list_card.html' %}
       {% endfor %}
     </div>
     {% else %}
@@ -409,17 +397,9 @@
   </div>
 
   {% if items_data %}
-  <div class="space-y-5">
-    {% for day_str, day_items in items_by_date|dictsort %}
-    {% set _dp = day_str.split('-') %}
-    <div>
-      <p class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">{{ _dp[2] }}/{{ _dp[1] }}/{{ _dp[0] }}</p>
-      <div class="space-y-2">
-        {% for item in day_items|sort(attribute='time') %}
-        {% include 'dispatch/_item_list_card.html' %}
-        {% endfor %}
-      </div>
-    </div>
+  <div class="space-y-2">
+    {% for item in items_data|sort(attribute='time')|sort(attribute='date_iso') %}
+    {% include 'dispatch/_item_list_card.html' %}
     {% endfor %}
   </div>
   {% else %}
@@ -783,17 +763,20 @@
 
     {# Footer com Ações #}
     <div class="px-6 py-4 border-t border-slate-100 dark:border-slate-700 shrink-0 bg-slate-50 dark:bg-slate-800/50">
+      <p x-show="!canActOnItem()" class="text-[11px] text-slate-400 mb-2 text-center">
+        <i class="fa-solid fa-lock mr-1"></i>Ações disponíveis somente no dia do serviço
+      </p>
       <div class="flex gap-2">
-        <button @click="startService()" :disabled="drawerData.order_status !== 'aberto'"
+        <button @click="startService()" :disabled="drawerData.order_status !== 'aberto' || !canActOnItem()"
                 class="flex-1 h-10 text-xs font-bold rounded-xl bg-amber-500 hover:bg-amber-600 text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
           <i class="fa-solid fa-play mr-1"></i> Iniciar
         </button>
-        <button @click="completeService()" :disabled="drawerData.order_status !== 'faturado'"
+        <button @click="completeService()" :disabled="drawerData.order_status !== 'faturado' || drawerData.completed || !canActOnItem()"
                 class="flex-1 h-10 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
           <i class="fa-solid fa-flag-checkered mr-1"></i> Concluir
         </button>
-        <button @click="cancelService()"
-                class="flex-1 h-10 text-xs font-bold rounded-xl bg-red-500 hover:bg-red-600 text-white transition-colors">
+        <button @click="cancelService()" :disabled="!canActOnItem()"
+                class="flex-1 h-10 text-xs font-bold rounded-xl bg-red-500 hover:bg-red-600 text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
           <i class="fa-solid fa-ban mr-1"></i> Cancelar
         </button>
         <a :href="'/orders/' + drawerData.order_id" target="_blank"
@@ -837,6 +820,7 @@ function dispatchCalendar() {
     },
 
     initMobile(days, itemsByDate, today, refDate) {
+      this.todayIso = today;
       this.mobileItems = itemsByDate || {};
       const dow = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM'];
       this.mobileDays = (days || []).map(iso => {
@@ -899,6 +883,13 @@ function dispatchCalendar() {
 
     get csrfToken() {
       return document.querySelector('meta[name="csrf-token"]')?.content || '';
+    },
+
+    canActOnItem() {
+      // Ações (iniciar/concluir/cancelar) válidas somente para o card da
+      // data selecionada (hoje) — cards de outras datas não liberam ações.
+      const dt = this.drawerData.pickup_datetime || '';
+      return dt.slice(0, 10) === this.todayIso;
     },
 
     async openDrawer(itemId) {

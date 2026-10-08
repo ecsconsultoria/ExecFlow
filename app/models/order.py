@@ -40,6 +40,10 @@ class Order(db.Model, TimestampMixin, SoftDeleteMixin):
     obs          = db.Column(db.Text)
     total_amount = db.Column(db.Float,       default=0)
     usd_rate     = db.Column(db.Float,       nullable=True)  # cotação R$/USD p/ PDF em inglês
+    # Serviços inclusos selecionados p/ PDF (JSON [{text_pt, text_en}]) e
+    # política de cancelamento no PDF (opções escolhidas na tela do SO)
+    inclusions_json       = db.Column(db.Text,    nullable=True)
+    include_cancel_policy = db.Column(db.Boolean, default=True)
 
     payment_method = db.Column(db.String(50))
     payment_terms  = db.Column(db.String(100))
@@ -215,6 +219,8 @@ class OrderItem(db.Model, TimestampMixin):
     op_passenger_phone  = db.Column(db.String(50))
     op_flight_number    = db.Column(db.String(50))
     op_notes            = db.Column(db.String(500))
+    # Conclusão POR ITEM na agenda (despacho) — alimenta a regra de conclusão do pedido
+    op_completed_at     = db.Column(db.DateTime, nullable=True)
 
     category = db.relationship("VehicleCategory", foreign_keys=[category_id], lazy="select")
 

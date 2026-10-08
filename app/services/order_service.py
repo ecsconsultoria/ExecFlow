@@ -140,6 +140,19 @@ def update_adjustments(order: Order, data: dict) -> None:
     if "usd_rate" in data:
         rate = _parse_float(data.get("usd_rate", 0))
         order.usd_rate = rate if rate and rate > 0 else None
+    # Política de cancelamento no PDF (checkbox na tela do SO)
+    if "include_cancel_policy" in data:
+        order.include_cancel_policy = data.get("include_cancel_policy") == "1"
+    # Serviços inclusos selecionados p/ PDF (checkboxes na tela do SO)
+    _inclusions = data.get("_inclusions")
+    if _inclusions is not None:
+        import json as _json
+        from ..models.quote import DEFAULT_INCLUSIONS as _DI
+        _sel = set(_inclusions)
+        order.inclusions_json = _json.dumps(
+            [{"text_pt": d["text_pt"], "text_en": d["text_en"]}
+             for d in _DI if d.get("group") == "incluso" and d["text_pt"] in _sel],
+            ensure_ascii=False)
     margin_service.recalculate_order(order)
     db.session.commit()
 
@@ -202,13 +215,11 @@ def faturar(order: Order, data: dict, user_id: int) -> None:
             pass
     margin_service.recalculate_order(order)
     _sync_order_pending_financials(order)
-    # Se todas as parcelas já estão pagas ao faturar, conclui automaticamente
-    if order.payments:
-        total_paid = sum(p.paid_amount or 0 for p in order.payments)
-        if (all(p.is_paid for p in order.payments)
-                and total_paid >= (order.computed_total or 0)):
-            order.status    = "concluido"
-            order.closed_at = now_br()
+    # Regra 10/2026: faturar NÃO conclui por pagamento — conclusão somente
+    # pela regra (_should_complete: datas passadas OU agenda concluída)
+    if _should_complete(order):
+        order.status    = "concluido"
+        order.closed_at = now_br()
     db.session.commit()
 
 
@@ -467,6 +478,29 @@ def delete_payment(payment: OrderPayment) -> None:
     db.session.commit()
 
 
+def _should_complete(order: Order) -> bool:
+    """Regra de conclusão automática (10/2026): o pedido conclui SOMENTE se
+    faturado E todas as parcelas pagas cobrindo o total E (todas as datas
+    dos serviços já passaram OU todos os serviços concluídos na agenda).
+    Baixa total NÃO conclui mais por si só — apenas mantém 'faturado'."""
+    if order.status != "faturado":
+        return False
+    if not order.payments or not all(p.is_paid for p in order.payments):
+        return False
+    total_paid = sum(p.paid_amount or 0 for p in order.payments)
+    if total_paid < (order.computed_total or 0):
+        return False
+    if not order.items:
+        return True
+    today = now_br().date()
+    # condição A: datas dos serviços já passaram
+    if all(not it.service_date or it.service_date <= today for it in order.items):
+        return True
+    # condição B: todos os serviços concluídos na agenda (por item)
+    return all(getattr(it, "op_completed_at", None) is not None
+               for it in order.items)
+
+
 def baixa(payment: OrderPayment, paid_amount: float, user_id: int, paid_date: date | None = None) -> None:
     """Liquida (parcial ou total) uma parcela de Order — Etapa 10D.
 
@@ -499,13 +533,11 @@ def baixa(payment: OrderPayment, paid_amount: float, user_id: int, paid_date: da
 
     margin_service.recalculate_order(order)
 
-    # Auto-conclui apenas se faturado E todas as parcelas pagas cobrem o total
-    if order.status == "faturado":
-        total_paid = sum(p.paid_amount or 0 for p in order.payments)
-        if (all(p.is_paid for p in order.payments)
-                and total_paid >= (order.computed_total or 0)):
-            order.status    = "concluido"
-            order.closed_at = now_br()
+    # Regra 10/2026: baixa total NÃO conclui — mantém 'faturado'; a conclusão
+    # só acontece pela regra (_should_complete)
+    if _should_complete(order):
+        order.status    = "concluido"
+        order.closed_at = now_br()
 
     # Espelho financeiro — criado ANTES do commit para atomicidade.
     # FR por parcela reflete o TOTAL acumulado recebido (histórico de cada
