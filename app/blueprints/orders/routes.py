@@ -376,6 +376,25 @@ def detail(oid):
     baixa_history = build_baixa_history(audit_logs, payments_by_no)
     clients    = Client.query.filter_by(company_id=current_user.company_id, deleted_at=None).order_by(Client.name).all()
 
+    # Serviços inclusos (PDF) — opções da tela com estado atual do pedido
+    import json as _json
+    from ...models.quote import DEFAULT_INCLUSIONS
+    _inc_raw = order.inclusions_json
+    _inc_sel = []
+    if _inc_raw:
+        try:
+            _inc_sel = _json.loads(_inc_raw)
+        except (TypeError, ValueError):
+            _inc_sel = []
+    _sel_pt = {i.get("text_pt") for i in _inc_sel if isinstance(i, dict)}
+    inclusion_options = [
+        {"text_pt": d["text_pt"], "text_en": d["text_en"],
+         "checked": (d["text_pt"] in _sel_pt) or (not _inc_raw and d.get("group") == "incluso")}
+        for d in DEFAULT_INCLUSIONS if d.get("group") == "incluso"
+    ]
+    include_cancel_policy = (order.include_cancel_policy
+                             if order.include_cancel_policy is not None else True)
+
     resp = make_response(render_template(
         "orders/detail.html",
         order=order,
@@ -389,6 +408,8 @@ def detail(oid):
         audit_logs=audit_logs,
         baixa_history=baixa_history,
         clients=clients,
+        inclusion_options=inclusion_options,
+        include_cancel_policy=include_cancel_policy,
     ))
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     resp.headers["Pragma"] = "no-cache"
@@ -530,7 +551,14 @@ def generate_payments(oid):
     raw_custom = request.form.get("custom_amount", "").strip()
     if raw_custom:
         custom_total = parse_brl(raw_custom)
-    pmts = order_service.generate_payments(order, custom_total=custom_total)
+    try:
+        pmts = order_service.generate_payments(order, custom_total=custom_total)
+    except ValueError as e:
+        db.session.rollback()
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'ok': False, 'error': str(e)}), 400
+        flash(str(e), "warning")
+        return redirect(url_for("orders.detail", oid=oid))
     log_activity("order", order.id, order.company_id, "Parcelas geradas", current_user.id)
     db.session.commit()
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -562,7 +590,12 @@ def recalculate_payments(oid):
     if order.status in ("concluido", "cancelado"):
         flash("Pedido não pode ser editado no status atual.", "warning")
         return redirect(url_for("orders.detail", oid=oid))
-    pmts = order_service.generate_payments(order)  # REGENERATE MODE
+    try:
+        pmts = order_service.generate_payments(order)  # REGENERATE MODE
+    except ValueError as e:
+        db.session.rollback()
+        flash(str(e), "warning")
+        return redirect(url_for("orders.detail", oid=oid))
     log_activity("order", order.id, order.company_id, "Parcelas recalculadas", current_user.id)
     db.session.commit()
     flash(f"Parcelas recalculadas — {len(pmts)} parcela(s) gerada(s).", "success")
@@ -675,13 +708,11 @@ def baixa(pid):
                      f"Parcela {pmt.installment_no} baixada R$ {paid_amount:.2f}", current_user.id)
         db.session.commit()
 
-        # Se saldo total está zerado e SO está em status permitido, concluir
-        if order.total_pending() <= 0 and order.status in ('rascunho', 'novo', 'aberto', 'faturado'):
-            order.status    = 'concluido'
-            order.closed_at = now_br()
-            order.closed_by = current_user.id
-            log_activity("order", order.id, order.company_id, "SO concluída automaticamente (todas as parcelas pagas)", current_user.id)
-            db.session.commit()
+        # Regra 10/2026: baixa NÃO conclui — a conclusão (se couber) já foi
+        # decidida em order_service.baixa via _should_complete
+        if order.status == "concluido" and order.closed_at:
+            log_activity("order", order.id, order.company_id,
+                         "SO concluído (regra: datas/agenda)", current_user.id)
 
         flash("Pagamento registrado.", "success")
     except Exception as e:
@@ -778,6 +809,10 @@ def save_all(oid):
         flash("Pedido não pode ser editado no status atual.", "warning")
         return redirect(url_for("orders.detail", oid=oid))
     data   = request.form.to_dict()
+    # checkboxes de serviços inclusos (múltiplos valores — getlist antes do to_dict os perder)
+    data["_inclusions"] = request.form.getlist("inclusions")
+    # checkbox desmarcado não vem no POST — chave sempre presente p/ salvar False
+    data["include_cancel_policy"] = request.form.get("include_cancel_policy", "")
     # Combine delivery_date + delivery_time
     d_date = data.pop("delivery_date", "").strip()
     d_time = data.pop("delivery_time", "").strip()
