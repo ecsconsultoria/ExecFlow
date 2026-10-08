@@ -696,6 +696,11 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         if not filled and not pickup_dt:
             continue
 
+        # Observações separadas: linha única de largura total, abaixo de
+        # todas as colunas (mesmo padrão do PO)
+        obs_entry = next(((lk, v) for lk, v in filled if lk == "op_obs"), None)
+        filled_main = [(lk, v) for lk, v in filled if lk != "op_obs"]
+
         # Header com subtítulo (quais itens)
         if len(items) == total_items and total_items > 1:
             sub = "Todos os itens" if lang == "pt" else "All items"
@@ -728,7 +733,7 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         # Tabela compacta — 4 colunas (label: valor) por linha
         COLS = 4
         cells = []
-        for lk, v in filled:
+        for lk, v in filled_main:
             label = _t(lk, lang)
             if lk in ("op_driver_phone", "op_pax_phone") and v and any(c.isdigit() for c in v):
                 add_55 = (lk == "op_driver_phone")
@@ -756,6 +761,25 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
                 ("VALIGN",        (0, 0), (-1, -1), "TOP"),
             ]))
             story.append(info_tbl)
+
+        # Observações: linha única abaixo de todas as colunas
+        if obs_entry:
+            obs_label = _t(obs_entry[0], lang)
+            obs_safe = (obs_entry[1] or "").replace('\xa0', ' ').replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            obs_tbl = Table(
+                [[Paragraph(f"<b>{obs_label}:</b> {obs_safe}", op_value_st)]],
+                colWidths=[W],
+            )
+            obs_tbl.setStyle(TableStyle([
+                ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#f8fafc")),
+                ("BOX",           (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
+                ("TOPPADDING",    (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ("LEFTPADDING",   (0, 0), (-1, -1), 5),
+                ("RIGHTPADDING",  (0, 0), (-1, -1), 5),
+                ("VALIGN",        (0, 0), (-1, -1), "TOP"),
+            ]))
+            story.append(obs_tbl)
         story.append(Spacer(1, 2 * mm))
 
     if op_groups:

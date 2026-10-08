@@ -849,8 +849,9 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
         if obs_entry:
             obs_label = _t(obs_entry[0], lang)
             obs_safe  = (obs_entry[1] or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            # Linha única de largura total, abaixo de todas as colunas
             obs_tbl = Table(
-                [[Paragraph(f"<b>{obs_label}</b><br/>{obs_safe}", op_value_st)]],
+                [[Paragraph(f"<b>{obs_label}:</b> {obs_safe}", op_value_st)]],
                 colWidths=[W],
             )
             obs_tbl.setStyle(TableStyle([
