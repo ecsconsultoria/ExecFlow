@@ -102,7 +102,8 @@ def index():
         prev_date = (ref_date - timedelta(days=1)).isoformat()
         next_date = (ref_date + timedelta(days=1)).isoformat()
         date_label = ref_date.strftime('%d/%m/%Y')
-    elif view == "month":
+    elif view in ("month", "list"):
+        # "list" = mesmos limites do mês, exibido como lista (desktop e mobile)
         start_date, end_date = _month_range(ref_date)
         prev_date = ((start_date - timedelta(days=1)).replace(day=1)).isoformat()
         next_date = ((end_date + timedelta(days=1)).replace(day=1)).isoformat()
@@ -137,7 +138,7 @@ def index():
     # month_days for monthly view
     month_days = []
     month_first_weekday = 0
-    if view == 'month':
+    if view in ('month', 'list'):
         month_first_weekday = start_date.weekday()
         d = start_date
         while d <= end_date:
