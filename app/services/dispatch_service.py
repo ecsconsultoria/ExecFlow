@@ -39,13 +39,9 @@ def derive_dispatch_status(item, order):
     """Status operacional derivado de Order.status + dados do item."""
     if order.status == 'cancelado':
         return 'cancelado'
-    if order.status == 'concluido':
+    if order.status in ('concluido', 'faturado'):
+        # Regra 10/2026: SO faturado é exibido como CONCLUÍDO no despacho
         return 'concluido'
-    if order.status == 'faturado':
-        # item concluído na agenda (Concluir por card) → concluido
-        if getattr(item, "op_completed_at", None):
-            return 'concluido'
-        return 'em_execucao'
     if not item.op_driver_name:
         return 'pendente_escala'
     if item.op_driver_name and not item.op_vehicle_model:
