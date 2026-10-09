@@ -816,6 +816,13 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<style>
+/* Cards da agenda (visao lista): Courier New, maiusculas, pontilhados
+   terminando na mesma coluna antes do valor */
+.courier-agenda { font-family: 'Courier New', Courier, monospace; font-size: 12px; }
+.courier-agenda .cl-line { display: flex; align-items: baseline; gap: 2px; line-height: 1.5; }
+.courier-agenda .cl-line .dots { flex: 1 1 auto; min-width: 24px; border-bottom: 1.5px dotted currentColor; margin: 0 4px; transform: translateY(-3px); opacity: 0.55; }
+</style>
 <script>
 function dispatchCalendar() {
   return {
