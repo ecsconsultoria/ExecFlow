@@ -741,12 +741,6 @@ def receivables():
                 if pmt_ids:
                     allowed_refs = {f"order_payment:{pid}" for pid in pmt_ids}
 
-    ref_date = func.coalesce(
-        FinancialRecord.emission_date,
-        FinancialRecord.paid_date,
-        func.date(FinancialRecord.created_at),
-    )
-
     _base = [
         FinancialRecord.company_id == cid,
         FinancialRecord.type == "revenue",
@@ -754,10 +748,33 @@ def receivables():
     ]
     _ref_filter = [FinancialRecord.reference.in_(allowed_refs)] if allowed_refs is not None else []
 
+    # Regra 10/2026: pendentes sem emissão caem pelo VENCIMENTO da parcela
+    # (espelhos de pedidos ainda não faturados têm emissão vazia)
+    ref_date = func.coalesce(
+        FinancialRecord.emission_date,
+        FinancialRecord.paid_date,
+        FinancialRecord.due_date,
+        func.date(FinancialRecord.created_at),
+    )
     # Etapa 8B: AR unificado — obrigação por DUE_DATE (parcela válida),
     # recebido por PAID_DATE (caixa). Fonte única: ar_ap_service.
     from ...services.ar_ap_service import received_in_period as ar_received
     _ar_rows = _receivable_rows_filtered(cid, first, last, fclient)
+
+    # Regra 10/2026: pedidos ainda não faturados não têm os espelhos das
+    # parcelas (são criados só no faturamento) — sincroniza antes de montar
+    # a tabela para as linhas a receber terem SO/cliente/parcela resolvidos.
+    from ...services import order_service as _order_svc
+    _synced_orders = set()
+    for _row in _ar_rows:
+        _p = _row.payment
+        if _p is None or _p.order is None:
+            continue
+        if _p.order_id not in _synced_orders:
+            _synced_orders.add(_p.order_id)
+            _order_svc._sync_order_pending_financials(_p.order)
+    if _synced_orders:
+        db.session.commit()
 
     received_in_period = ar_received(cid, first, last)
     pending_total = round(sum(r.amount for r in _ar_rows), 2)
