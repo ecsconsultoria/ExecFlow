@@ -1,5 +1,7 @@
-{# ── Card de Lista — Courier New, maiúsculas, pontilhados alinhados ─────────
-     Formato: DATA E HORA · SO · CLIENTE · ITINERÁRIO · DRIVER · VEÍCULO · PLACA #}
+{# ── Card de Lista — Courier New, maiúsculas, pontinhos em coluna fixa ──────
+     Pontos: ITINERÁRIO tem 3; os demais rótulos completam com pontos até a
+     mesma coluna do último ponto de ITINERÁRIO (fonte monoespaçada).
+     Data/Hora: formato anterior (Data DD/MM/YYYY | Hora HH:MM). #}
 {% set s = item.dispatch_status %}
 {% set border_map = {
     'pendente_escala':     'border-l-slate-400',
@@ -22,15 +24,21 @@
 <div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 border-l-[3px] {{ border_map.get(s, 'border-l-slate-300') }} shadow-sm hover:shadow-md transition-all cursor-pointer p-3 courier-agenda uppercase text-slate-500 dark:text-slate-400 {% if s == 'cancelado' %}opacity-75{% endif %}"
      @click="openDrawer({{ item.id }})">
 
-  <div class="flex items-start justify-between gap-2 mb-1.5">
+  <div class="flex items-start justify-between gap-2">
     <div class="min-w-0 flex-1">
-      <p class="cl-line"><span class="font-bold">DATA E HORA:</span><span class="dots"></span><span class="font-bold">{{ dp[2] }}/{{ dp[1] }}/{{ dp[0] if dp|length == 3 else '–' }} {{ item.time or '--:--' }}</span></p>
-      <p class="cl-line"><span class="font-bold">SO:</span><span class="dots"></span><span>{{ item.order_number }}</span></p>
-      <p class="cl-line"><span class="font-bold">CLIENTE:</span><span class="dots"></span><span>{{ item.client_name }}</span></p>
-      <p class="cl-line"><span class="font-bold">ITINERÁRIO:</span><span class="dots"></span><span>{{ item.pickup_location or '–' }} <i class="fa-solid fa-arrow-right text-[9px] not-italic mx-0.5"></i> {{ item.dropoff_location or '–' }}</span></p>
-      <p class="cl-line"><span class="font-bold">DRIVER:</span><span class="dots"></span><span>{{ item.driver_name or '–' }}</span></p>
-      <p class="cl-line"><span class="font-bold">VEÍCULO:</span><span class="dots"></span><span>{{ item.vehicle_model or '–' }}</span></p>
-      <p class="cl-line"><span class="font-bold">PLACA:</span><span class="dots"></span><span>{{ item.vehicle_plate or '–' }}</span></p>
+      {# Data e Hora — formato anterior (nao alterar) #}
+      <p class="text-xs leading-tight normal-case mb-1.5">
+        <span class="font-bold text-slate-800 dark:text-slate-100">Data {{ dp[2] }}/{{ dp[1] }}/{{ dp[0] if dp|length == 3 else '–' }}</span>
+        <span class="text-slate-300 dark:text-slate-600 mx-1">|</span>
+        <span class="font-bold text-slate-800 dark:text-slate-100">Hora {{ item.time or '--:--' }}</span>
+      </p>
+
+      <p class="cl-line"><span class="font-bold">SO:</span> ........... <span>{{ item.order_number }}</span></p>
+      <p class="cl-line"><span class="font-bold">CLIENTE:</span> ...... <span>{{ item.client_name }}</span></p>
+      <p class="cl-line"><span class="font-bold">ITINERÁRIO:</span> ... <span>{{ item.pickup_location or '–' }} <i class="fa-solid fa-arrow-right text-[9px] not-italic mx-0.5"></i> {{ item.dropoff_location or '–' }}</span></p>
+      <p class="cl-line"><span class="font-bold">DRIVER:</span> ....... <span>{{ item.driver_name or '–' }}</span></p>
+      <p class="cl-line"><span class="font-bold">VEÍCULO:</span> ...... <span>{{ item.vehicle_model or '–' }}</span></p>
+      <p class="cl-line"><span class="font-bold">PLACA:</span> ........ <span>{{ item.vehicle_plate or '–' }}</span></p>
     </div>
     <span class="text-[9px] font-semibold px-2 py-0.5 rounded-full {{ badge_map.get(s, '') }} whitespace-nowrap shrink-0 normal-case">{{ status_labels.get(s, s) }}</span>
   </div>
