@@ -831,6 +831,20 @@ def receivables():
                         except (ValueError, IndexError):
                             pass
 
+    # Regra 10/2026: ordena por SO e depois por parcela (lançamentos
+    # manuais sem SO vão para o fim)
+    def _ar_sort_key(r):
+        ref = record_refs.get(r.id, {})
+        so = ref.get("so_number") or "￿"
+        inst_raw = ref.get("installment") or "1"
+        try:
+            inst_no = int(str(inst_raw).split("/")[0])
+        except (ValueError, IndexError):
+            inst_no = 9999
+        return (so, inst_no, r.due_date or date.max)
+
+    records.sort(key=_ar_sort_key)
+
     period_label = _PERIOD_LABELS.get(period, "Todos")
     if period == "custom" and date_from and date_to:
         period_label = f"{date_from} a {date_to}"
