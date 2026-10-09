@@ -148,9 +148,10 @@ def index():
     pending_rfq_count = Quote.query.filter_by(company_id=cid, status="pendente", deleted_at=None).count()
 
     # ── KPI: financials (current period) ─────────────────────────────────────
-    # Etapa 10B: fonte única — dre_service (Dashboard = DRE no mesmo período).
-    # Regra do usuário (15/09/2026): a margem do dashboard é o RESULTADO —
-    # Receita − Custos Diretos − Despesas (tudo que entrou menos tudo que saiu).
+    # Etapa 10B: fonte única — dre_service. Regra do usuário (15/09/2026): a
+    # margem do dashboard é o RESULTADO — Receita − Custos Diretos − Despesas.
+    # Regime de caixa (08/10/2026): a RECEITA do dashboard é a soma das BAIXAS
+    # (parcelas pagas por paid_date) — a tela DRE segue por competência.
     # Otimização (15/09/2026): UM fetch por fonte cobre o período, o anterior e
     # os 12 meses do gráfico — nada de consulta por mês.
     from ...services import dre_service as _dre
@@ -171,13 +172,23 @@ def index():
                       [x for x in (pp_start, p_start) if x])
     fetch_end = max(p_end, pp_end or p_end, today)
 
-    _rev_rows = _dre.revenue_rows(cid, fetch_start, fetch_end)
     _cost_rows = _dre.direct_cost_rows(cid, fetch_start, fetch_end)
     _exp_rows = _dre.expense_rows(cid, fetch_start, fetch_end)
+    # Receita em regime de CAIXA: baixas das parcelas (FR pago por paid_date)
+    from ...models.financial import FinancialRecord as _FR
+    _paid_frs = (_FR.query
+                 .filter(_FR.company_id == cid,
+                         _FR.type == "revenue",
+                         _FR.status == "pago",
+                         _FR.deleted_at.is_(None),
+                         _FR.reference.like("order_payment:%"),
+                         _FR.paid_date.isnot(None),
+                         _FR.paid_date.between(fetch_start, fetch_end))
+                 .all())
 
     def _rev(s, e):
-        return round(sum(float(o.computed_total or 0) for o in _rev_rows
-                         if s <= (_dre.revenue_competence(o) or _date.min) <= e), 2)
+        return round(sum(float(fr.amount or 0) for fr in _paid_frs
+                         if s <= fr.paid_date <= e), 2)
 
     def _custo(s, e):
         return round(sum(float(po.computed_total or 0) for po, comp, _ in _cost_rows
