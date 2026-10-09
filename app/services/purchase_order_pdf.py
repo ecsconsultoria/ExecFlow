@@ -876,11 +876,11 @@ def generate_po_pdf(po, lang: str = "pt") -> io.BytesIO:
         _render_sign_page(story, _ptext, _pimg, _ppos)
 
     # ── Footer callback ───────────────────────────────────────────────────────
-    from datetime import datetime as _dt  # noqa: PLC0415
+    from ..utils import now_br
     cnpj_lbl_footer = "CNPJ" if lang == "pt" else "TAX ID"
     tax_part        = (f"{company_name} \u2022 {cnpj_lbl_footer} {company_doc}"
                        if company_doc else company_name)
-    now_str         = _dt.now().strftime("%m/%d/%Y %I:%M%p" if lang == "en" else "%d/%m/%Y %I:%M%p")
+    now_str         = now_br().strftime("%m/%d/%Y %I:%M%p" if lang == "en" else "%d/%m/%Y %I:%M%p")
     _footer_line    = f"{_t('generated', lang)} {now_str}   \u2022   {tax_part}"
     _lm, _rm, _pw  = 15 * mm, A4[0] - 15 * mm, A4[0]
 

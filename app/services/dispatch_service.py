@@ -99,6 +99,16 @@ def get_calendar_items(company_id, start_date, end_date, filters=None):
         items = [it for it in items
                  if derive_dispatch_status(it, it.order) == filters['status']]
 
+    if filters and filters.get('driver_pending'):
+        # card "Motorista Pendente": não concluído/cancelado/em execução e com
+        # dados de motorista/veículo incompletos
+        def _driver_pending(it):
+            st = derive_dispatch_status(it, it.order)
+            complete = bool(it.op_driver_name and it.op_driver_phone
+                            and it.op_vehicle_model and it.op_vehicle_plate)
+            return st not in ('em_execucao', 'concluido', 'cancelado') and not complete
+        items = [it for it in items if _driver_pending(it)]
+
     return items
 
 

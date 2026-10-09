@@ -326,13 +326,14 @@ def index():
                    .limit(30).all())
 
     # ── AR/AP (Etapa 8B) — fonte única: ar_ap_service (vencimento no período) ─
-    from ...services.ar_ap_service import receivable_rows, payable_rows
+    from ...services.ar_ap_service import receivable_rows, receivable_rows_open, payable_rows
     _ar_rows = receivable_rows(cid, p_start, p_end)
     pending_receivables = _ar_rows[:20]
     pending_payables = payable_rows(cid, p_start, p_end)[:20]
-    # Quadro "À Receber": saldo em aberto de SOs abertos/faturados com
-    # vencimento no período selecionado (mesma fonte do painel AR)
-    ar_open_total = round(sum(r.amount for r in _ar_rows
+    # Quadro "À Receber": posição COMPLETA da carteira — todas as parcelas em
+    # aberto de SOs abertos/faturados, sem teto de vencimento (a parcela
+    # adicional de "à vista + 1 parcela", com vencimento futuro, também entra)
+    ar_open_total = round(sum(r.amount for r in receivable_rows_open(cid)
                               if r.order and r.order.status in ("aberto", "faturado")), 2)
 
     # ── Alerts ────────────────────────────────────────────────────────────────

@@ -344,6 +344,12 @@ def generate_payments(order: Order, custom_total: float = None) -> list:
     """
     today = now_br().date()
 
+    # Regra 10/2026: não gera contas sem forma de pagamento e parcelamento
+    if not (order.payment_method or "").strip():
+        raise ValueError("Selecione a forma de pagamento antes de gerar as contas.")
+    if not (order.payment_terms or "").strip():
+        raise ValueError("Selecione o parcelamento antes de gerar as contas.")
+
     # ── ADD MODE ────────────────────────────────────────────────────────────
     if custom_total is not None:
         existing      = list(order.payments)
@@ -365,6 +371,11 @@ def generate_payments(order: Order, custom_total: float = None) -> list:
     # ── REGENERATE MODE ──────────────────────────────────────────────────────
     paid_pmts = [p for p in order.payments if p.is_paid]
     unpaid    = [p for p in order.payments if not p.is_paid]
+    # Causa raiz (10/2026): descarta os espelhos financeiros PENDENTES das
+    # parcelas que serão removidas — evita lançamentos órfãos duplicados
+    if unpaid:
+        from .financial_service import void_payment_financial_records
+        void_payment_financial_records(unpaid, "order_payment")
     for p in unpaid:
         db.session.delete(p)
     db.session.flush()

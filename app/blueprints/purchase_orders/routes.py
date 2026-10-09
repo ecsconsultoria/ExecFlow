@@ -61,7 +61,9 @@ def index():
               .filter_by(company_id=cid)
               .filter(PurchaseOrder.deleted_at.is_(None)))
     if status:
-        if status == "aberto_faturado":
+        if "," in status:
+            query = query.filter(PurchaseOrder.status.in_([s.strip() for s in status.split(",") if s.strip()]))
+        elif status == "aberto_faturado":
             query = query.filter(PurchaseOrder.status.in_(["aberto", "faturado"]))
         else:
             query = query.filter_by(status=status)
@@ -234,7 +236,9 @@ def export_csv():
               .filter_by(company_id=cid)
               .filter(PurchaseOrder.deleted_at.is_(None)))
     if status:
-        if status == "aberto_faturado":
+        if "," in status:
+            query = query.filter(PurchaseOrder.status.in_([s.strip() for s in status.split(",") if s.strip()]))
+        elif status == "aberto_faturado":
             query = query.filter(PurchaseOrder.status.in_(["aberto", "faturado"]))
         else:
             query = query.filter_by(status=status)
@@ -699,7 +703,14 @@ def generate_payments(po_id):
     raw_custom = request.form.get("custom_amount", "").strip()
     if raw_custom:
         custom_total = parse_brl(raw_custom)
-    pmts = pos.generate_payments(po, custom_total=custom_total)
+    try:
+        pmts = pos.generate_payments(po, custom_total=custom_total)
+    except ValueError as e:
+        db.session.rollback()
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"ok": False, "error": str(e)}), 400
+        flash(str(e), "warning")
+        return redirect(url_for("purchase_orders.detail", po_id=po_id))
     log_activity("po", po.id, po.company_id, "Parcelas geradas", current_user.id)
     db.session.commit()
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
@@ -730,7 +741,12 @@ def recalculate_payments(po_id):
     if po.status in ("concluido", "cancelado"):
         flash("PO não pode ser editada no status atual.", "warning")
         return redirect(url_for("purchase_orders.detail", po_id=po_id))
-    pmts = pos.generate_payments(po)  # REGENERATE MODE
+    try:
+        pmts = pos.generate_payments(po)  # REGENERATE MODE
+    except ValueError as e:
+        db.session.rollback()
+        flash(str(e), "warning")
+        return redirect(url_for("purchase_orders.detail", po_id=po_id))
     log_activity("po", po.id, po.company_id, "Parcelas recalculadas", current_user.id)
     db.session.commit()
     flash(f"Parcelas recalculadas — {len(pmts)} parcela(s) gerada(s).", "success")

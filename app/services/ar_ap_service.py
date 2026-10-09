@@ -88,15 +88,29 @@ def receivable_rows(cid, start, end):
     Etapa 10D: inclui parcelas PARCIALMENTE recebidas (saldo > 0) e o valor
     exibido é o SALDO restante (balance), nunca o total original.
     """
-    pmts = (OrderPayment.query
-            .join(Order, OrderPayment.order_id == Order.id)
-            .filter(Order.company_id == cid, Order.deleted_at.is_(None))
-            .filter(Order.status.notin_(["cancelado", "excluido"]))
-            .filter(OrderPayment.amount > 0)
-            .filter(OrderPayment.due_date.isnot(None))
-            .filter(OrderPayment.due_date.between(start, end))
-            .order_by(OrderPayment.due_date.asc())
-            .all())
+    return _receivable_rows(cid, start, end)
+
+
+def receivable_rows_open(cid):
+    """TODAS as parcelas de SO em aberto (saldo > 0), SEM teto de vencimento.
+
+    Posição completa da carteira — usada no quadro À Receber do dashboard
+    (a parcela adicional de "à vista + 1 parcela", com vencimento futuro,
+    também entra).
+    """
+    return _receivable_rows(cid)
+
+
+def _receivable_rows(cid, start=None, end=None):
+    q = (OrderPayment.query
+         .join(Order, OrderPayment.order_id == Order.id)
+         .filter(Order.company_id == cid, Order.deleted_at.is_(None))
+         .filter(Order.status.notin_(["cancelado", "excluido"]))
+         .filter(OrderPayment.amount > 0)
+         .filter(OrderPayment.due_date.isnot(None)))
+    if start is not None and end is not None:
+        q = q.filter(OrderPayment.due_date.between(start, end))
+    pmts = q.order_by(OrderPayment.due_date.asc()).all()
     rows = []
     for p in pmts:
         balance = round((p.amount or 0) - (p.paid_amount or 0), 2)

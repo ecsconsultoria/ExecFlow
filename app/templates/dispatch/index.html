@@ -79,16 +79,21 @@
 ══════════════════════════════════════════ #}
 <div class="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-4">
   {% set kpi_cards = [
-    ('Total de Serviços',    kpi_total,     'blue',    'fa-calendar-check', 'period'),
-    ('Agendamento Pendente', pending.count, 'orange',  'fa-hourglass-half', 'pending'),
-    ('Motorista Pendente',   kpi_mot,       'violet',  'fa-user-clock',     'pct'),
-    ('Em Andamento',         kpi_exec,      'amber',   'fa-person-running', 'pct'),
-    ('Concluído',            kpi_done,      'emerald', 'fa-circle-check',   'pct'),
-    ('Cancelados',           kpi_canc,      'red',     'fa-ban',            'pct'),
+    ('Total de Serviços',    kpi_total,     'blue',    'fa-calendar-check', 'period',  {}),
+    ('Agendamento Pendente', pending.count, 'orange',  'fa-hourglass-half', 'pending', {}),
+    ('Motorista Pendente',   kpi_mot,       'violet',  'fa-user-clock',     'pct',     {'driver_pending': '1'}),
+    ('Em Andamento',         kpi_exec,      'amber',   'fa-person-running', 'pct',     {'status': 'em_execucao'}),
+    ('Concluído',            kpi_done,      'emerald', 'fa-circle-check',   'pct',     {'status': 'concluido'}),
+    ('Cancelados',           kpi_canc,      'red',     'fa-ban',            'pct',     {'status': 'cancelado'}),
   ] %}
-  {% for label, value, color, icon, mode in kpi_cards %}
-  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-3 border border-slate-100 dark:border-slate-700 hover:shadow-md transition-shadow flex items-center gap-2.5 {% if mode == 'pending' %}cursor-pointer{% endif %}"
-       {% if mode == 'pending' %}@click="showPending = !showPending" :class="showPending ? 'ring-2 ring-orange-300 dark:ring-orange-500' : ''"{% endif %}>
+  {% for label, value, color, icon, mode, filtro in kpi_cards %}
+  {% if mode == 'pending' %}
+  <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-3 border border-slate-100 dark:border-slate-700 hover:shadow-md transition-shadow flex items-center gap-2.5 cursor-pointer"
+       @click="showPending = !showPending" :class="showPending ? 'ring-2 ring-orange-300 dark:ring-orange-500' : ''">
+  {% else %}
+  <a href="{{ url_for('dispatch.index', view=view, date=ref_date, **filtro) }}"
+     class="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-3 border border-slate-100 dark:border-slate-700 hover:shadow-md transition-shadow flex items-center gap-2.5">
+  {% endif %}
     <span class="w-9 h-9 rounded-lg bg-{{ color }}-50 dark:bg-{{ color }}-900/20 flex items-center justify-center shrink-0">
       <i class="fa-solid {{ icon }} text-{{ color }}-500 text-base"></i>
     </span>
@@ -101,7 +106,11 @@
         {% else %}no período{% endif %}
       </p>
     </div>
+  {% if mode == 'pending' %}
   </div>
+  {% else %}
+  </a>
+  {% endif %}
   {% endfor %}
 </div>
 
@@ -355,21 +364,33 @@
   <div class="-mx-4 px-4 mb-4">
     <div class="flex gap-2.5 overflow-x-auto pb-1 snap-x">
       {% set mkpis = [
-        ('Total Serviços',    kpi_total,     'blue',    'fa-calendar-check'),
-        ('Pendentes',         pending.count, 'orange',  'fa-hourglass-half'),
-        ('Motoristas Pend.',  kpi_mot,       'violet',  'fa-user-clock'),
-        ('Em Andamento',      kpi_exec,      'amber',   'fa-person-running'),
-        ('Concluídos',        kpi_done,      'emerald', 'fa-circle-check'),
-        ('Cancelados',        kpi_canc,      'red',     'fa-ban'),
+        ('Total Serviços',    kpi_total,     'blue',    'fa-calendar-check', 'reset'),
+        ('Pendentes',         pending.count, 'orange',  'fa-hourglass-half', 'list'),
+        ('Motoristas Pend.',  kpi_mot,       'violet',  'fa-user-clock',     'driver'),
+        ('Em Andamento',      kpi_exec,      'amber',   'fa-person-running', 'exec'),
+        ('Concluídos',        kpi_done,      'emerald', 'fa-circle-check',   'done'),
+        ('Cancelados',        kpi_canc,      'red',     'fa-ban',            'canc'),
       ] %}
-      {% for lbl, val, col, icon in mkpis %}
-      <div class="snap-start shrink-0 w-32 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-3.5">
+      {% for lbl, val, col, icon, alvo in mkpis %}
+      {% if alvo == 'reset' %}
+      <a href="{{ url_for('dispatch.index', view=view, date=ref_date) }}" class="snap-start shrink-0 w-32 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-3.5">
+      {% elif alvo == 'list' %}
+      <a href="{{ url_for('dispatch.index', view='list', date=ref_date) }}" class="snap-start shrink-0 w-32 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-3.5">
+      {% elif alvo == 'driver' %}
+      <a href="{{ url_for('dispatch.index', view=view, date=ref_date, driver_pending='1') }}" class="snap-start shrink-0 w-32 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-3.5">
+      {% elif alvo == 'exec' %}
+      <a href="{{ url_for('dispatch.index', view=view, date=ref_date, status='em_execucao') }}" class="snap-start shrink-0 w-32 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-3.5">
+      {% elif alvo == 'done' %}
+      <a href="{{ url_for('dispatch.index', view=view, date=ref_date, status='concluido') }}" class="snap-start shrink-0 w-32 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-3.5">
+      {% else %}
+      <a href="{{ url_for('dispatch.index', view=view, date=ref_date, status='cancelado') }}" class="snap-start shrink-0 w-32 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-3.5">
+      {% endif %}
         <span class="w-8 h-8 rounded-lg bg-{{ col }}-50 dark:bg-{{ col }}-900/20 flex items-center justify-center mb-2.5">
           <i class="fa-solid {{ icon }} text-{{ col }}-500 text-sm"></i>
         </span>
         <p class="text-2xl font-extrabold text-slate-800 dark:text-slate-100 leading-none">{{ val }}</p>
         <p class="text-[11px] font-medium text-slate-400 mt-1 truncate">{{ lbl }}</p>
-      </div>
+      </a>
       {% endfor %}
     </div>
   </div>

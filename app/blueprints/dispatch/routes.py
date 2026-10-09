@@ -45,7 +45,7 @@ def _month_range(ref_date):
 def _collect_filters(args):
     """Extrai filtros dos query params."""
     filters = {}
-    for key in ['search', 'driver', 'client', 'status']:
+    for key in ['search', 'driver', 'client', 'status', 'driver_pending']:
         val = args.get(key, '').strip()
         if val:
             filters[key] = val

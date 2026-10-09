@@ -70,6 +70,14 @@ _T: dict[str, dict[str, str]] = {
     "status_paid":      {"pt": "Efetuado",                 "en": "PAID"},
     "status_open":      {"pt": "PENDENTE",                 "en": "PENDING"},
     "obs_hdr":          {"pt": "OBSERVAÇÕES",              "en": "NOTES"},
+    "incluso_hdr":      {"pt": "Serviços Inclusos",        "en": "Included Services"},
+    "cancel_policy":    {"pt": "POLÍTICA DE CANCELAMENTO", "en": "CANCELLATION POLICY"},
+    "cancel_72":        {"pt": "72 horas antes do evento, será cobrada uma taxa de 10%.",
+                         "en": "72 hours before the event, a fee of 10% will be charged."},
+    "cancel_48":        {"pt": "48 horas antes do evento, será cobrada uma taxa de 50%.",
+                         "en": "48 hours before the event, a fee of 50% will be charged."},
+    "cancel_24":        {"pt": "24 horas antes do evento, será cobrada uma taxa de 100%.",
+                         "en": "24 hours before the event, a fee of 100% will be charged."},
     "vendor_lbl":       {"pt": "VENDEDOR",                 "en": "SALES REP."},
     "po_destino":       {"pt": "PO DESTINO",               "en": "DESTINATION PO"},
     # Sobrescreve rotulos do quote_pdf p/ caberem em linha unica no PT
@@ -603,6 +611,40 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
                 story.append(Paragraph(safe, normal))
     story.append(Spacer(1, 4 * mm))
 
+    # ── Serviços Inclusos (selecionados na tela do SO) ────────────────────────
+    _inc_raw = getattr(order, "inclusions_json", None)
+    _inclusoes = None
+    if _inc_raw:
+        import json as _json
+        try:
+            _inclusoes = _json.loads(_inc_raw)
+        except (TypeError, ValueError):
+            _inclusoes = None
+    if _inclusoes is None:
+        # sem registro salvo: padrão histórico (os 4 inclusos, como a RFQ)
+        from ..models.quote import DEFAULT_INCLUSIONS as _DI
+        _inclusoes = [{"text_pt": d["text_pt"], "text_en": d["text_en"]}
+                      for d in _DI if d.get("group") == "incluso"]
+    if _inclusoes:
+        story.append(Paragraph(f"<b>{_t('incluso_hdr', lang)}</b>", sec_hdr))
+        for _inc in _inclusoes:
+            if not isinstance(_inc, dict):
+                continue
+            _txt = _inc.get("text_en") if lang == "en" and _inc.get("text_en") else _inc.get("text_pt", "")
+            if _txt:
+                story.append(Paragraph(f"• {_txt}", bullet_st))
+        story.append(Spacer(1, 4 * mm))
+
+    # ── Política de Cancelamento (opção da tela do SO) ────────────────────────
+    if getattr(order, "include_cancel_policy", None) is not False:
+        story.append(Spacer(1, 3 * mm))
+        story.append(HRFlowable(width=W, thickness=0.5,
+                                 color=colors.HexColor("#cccccc"), spaceAfter=3 * mm))
+        story.append(Paragraph(f"<b>{_t('cancel_policy', lang)}</b>", sec_hdr))
+        for k in ("cancel_72", "cancel_48", "cancel_24"):
+            story.append(Paragraph(f"  • {_t(k, lang)}", bullet_st))
+        story.append(Spacer(1, 4 * mm))
+
     # ── Dados operacionais por item — formato compacto, agrupados ──────────
     # Omitidos no PDF após faturamento (dados operacionais são do despacho,
     # não pertencem ao documento fiscal).
@@ -787,10 +829,9 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
     # ── Fim do bloco de dados operacionais ──────────────────────────────────
 
     # ── Footer as page callback (like quote PDF) ───────────────────────────
-    from datetime import datetime as _dt
     cnpj_lbl_footer = "CNPJ" if lang == "pt" else "TAX ID"
     tax_part     = (f"{company_name} \u2022 {cnpj_lbl_footer} {company_doc}" if company_doc else company_name)
-    now_str      = _dt.now().strftime("%m/%d/%Y %I:%M%p" if lang == "en" else "%d/%m/%Y %I:%M%p")
+    now_str      = now_br().strftime("%m/%d/%Y %I:%M%p" if lang == "en" else "%d/%m/%Y %I:%M%p")
     _footer_line = f"{_t('generated', lang)} {now_str}   \u2022   {tax_part}"
     _lm, _rm, _pw = 15 * mm, A4[0] - 15 * mm, A4[0]
 

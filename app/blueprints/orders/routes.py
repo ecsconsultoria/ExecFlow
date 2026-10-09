@@ -60,7 +60,9 @@ def index():
               )
               .filter_by(company_id=current_user.company_id, deleted_at=None))
     if status:
-        if status == "aberto_faturado":
+        if "," in status:
+            query = query.filter(Order.status.in_([s.strip() for s in status.split(",") if s.strip()]))
+        elif status == "aberto_faturado":
             query = query.filter(Order.status.in_(["aberto", "faturado"]))
         else:
             query = query.filter_by(status=status)
@@ -221,7 +223,9 @@ def export_csv():
               )
               .filter_by(company_id=current_user.company_id, deleted_at=None))
     if status:
-        if status == "aberto_faturado":
+        if "," in status:
+            query = query.filter(Order.status.in_([s.strip() for s in status.split(",") if s.strip()]))
+        elif status == "aberto_faturado":
             query = query.filter(Order.status.in_(["aberto", "faturado"]))
         else:
             query = query.filter_by(status=status)
