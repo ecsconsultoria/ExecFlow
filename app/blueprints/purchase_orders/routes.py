@@ -26,6 +26,16 @@ def _void_po_financial_records(po):
     void_payment_financial_records(po.payments, "po_payment")
 
 
+def _normalize_lang(value: str) -> str:
+    """Normaliza o idioma do PDF ('pt'/'en').
+
+    Aceita valores malformados vindos de links antigos (ex.: 'pt?ts=123',
+    'en?_cb=456') cortando no primeiro '?'. Qualquer outro valor vira 'pt'.
+    """
+    lang = (value or "pt").split("?")[0]
+    return lang if lang in ("pt", "en") else "pt"
+
+
 
 @purchase_orders_bp.route("/")
 @login_required
@@ -51,37 +61,52 @@ def index():
               .filter_by(company_id=cid)
               .filter(PurchaseOrder.deleted_at.is_(None)))
     if status:
-        if status == "aberto_faturado":
+        if "," in status:
+            query = query.filter(PurchaseOrder.status.in_([s.strip() for s in status.split(",") if s.strip()]))
+        elif status == "aberto_faturado":
             query = query.filter(PurchaseOrder.status.in_(["aberto", "faturado"]))
         else:
             query = query.filter_by(status=status)
     else:
-        # Regra 10/2026: listagem padrão INCLUI rascunhos — exclui apenas
-        # POs excluídas
-        query = query.filter(PurchaseOrder.status.notin_(["excluido"]))
+        # Exclui rascunhos não salvos e POs excluídas da listagem padrão
+        query = query.filter(PurchaseOrder.status.notin_(["excluido"]))  # 10/2026: rascunhos aparecem na lista
     if q:
         from ...models.supplier import Supplier
         query = query.outerjoin(Supplier, PurchaseOrder.supplier_id == Supplier.id).filter(
             PurchaseOrder.number.ilike(f"%{q}%") |
             Supplier.name.ilike(f"%{q}%")
         )
-    page = request.args.get("page", 1, type=int)
-    pagination = query.order_by(
+    # Filtro por periodo (data de criacao): De/Até inclusivos
+    from datetime import date as _date, timedelta as _td
+    date_from = request.args.get("date_from", "")
+    date_to   = request.args.get("date_to", "")
+    try:
+        d_from = _date.fromisoformat(date_from) if date_from else None
+    except ValueError:
+        d_from = None
+    try:
+        d_to = _date.fromisoformat(date_to) if date_to else None
+    except ValueError:
+        d_to = None
+    if d_from:
+        query = query.filter(PurchaseOrder.created_at >= d_from)
+    if d_to:
+        query = query.filter(PurchaseOrder.created_at < d_to + _td(days=1))
+
+    # Lista completa, sem paginação — todos os pedidos aparecem
+    all_filtered = query.order_by(
         PurchaseOrder.pickup_datetime.asc().nullsfirst(),
         PurchaseOrder.id.desc()
-    ).paginate(page=page, per_page=25, error_out=False)
-    po_list = pagination.items
-
-    # Soma dos totais filtrados (todos os registros, sem paginação)
-    all_filtered = query.order_by(None).all()
+    ).all()
+    po_list = all_filtered
     total_filtered         = sum(p.computed_total or 0 for p in all_filtered)
     total_paid_filtered    = sum(p.total_paid() or 0 for p in all_filtered)
     total_pending_filtered = sum(p.total_pending() or 0 for p in all_filtered)
 
     resp = make_response(render_template(
         "purchase_orders/index.html",
-        po_list=po_list, pagination=pagination,
-        status=status, q=q,
+        po_list=po_list,
+        status=status, q=q, date_from=date_from, date_to=date_to,
         PO_STATUSES=PO_STATUSES,
         total_filtered=total_filtered,
         total_paid_filtered=total_paid_filtered,
@@ -211,18 +236,35 @@ def export_csv():
               .filter_by(company_id=cid)
               .filter(PurchaseOrder.deleted_at.is_(None)))
     if status:
-        if status == "aberto_faturado":
+        if "," in status:
+            query = query.filter(PurchaseOrder.status.in_([s.strip() for s in status.split(",") if s.strip()]))
+        elif status == "aberto_faturado":
             query = query.filter(PurchaseOrder.status.in_(["aberto", "faturado"]))
         else:
             query = query.filter_by(status=status)
     else:
-        query = query.filter(PurchaseOrder.status.notin_(["excluido", "rascunho"]))
+        query = query.filter(PurchaseOrder.status.notin_(["excluido"]))  # 10/2026: rascunhos aparecem na lista
     if q:
         from ...models.supplier import Supplier
         query = query.outerjoin(Supplier, PurchaseOrder.supplier_id == Supplier.id).filter(
             PurchaseOrder.number.ilike(f"%{q}%") |
             Supplier.name.ilike(f"%{q}%")
         )
+    from datetime import date as _date, timedelta as _td
+    date_from = request.args.get("date_from", "")
+    date_to   = request.args.get("date_to", "")
+    try:
+        d_from = _date.fromisoformat(date_from) if date_from else None
+    except ValueError:
+        d_from = None
+    try:
+        d_to = _date.fromisoformat(date_to) if date_to else None
+    except ValueError:
+        d_to = None
+    if d_from:
+        query = query.filter(PurchaseOrder.created_at >= d_from)
+    if d_to:
+        query = query.filter(PurchaseOrder.created_at < d_to + _td(days=1))
     po_list = query.order_by(
         PurchaseOrder.pickup_datetime.asc().nullsfirst(),
         PurchaseOrder.id.desc()
@@ -346,7 +388,7 @@ def pdf(po_id):
             .populate_existing()
             .filter_by(id=po_id, company_id=current_user.company_id)
             .first_or_404())
-    lang = request.args.get("lang", "pt")
+    lang = _normalize_lang(request.args.get("lang", "pt"))
     buf  = generate_po_pdf(po, lang=lang)
     buf.seek(0)
     gc.collect()
@@ -493,6 +535,8 @@ def update_adjustments(po_id):
 
     po.discount_type      = d.get("discount_type", "R$") or "R$"
     po.discount_value     = _pf(d.get("discount_value"))
+    rate = _pf(d.get("usd_rate"))
+    po.usd_rate           = rate if rate > 0 else None
     po.freight_amount     = _pf(d.get("freight_amount"))
     po.other_costs_amount = _pf(d.get("other_costs_amount"))
     po.other_costs_label  = d.get("other_costs_label", "") or ""
@@ -659,7 +703,14 @@ def generate_payments(po_id):
     raw_custom = request.form.get("custom_amount", "").strip()
     if raw_custom:
         custom_total = parse_brl(raw_custom)
-    pmts = pos.generate_payments(po, custom_total=custom_total)
+    try:
+        pmts = pos.generate_payments(po, custom_total=custom_total)
+    except ValueError as e:
+        db.session.rollback()
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"ok": False, "error": str(e)}), 400
+        flash(str(e), "warning")
+        return redirect(url_for("purchase_orders.detail", po_id=po_id))
     log_activity("po", po.id, po.company_id, "Parcelas geradas", current_user.id)
     db.session.commit()
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
@@ -690,7 +741,12 @@ def recalculate_payments(po_id):
     if po.status in ("concluido", "cancelado"):
         flash("PO não pode ser editada no status atual.", "warning")
         return redirect(url_for("purchase_orders.detail", po_id=po_id))
-    pmts = pos.generate_payments(po)  # REGENERATE MODE
+    try:
+        pmts = pos.generate_payments(po)  # REGENERATE MODE
+    except ValueError as e:
+        db.session.rollback()
+        flash(str(e), "warning")
+        return redirect(url_for("purchase_orders.detail", po_id=po_id))
     log_activity("po", po.id, po.company_id, "Parcelas recalculadas", current_user.id)
     db.session.commit()
     flash(f"Parcelas recalculadas — {len(pmts)} parcela(s) gerada(s).", "success")

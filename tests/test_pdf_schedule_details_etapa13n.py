@@ -162,7 +162,12 @@ class TestSO:
         with app.app_context():
             paginas = _paginas(generate_order_pdf(_so_com_dados_op(), lang="pt"))
         assert not any(land for _, land in paginas), "SO não deve ter página landscape"
-        assert MEET not in " ".join(t for t, _ in paginas)
+        # "Meet & Greet" agora pode aparecer como item de Serviços Inclusos
+        # (opção da tela do SO), mas nunca como TÍTULO de página de placa —
+        # no PO a página de placa começa com o título.
+        for text, _ in paginas:
+            assert not text.lstrip().startswith(MEET), (
+                "SO não deve ter página de placa com título 'Meet & Greet'")
 
 
 class TestPOSemReceptivo:
