@@ -152,8 +152,7 @@
 
       <section class="panel">
         <div class="label panel-title" data-i18n="total_label">{{ 'PREÇO TOTAL' if lang != 'en' else 'TOTAL PRICE' }}</div>
-        <p class="amount total">{{ _money(total, lang) }}</p>
-        {% if total_usd %}<div class="usd total">USD {{ total_usd }}</div>{% endif %}
+        <p class="amount total" data-i18n="total_line">{{ total_line_en if lang == 'en' else total_line_pt }}</p>
       </section>
 
       <section class="panel">
