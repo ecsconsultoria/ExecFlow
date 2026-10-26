@@ -80,6 +80,7 @@
     .label { color: var(--muted); letter-spacing: .13em; font-size: 14px; }
     .amount { margin: 0; color: var(--gold-light); font-weight: 800; font-size: clamp(24px, 5vw, 34px); line-height: 1.1; white-space: nowrap; }
     .amount.total { text-align: center; margin-top: 12px; }
+    .total-usd-line { color: var(--text); font-weight: 700; margin-left: 6px; }
     .usd { color: var(--muted); font-size: 13px; margin-top: 2px; }
     .usd.total { text-align: center; }
     .panel-list { list-style: none; margin: 12px 0 0; padding: 0; color: var(--muted); font-size: 14px; }
@@ -152,7 +153,10 @@
 
       <section class="panel">
         <div class="label panel-title" data-i18n="total_label">{{ 'PREÇO TOTAL' if lang != 'en' else 'TOTAL PRICE' }}</div>
-        <p class="amount total" data-i18n="total_line">{{ total_line_en if lang == 'en' else total_line_pt }}</p>
+        <p class="amount total">
+          <span data-i18n="total_brl">{{ total_brl_en if lang == 'en' else total_brl_pt }}</span>
+          <span class="total-usd-line" data-i18n="total_usd_line">{{ total_usd_label }}</span>
+        </p>
       </section>
 
       <section class="panel">

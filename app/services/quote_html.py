@@ -166,7 +166,8 @@ def _i18n_dict(ctx: dict) -> dict:
     pt["ref"], en["ref"] = "ORÇAMENTO", "QUOTATION"
     pt["date_ref"], en["date_ref"] = ctx["emission_pt"], ctx["emission_en"]
     pt["total_label"], en["total_label"] = "PREÇO TOTAL", "TOTAL PRICE"
-    pt["total_line"], en["total_line"] = ctx["total_line_pt"], ctx["total_line_en"]
+    pt["total_brl"], en["total_brl"] = ctx["total_brl_pt"], ctx["total_brl_en"]
+    pt["total_usd_line"], en["total_usd_line"] = ctx["total_usd_label"], ctx["total_usd_label"]
     pt["unit_label"], en["unit_label"] = "Preço Unit.", "Unit Price"
     pt["pay_title"], en["pay_title"] = "FORMA DE PAGAMENTO", "PAYMENT METHOD"
     pt["pay_bank"], en["pay_bank"] = "Transferência Bancária", "Wire Transfer"
@@ -243,15 +244,15 @@ def build_context(quote: Quote) -> dict:
 
     total = quote.total_amount or 0.0
     total_usd = round(total / rate) if rate else None
-    total_line_pt = money(total, "pt") + (f" | USD {total_usd:,}".replace(",", ".") if total_usd is not None else "")
-    total_line_en = money(total, "en") + (f" | USD {total_usd:,}" if total_usd is not None else "")
+    total_usd_label = f"| USD {total_usd:,}".replace(",", ".") if total_usd is not None else ""
     ctx = {
         "quote": quote,
         "items": items,
         "inclusions": inclusions,
         "total": total,
-        "total_line_pt": total_line_pt,
-        "total_line_en": total_line_en,
+        "total_brl_pt": money(total, "pt"),
+        "total_brl_en": money(total, "en"),
+        "total_usd_label": total_usd_label,
         "total_usd": total_usd,
         "rate": rate,
         "hero_image": hero_image,
