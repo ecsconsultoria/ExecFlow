@@ -26,7 +26,10 @@
       line-height: 1.45;
     }
     .lang-switch {
-      display: flex; justify-content: center; gap: 8px; padding: 10px 0 0;
+      position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+      display: flex; justify-content: center; gap: 8px; z-index: 99;
+      background: rgba(8, 8, 7, .85); padding: 6px 10px; border-radius: 999px;
+      border: 1px solid #2c2821;
     }
     .lang-switch button {
       background: transparent; border: 1px solid #51432d; color: var(--muted);
@@ -91,6 +94,8 @@
     .pay-item svg { color: var(--gold); flex-shrink: 0; }
     .pay-sep { color: var(--muted); opacity: .6; }
     .validity { font-size: 11px; color: var(--muted); text-align: center; margin: 14px 2px 0; }
+    .validity span { display: block; }
+    .obs-text { white-space: pre-line; }
     .actions { display: grid; gap: 10px; margin-top: 16px; }
     .button {
       display: block; text-align: center; text-decoration: none; font-weight: 800;
@@ -201,7 +206,7 @@
       <section class="panel">
         <div class="label panel-title" data-i18n="obs_title">{{ 'OBSERVAÇÕES' if lang != 'en' else 'NOTES' }}</div>
         <ul class="panel-list">
-          <li>{{ quote.obs }}</li>
+          <li class="obs-text">{{ quote.obs }}</li>
         </ul>
       </section>
       {% endif %}
@@ -215,10 +220,13 @@
            data-i18n="ask">{{ '♡   FALAR NO WHATSAPP' if lang != 'en' else '♡   ASK ON WHATSAPP' }}</a>
       </div>
 
-      <p class="validity" data-i18n="validity">{{ validity[lang] }}</p>
+      <p class="validity">
+        <span data-i18n="validity1">{{ validity[lang][0] }}</span>
+        <span data-i18n="validity2">{{ validity[lang][1] }}</span>
+      </p>
     </section>
     <footer class="footer">
-      <div class="footer-company">Executive Car SP • CNPJ 11.183.125/0001-10</div>
+      <div class="footer-company" data-i18n="company_line">{{ 'Executive Car SP • CNPJ 11.183.125/0001-10' if lang != 'en' else 'Executive Car SP • TAX ID 11.183.125/0001-10' }}</div>
       <div class="footer-links">
         <a class="lang-link lang-pt" href="https://www.executivecarsp.com" target="_blank" rel="noopener">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="3" y1="12" x2="21" y2="12"/><path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18z"/></svg>

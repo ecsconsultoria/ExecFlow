@@ -60,20 +60,26 @@ PAYMENT_METHOD_EN = {
 
 CANCELLATION_POLICY = {
     "pt": [
-        "72 horas antes do evento, será cobrada uma taxa de 10%.",
-        "48 horas antes do evento, será cobrada uma taxa de 50%.",
-        "24 horas antes do evento, será cobrada uma taxa de 100%.",
+        "72h antes do evento, cobraremos taxa de 10%.",
+        "48h antes do evento, cobraremos taxa de 50%.",
+        "24h antes do evento, cobraremos taxa de 100%.",
     ],
     "en": [
-        "72 hours before the event, a 10% fee will be charged.",
-        "48 hours before the event, a 50% fee will be charged.",
-        "24 hours before the event, a 100% fee will be charged.",
+        "72h before the event, we will charge a 10% fee.",
+        "48h before the event, we will charge a 50% fee.",
+        "24h before the event, we will charge a 100% fee.",
     ],
 }
 
 VALIDITY_TEXT = {
-    "pt": "Esta proposta é válida por 15 dias a partir da data de emissão. Preços sujeitos a alteração sem aviso prévio.",
-    "en": "This quotation is valid for 15 days from the date of issue. Prices subject to change without notice.",
+    "pt": [
+        "Esta proposta é válida por 15 dias a partir da data de emissão.",
+        "Preços sujeitos a alteração sem aviso prévio.",
+    ],
+    "en": [
+        "This quotation is valid for 15 days from the date of issue.",
+        "Prices subject to change without notice.",
+    ],
 }
 
 
@@ -180,7 +186,10 @@ def _i18n_dict(ctx: dict) -> dict:
     en["accept"] = "✓   ACCEPT QUOTATION"
     pt["ask"] = "♡   FALAR NO WHATSAPP"
     en["ask"] = "♡   ASK ON WHATSAPP"
-    pt["validity"], en["validity"] = VALIDITY_TEXT["pt"], VALIDITY_TEXT["en"]
+    pt["validity1"], en["validity1"] = VALIDITY_TEXT["pt"][0], VALIDITY_TEXT["en"][0]
+    pt["validity2"], en["validity2"] = VALIDITY_TEXT["pt"][1], VALIDITY_TEXT["en"][1]
+    pt["company_line"] = "Executive Car SP • CNPJ 11.183.125/0001-10"
+    en["company_line"] = "Executive Car SP • TAX ID 11.183.125/0001-10"
     pt["wa_accept"] = f"https://wa.me/{WHATSAPP_NUMBER}?text={accept_text('pt', number)}"
     en["wa_accept"] = f"https://wa.me/{WHATSAPP_NUMBER}?text={accept_text('en', number)}"
     pt["wa_ask"] = f"https://wa.me/{WHATSAPP_NUMBER}?text={ask_text('pt', number)}"
