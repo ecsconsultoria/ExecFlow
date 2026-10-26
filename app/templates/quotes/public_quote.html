@@ -55,19 +55,19 @@
     }
     .hero .ref { margin: 6px 0 0; color: var(--muted); font-size: 13px; letter-spacing: .12em; }
     .content { padding: 22px; }
-    /* itens — serviço ao lado do ITEM; preço à direita com rótulo "Preço Unit." */
+    /* itens — serviço ao lado do ITEM; preço unitário na última linha; separador tracejado uniforme */
     .detail-row {
-      display: grid; grid-template-columns: 1fr auto; gap: 16px;
-      padding: 17px 0; border-top: 1px solid var(--line); align-items: start;
+      padding: 17px 0; border-top: 1px dashed var(--line);
     }
+    .detail-row:last-of-type { border-bottom: 1px dashed var(--line); }
     .item-head { margin: 0 0 6px; }
     .item-num { color: var(--gold); font-size: 13px; font-weight: 800; letter-spacing: .18em; }
     .svc { color: var(--text); font-weight: 800; }
     .item-date { margin: 0 0 4px; color: var(--gold-light); font-weight: 700; font-size: 14px; letter-spacing: .4px; }
     .item-line { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.5; }
-    .item-price { text-align: right; color: var(--gold-light); font-weight: 700; font-size: 17px; font-variant-numeric: tabular-nums; }
-    .item-price-label { font-size: 10px; color: var(--muted); font-weight: 400; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 2px; }
-    .item-usd { font-size: 11px; color: var(--muted); font-weight: 400; margin-top: 2px; }
+    .item-price { margin: 8px 0 0; color: var(--gold-light); font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
+    .item-price-label { font-size: 10px; color: var(--muted); font-weight: 400; letter-spacing: .12em; text-transform: uppercase; margin-right: 4px; }
+    .item-usd { color: var(--muted); font-weight: 400; font-size: 13px; }
     /* painéis (preço total, forma de pagamento e incluso — mesmo estilo) */
     .panel {
       margin: 12px 0; padding: 18px 22px; border: 1px solid #6b5431;
@@ -124,21 +124,19 @@
     <section class="content">
       {% for it in items %}
       <div class="detail-row">
-        <div>
-          <p class="item-head"><span class="item-num">ITEM {{ loop.index }}</span> - <span class="svc" data-i18n-html="svc{{ loop.index }}">{{ it.service_en if lang == 'en' else it.service_pt }}</span></p>
-          {% if it.dt_pt %}
-          <p class="item-date" data-i18n-html="date{{ loop.index }}">{{ it.dt_en if lang == 'en' else it.dt_pt }}</p>
-          {% endif %}
-          <p class="item-line" data-i18n-html="veh{{ loop.index }}">
-            {{ (it.category_en if lang == 'en' else it.category_pt) }}{% if (it.model_en if lang == 'en' else it.model_pt) %} ({{ it.model_en if lang == 'en' else it.model_pt }}){% endif %}
-          </p>
-          <p class="item-line" data-i18n-html="driver{{ loop.index }}">{{ it.driver_en if lang == 'en' else it.driver_pt }}</p>
-        </div>
-        <div class="item-price">
-          <div class="item-price-label" data-i18n="unit_label">{{ 'Preço Unit.' if lang != 'en' else 'Unit Price' }}</div>
-          <div data-i18n="price{{ loop.index }}">{{ _money(it.unit, lang) }}</div>
-          {% if it.unit_usd %}<div class="item-usd">USD {{ it.unit_usd }}</div>{% endif %}
-        </div>
+        <p class="item-head"><span class="item-num">ITEM {{ loop.index }}</span> - <span class="svc" data-i18n-html="svc{{ loop.index }}">{{ it.service_en if lang == 'en' else it.service_pt }}</span></p>
+        {% if it.dt_pt %}
+        <p class="item-date" data-i18n-html="date{{ loop.index }}">{{ it.dt_en if lang == 'en' else it.dt_pt }}</p>
+        {% endif %}
+        <p class="item-line" data-i18n-html="veh{{ loop.index }}">
+          {{ (it.category_en if lang == 'en' else it.category_pt) }}{% if (it.model_en if lang == 'en' else it.model_pt) %} ({{ it.model_en if lang == 'en' else it.model_pt }}){% endif %}
+        </p>
+        <p class="item-line" data-i18n-html="driver{{ loop.index }}">{{ it.driver_en if lang == 'en' else it.driver_pt }}</p>
+        <p class="item-price">
+          <span class="item-price-label" data-i18n="unit_label">{{ 'Preço Unit.' if lang != 'en' else 'Unit Price' }}</span>
+          <span data-i18n="price{{ loop.index }}">{{ _money(it.unit, lang) }}</span>
+          {% if it.unit_usd %}<span class="item-usd"> | USD {{ it.unit_usd }}</span>{% endif %}
+        </p>
       </div>
       {% endfor %}
 
