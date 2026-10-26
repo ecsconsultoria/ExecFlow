@@ -78,8 +78,10 @@
     }
     .panel-top { display: flex; justify-content: space-between; align-items: center; gap: 14px; }
     .label { color: var(--muted); letter-spacing: .13em; font-size: 14px; }
-    .amount { margin: 0; color: var(--gold-light); font-weight: 800; font-size: clamp(24px, 5vw, 34px); line-height: 1.1; text-align: right; white-space: nowrap; }
-    .usd { color: var(--muted); font-size: 13px; text-align: right; margin-top: 2px; }
+    .amount { margin: 0; color: var(--gold-light); font-weight: 800; font-size: clamp(24px, 5vw, 34px); line-height: 1.1; white-space: nowrap; }
+    .amount.total { text-align: center; margin-top: 12px; }
+    .usd { color: var(--muted); font-size: 13px; margin-top: 2px; }
+    .usd.total { text-align: center; }
     .panel-list { list-style: none; margin: 12px 0 0; padding: 0; color: var(--muted); font-size: 14px; }
     .panel-list li { padding: 3px 0; }
     .panel-title { text-align: center; font-weight: 800; }
@@ -149,13 +151,9 @@
       {% endfor %}
 
       <section class="panel">
-        <div class="panel-top">
-          <div class="label" data-i18n="total_label">{{ 'PREÇO TOTAL' if lang != 'en' else 'TOTAL PRICE' }}</div>
-          <div>
-            <p class="amount">{{ _money(total, lang) }}</p>
-            {% if total_usd %}<div class="usd">USD {{ total_usd }}</div>{% endif %}
-          </div>
-        </div>
+        <div class="label panel-title" data-i18n="total_label">{{ 'PREÇO TOTAL' if lang != 'en' else 'TOTAL PRICE' }}</div>
+        <p class="amount total">{{ _money(total, lang) }}</p>
+        {% if total_usd %}<div class="usd total">USD {{ total_usd }}</div>{% endif %}
       </section>
 
       <section class="panel">
