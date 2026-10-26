@@ -136,14 +136,15 @@ def ask_text(lang: str, number: str) -> str:
 
 
 def money(value: float, lang: str) -> str:
-    """Formata moeda para o template público (PT: 2.838,22 · EN: 2,838.22)."""
+    """Formata moeda para o template público — valor inteiro, sem centavos
+    (PT: R$ 2.838 · EN: R$ 2,838)."""
     try:
-        value = float(value)
+        value = round(float(value))
     except (TypeError, ValueError):
-        value = 0.0
+        value = 0
     if lang == "en":
-        return f"R$ {value:,.2f}"
-    return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        return f"R$ {value:,.0f}"
+    return f"R$ {value:,.0f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
 def _i18n_dict(ctx: dict) -> dict:
