@@ -80,11 +80,13 @@ def create_app(config_name: str | None = None) -> Flask:
     app.jinja_env.filters["status_badge_style"] = status_badge_style
 
     # Jinja2 globals — página pública do orçamento (HTML para envio)
-    from .services.quote_html import driver_label, accept_text, ask_text, money
+    from .services.quote_html import driver_label, accept_text, ask_text, money, money_html, usd_html
     app.jinja_env.globals["_driver"]      = driver_label
     app.jinja_env.globals["_accept_text"] = accept_text
     app.jinja_env.globals["_ask_text"]    = ask_text
     app.jinja_env.globals["_money"]       = money
+    app.jinja_env.globals["money_html"]   = money_html
+    app.jinja_env.globals["usd_html"]     = usd_html
     app.jinja_env.filters["status_dot_color"]   = status_dot_color
 
     @app.context_processor

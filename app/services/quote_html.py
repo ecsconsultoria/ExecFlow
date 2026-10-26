@@ -153,15 +153,26 @@ def money(value: float, lang: str) -> str:
     return f"R$ {value:,.0f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
-def _fmt_brl_cents(value: float, lang: str) -> str:
-    """Formata moeda COM centavos (PT: R$ 2.838,00 · EN: R$ 2,838.00)."""
+def _num(value, lang: str) -> str:
+    """Número formatado com separador de milhar (PT: 1.869 · EN: 1,869)."""
     try:
-        value = float(value)
+        n = round(float(value))
     except (TypeError, ValueError):
-        value = 0.0
-    if lang == "en":
-        return f"R$ {value:,.2f}"
-    return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        n = 0
+    s = f"{n:,}"
+    if lang == "pt":
+        s = s.replace(",", ".")
+    return s
+
+
+def money_html(value, lang: str) -> str:
+    """HTML do valor em R$ — símbolo dourado e número branco."""
+    return f'<span class="cur">R$</span> <span class="val">{_num(value, lang)}</span>'
+
+
+def usd_html(value, lang: str) -> str:
+    """HTML do valor em USD — pipe branco, símbolo dourado e número branco."""
+    return f'<span class="pipe">|</span> <span class="cur">USD</span> <span class="val">{_num(value, lang)}</span>'
 
 
 def _i18n_dict(ctx: dict) -> dict:
@@ -173,7 +184,7 @@ def _i18n_dict(ctx: dict) -> dict:
     pt["date_ref"], en["date_ref"] = ctx["emission_pt"], ctx["emission_en"]
     pt["total_label"], en["total_label"] = "PREÇO TOTAL", "TOTAL PRICE"
     pt["total_brl"], en["total_brl"] = ctx["total_brl_pt"], ctx["total_brl_en"]
-    pt["total_usd_line"], en["total_usd_line"] = ctx["total_usd_label"], ctx["total_usd_label"]
+    pt["total_usd_line"], en["total_usd_line"] = ctx["total_usd_pt"], ctx["total_usd_en"]
     pt["unit_label"], en["unit_label"] = "Preço Unit.", "Unit Price"
     pt["pay_title"], en["pay_title"] = "FORMA DE PAGAMENTO", "PAYMENT METHOD"
     pt["pay_bank"], en["pay_bank"] = "Transferência Bancária", "Wire Transfer"
@@ -205,8 +216,10 @@ def _i18n_dict(ctx: dict) -> dict:
         en[f"veh{idx}"] = f"{it['category_en']}{model_en}"
         pt[f"driver{idx}"] = it["driver_pt"]
         en[f"driver{idx}"] = it["driver_en"]
-        pt[f"price{idx}"] = money(it["unit"], "pt")
-        en[f"price{idx}"] = money(it["unit"], "en")
+        pt[f"price{idx}"] = money_html(it["unit"], "pt")
+        en[f"price{idx}"] = money_html(it["unit"], "en")
+        pt[f"usd{idx}"] = usd_html(it["unit_usd"], "pt") if it["unit_usd"] is not None else ""
+        en[f"usd{idx}"] = usd_html(it["unit_usd"], "en") if it["unit_usd"] is not None else ""
     for idx, inc in enumerate(ctx["inclusions"], start=1):
         pt[f"inc{idx}"] = "• " + inc.text_pt
         en[f"inc{idx}"] = "• " + (inc.text_en or inc.text_pt)
@@ -253,15 +266,15 @@ def build_context(quote: Quote) -> dict:
 
     total = quote.total_amount or 0.0
     total_usd = round(total / rate) if rate else None
-    total_usd_label = f"| USD {total_usd:,}".replace(",", ".") if total_usd is not None else ""
     ctx = {
         "quote": quote,
         "items": items,
         "inclusions": inclusions,
         "total": total,
-        "total_brl_pt": money(total, "pt"),
-        "total_brl_en": money(total, "en"),
-        "total_usd_label": total_usd_label,
+        "total_brl_pt": money_html(total, "pt"),
+        "total_brl_en": money_html(total, "en"),
+        "total_usd_pt": usd_html(total_usd, "pt") if total_usd is not None else "",
+        "total_usd_en": usd_html(total_usd, "en") if total_usd is not None else "",
         "total_usd": total_usd,
         "rate": rate,
         "hero_image": hero_image,

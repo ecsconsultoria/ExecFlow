@@ -56,6 +56,14 @@
       margin: 12px 0 0; color: var(--gold-light); font-weight: 800;
       font-size: clamp(24px, 5vw, 38px); letter-spacing: .08em;
     }
+    .b-white { color: var(--text); }
+    .b-gold {
+      background: linear-gradient(95deg, var(--gold-light), var(--gold) 70%);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .cur { color: var(--gold-light); }
+    .val { color: var(--text); }
+    .pipe { color: var(--text); }
     .hero .ref { margin: 6px 0 0; color: var(--muted); font-size: 13px; letter-spacing: .12em; }
     .content { padding: 22px; }
     /* itens — serviço ao lado do ITEM; preço unitário delimitado por linhas tracejadas */
@@ -130,7 +138,7 @@
   <main class="quote">
     <header class="hero">
       <img src="{{ url_for('static', filename='img/fleet/' ~ hero_image) }}" alt="Veículo Executive Car SP">
-      <div class="brand">EXECUTIVE CAR SP</div>
+      <div class="brand"><span class="b-white">EXECUTIVE</span> <span class="b-gold">CAR</span> <span class="b-white">SP</span></div>
       <div class="ref">
         <span data-i18n="ref">{{ 'ORÇAMENTO' if lang != 'en' else 'QUOTATION' }}</span>
         {{ quote.number }} | <span data-i18n="date_ref">{{ emission_en if lang == 'en' else emission_pt }}</span>
@@ -150,8 +158,8 @@
         <p class="item-line" data-i18n-html="driver{{ loop.index }}">{{ it.driver_en if lang == 'en' else it.driver_pt }}</p>
         <p class="item-price">
           <span class="item-price-label" data-i18n="unit_label">{{ 'Preço Unit.' if lang != 'en' else 'Unit Price' }}</span>
-          <span data-i18n="price{{ loop.index }}">{{ _money(it.unit, lang) }}</span>
-          {% if it.unit_usd %}<span class="item-usd"> | USD {{ it.unit_usd }}</span>{% endif %}
+          <span data-i18n-html="price{{ loop.index }}">{{ money_html(it.unit, lang) }}</span>
+          {% if it.unit_usd %}<span class="item-usd" data-i18n-html="usd{{ loop.index }}">{{ usd_html(it.unit_usd, lang) }}</span>{% endif %}
         </p>
       </div>
       {% endfor %}
@@ -159,8 +167,8 @@
       <section class="panel">
         <div class="label panel-title" data-i18n="total_label">{{ 'PREÇO TOTAL' if lang != 'en' else 'TOTAL PRICE' }}</div>
         <p class="amount total">
-          <span data-i18n="total_brl">{{ total_brl_en if lang == 'en' else total_brl_pt }}</span>
-          <span class="total-usd-line" data-i18n="total_usd_line">{{ total_usd_label }}</span>
+          <span data-i18n-html="total_brl">{{ total_brl_en if lang == 'en' else total_brl_pt }}</span>
+          <span class="total-usd-line" data-i18n-html="total_usd_line">{{ total_usd_en if lang == 'en' else total_usd_pt }}</span>
         </p>
       </section>
 
