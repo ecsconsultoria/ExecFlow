@@ -154,6 +154,7 @@ def _i18n_dict(ctx: dict) -> dict:
     pt["ref"], en["ref"] = "ORÇAMENTO", "QUOTATION"
     pt["date_ref"], en["date_ref"] = ctx["emission_pt"], ctx["emission_en"]
     pt["total_label"], en["total_label"] = "PREÇO TOTAL", "TOTAL PRICE"
+    pt["unit_label"], en["unit_label"] = "Preço Unit.", "Unit Price"
     pt["pay_title"], en["pay_title"] = "FORMA DE PAGAMENTO", "PAYMENT METHOD"
     pt["pay1"] = ("• " + ctx["payment_method_pt"]) if ctx["payment_method_pt"] else ""
     en["pay1"] = ("• " + ctx["payment_method_en"]) if ctx["payment_method_en"] else ""
@@ -172,8 +173,8 @@ def _i18n_dict(ctx: dict) -> dict:
     pt["wa_ask"] = f"https://wa.me/{WHATSAPP_NUMBER}?text={ask_text('pt', number)}"
     en["wa_ask"] = f"https://wa.me/{WHATSAPP_NUMBER}?text={ask_text('en', number)}"
     for idx, it in enumerate(items, start=1):
-        pt[f"date{idx}"] = f"{it['date_pt']} às {it['time_pt']}"
-        en[f"date{idx}"] = f"{it['date_en']} at {it['time_en']}"
+        pt[f"date{idx}"] = it["dt_pt"]
+        en[f"date{idx}"] = it["dt_en"]
         pt[f"svc{idx}"] = it["service_pt"]
         en[f"svc{idx}"] = it["service_en"]
         model_pt = f" ({it['model_pt']})" if it["model_pt"] else ""
@@ -202,13 +203,18 @@ def build_context(quote: Quote) -> dict:
         cat_name = it.category.name if it.category else ""
         d = it.service_date
         t = it.service_time
+        date_pt = f"{d.day:02d}/{d.month:02d}/{d.year}" if d else ""
+        date_en = f"{d.month:02d}/{d.day:02d}/{d.year}" if d else ""
+        time_pt = f"{t.hour:02d}:{t.minute:02d}h" if t else ""
+        time_en = f"{t.hour:02d}:{t.minute:02d}" if t else ""
+        # linha de data/hora — separador "às"/"at" só quando há data
+        dt_pt = " às ".join(x for x in (date_pt, time_pt) if x)
+        dt_en = " at ".join(x for x in (date_en, time_en) if x)
         items.append({
             "service_pt": _translate_service(it.description or "", "pt"),
             "service_en": _translate_service(it.description or "", "en"),
-            "date_pt": f"{d.day:02d}/{d.month:02d}/{d.year}" if d else "",
-            "date_en": f"{d.month:02d}/{d.day:02d}/{d.year}" if d else "",
-            "time_pt": f"{t.hour:02d}:{t.minute:02d}h" if t else "",
-            "time_en": f"{t.hour:02d}:{t.minute:02d}" if t else "",
+            "dt_pt": dt_pt,
+            "dt_en": dt_en,
             "category_pt": vehicle_label(cat_name, "pt"),
             "category_en": vehicle_label(cat_name, "en"),
             "model_pt": vehicle_model(cat_name, "pt"),

@@ -55,13 +55,18 @@
     }
     .hero .ref { margin: 6px 0 0; color: var(--muted); font-size: 13px; letter-spacing: .12em; }
     .content { padding: 22px; }
-    /* itens — tudo alinhado à esquerda, preço centralizado abaixo */
-    .detail-row { padding: 17px 0; border-top: 1px solid var(--line); }
-    .item-num { color: var(--gold); font-size: 13px; font-weight: 800; letter-spacing: .18em; margin: 0 0 6px; }
+    /* itens — serviço ao lado do ITEM; preço à direita com rótulo "Preço Unit." */
+    .detail-row {
+      display: grid; grid-template-columns: 1fr auto; gap: 16px;
+      padding: 17px 0; border-top: 1px solid var(--line); align-items: start;
+    }
+    .item-head { margin: 0 0 6px; }
+    .item-num { color: var(--gold); font-size: 13px; font-weight: 800; letter-spacing: .18em; }
+    .svc { color: var(--text); font-weight: 800; }
     .item-date { margin: 0 0 4px; color: var(--gold-light); font-weight: 700; font-size: 14px; letter-spacing: .4px; }
-    .item-date .svc { color: var(--text); font-weight: 800; }
     .item-line { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.5; }
-    .item-price { text-align: center; margin-top: 12px; color: var(--gold-light); font-weight: 700; font-size: 17px; font-variant-numeric: tabular-nums; }
+    .item-price { text-align: right; color: var(--gold-light); font-weight: 700; font-size: 17px; font-variant-numeric: tabular-nums; }
+    .item-price-label { font-size: 10px; color: var(--muted); font-weight: 400; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 2px; }
     .item-usd { font-size: 11px; color: var(--muted); font-weight: 400; margin-top: 2px; }
     /* painéis (preço total, forma de pagamento e incluso — mesmo estilo) */
     .panel {
@@ -119,16 +124,18 @@
     <section class="content">
       {% for it in items %}
       <div class="detail-row">
-        <p class="item-num">ITEM {{ loop.index }}</p>
-        <p class="item-date">
-          <span data-i18n-html="date{{ loop.index }}">{{ (it.date_en ~ ' at ' ~ it.time_en if lang == 'en' else it.date_pt ~ ' às ' ~ it.time_pt) }}</span>
-          - <span class="svc" data-i18n-html="svc{{ loop.index }}">{{ it.service_en if lang == 'en' else it.service_pt }}</span>
-        </p>
-        <p class="item-line" data-i18n-html="veh{{ loop.index }}">
-          {{ (it.category_en if lang == 'en' else it.category_pt) }}{% if (it.model_en if lang == 'en' else it.model_pt) %} ({{ it.model_en if lang == 'en' else it.model_pt }}){% endif %}
-        </p>
-        <p class="item-line" data-i18n-html="driver{{ loop.index }}">{{ it.driver_en if lang == 'en' else it.driver_pt }}</p>
+        <div>
+          <p class="item-head"><span class="item-num">ITEM {{ loop.index }}</span> - <span class="svc" data-i18n-html="svc{{ loop.index }}">{{ it.service_en if lang == 'en' else it.service_pt }}</span></p>
+          {% if it.dt_pt %}
+          <p class="item-date" data-i18n-html="date{{ loop.index }}">{{ it.dt_en if lang == 'en' else it.dt_pt }}</p>
+          {% endif %}
+          <p class="item-line" data-i18n-html="veh{{ loop.index }}">
+            {{ (it.category_en if lang == 'en' else it.category_pt) }}{% if (it.model_en if lang == 'en' else it.model_pt) %} ({{ it.model_en if lang == 'en' else it.model_pt }}){% endif %}
+          </p>
+          <p class="item-line" data-i18n-html="driver{{ loop.index }}">{{ it.driver_en if lang == 'en' else it.driver_pt }}</p>
+        </div>
         <div class="item-price">
+          <div class="item-price-label" data-i18n="unit_label">{{ 'Preço Unit.' if lang != 'en' else 'Unit Price' }}</div>
           <div data-i18n="price{{ loop.index }}">{{ _money(it.unit, lang) }}</div>
           {% if it.unit_usd %}<div class="item-usd">USD {{ it.unit_usd }}</div>{% endif %}
         </div>
