@@ -26,7 +26,7 @@
       line-height: 1.45;
     }
     .lang-switch {
-      position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+      position: fixed; top: 10px; left: 10px;
       display: flex; justify-content: center; gap: 8px; z-index: 99;
       background: rgba(8, 8, 7, .85); padding: 6px 10px; border-radius: 999px;
       border: 1px solid #2c2821;
@@ -52,10 +52,17 @@
       display: block; width: 100%; aspect-ratio: 16 / 7; object-fit: cover;
       border-radius: 13px; border: 1px solid #4b4030;
     }
+    .brand-block { display: inline-block; text-align: center; margin-bottom: 14px; }
     .brand {
-      margin: 12px 0 0; color: var(--gold-light); font-weight: 800;
+      margin: 0; color: var(--gold-light); font-weight: 800;
       font-size: clamp(24px, 5vw, 38px); letter-spacing: .08em;
     }
+    .brand-line {
+      height: 2px; margin: 6px auto;
+      background: linear-gradient(90deg, var(--gold), var(--gold-light));
+      border-radius: 1px;
+    }
+    .brand-sub { font-size: 11px; letter-spacing: .34em; text-indent: .34em; color: var(--muted); text-transform: uppercase; }
     .b-white { color: var(--text); }
     .b-gold {
       background: linear-gradient(95deg, var(--gold-light), var(--gold) 70%);
@@ -137,8 +144,12 @@
 
   <main class="quote">
     <header class="hero">
+      <div class="brand-block">
+        <div class="brand"><span class="b-white">EXECUTIVE</span> <span class="b-gold">CAR</span> <span class="b-white">SP</span></div>
+        <div class="brand-line"></div>
+        <div class="brand-sub">Shuttle Service</div>
+      </div>
       <img src="{{ url_for('static', filename='img/fleet/' ~ hero_image) }}" alt="Veículo Executive Car SP">
-      <div class="brand"><span class="b-white">EXECUTIVE</span> <span class="b-gold">CAR</span> <span class="b-white">SP</span></div>
       <div class="ref">
         <span data-i18n="ref">{{ 'ORÇAMENTO' if lang != 'en' else 'QUOTATION' }}</span>
         {{ quote.number }} | <span data-i18n="date_ref">{{ emission_en if lang == 'en' else emission_pt }}</span>
