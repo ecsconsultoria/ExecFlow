@@ -242,9 +242,9 @@ def build_context(quote: Quote) -> dict:
     created = quote.created_at
 
     total = quote.total_amount or 0.0
-    total_usd_cents = round(total / rate, 2) if rate else None
-    total_line_pt = _fmt_brl_cents(total, "pt") + (f" | USD {total_usd_cents:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") if total_usd_cents is not None else "")
-    total_line_en = _fmt_brl_cents(total, "en") + (f" | USD {total_usd_cents:,.2f}" if total_usd_cents is not None else "")
+    total_usd = round(total / rate) if rate else None
+    total_line_pt = money(total, "pt") + (f" | USD {total_usd:,}".replace(",", ".") if total_usd is not None else "")
+    total_line_en = money(total, "en") + (f" | USD {total_usd:,}" if total_usd is not None else "")
     ctx = {
         "quote": quote,
         "items": items,
@@ -252,7 +252,7 @@ def build_context(quote: Quote) -> dict:
         "total": total,
         "total_line_pt": total_line_pt,
         "total_line_en": total_line_en,
-        "total_usd": total_usd_cents,
+        "total_usd": total_usd,
         "rate": rate,
         "hero_image": hero_image,
         "whatsapp": WHATSAPP_NUMBER,
