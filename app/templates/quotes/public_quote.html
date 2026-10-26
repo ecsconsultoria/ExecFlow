@@ -55,33 +55,25 @@
     }
     .hero .ref { margin: 6px 0 0; color: var(--muted); font-size: 13px; letter-spacing: .12em; }
     .content { padding: 22px; }
-    .detail-row {
-      display: grid; grid-template-columns: 84px 1fr auto; gap: 16px;
-      padding: 17px 0; border-top: 1px solid var(--line); align-items: start;
-    }
-    .item-num { color: var(--gold); font-size: 13px; font-weight: 800; letter-spacing: .18em; padding-top: 3px; }
-    .item-date { margin: 0 0 3px; color: var(--gold-light); font-weight: 700; font-size: 14px; letter-spacing: .4px; }
+    /* itens — tudo alinhado à esquerda, preço centralizado abaixo */
+    .detail-row { padding: 17px 0; border-top: 1px solid var(--line); }
+    .item-num { color: var(--gold); font-size: 13px; font-weight: 800; letter-spacing: .18em; margin: 0 0 6px; }
+    .item-date { margin: 0 0 4px; color: var(--gold-light); font-weight: 700; font-size: 14px; letter-spacing: .4px; }
     .item-date .svc { color: var(--text); font-weight: 800; }
     .item-line { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.5; }
-    .item-driver { display: block; margin-top: 2px; }
-    .item-price { color: var(--gold-light); font-weight: 700; font-size: 16px; white-space: nowrap; padding-top: 2px; font-variant-numeric: tabular-nums; text-align: right; }
+    .item-price { text-align: center; margin-top: 12px; color: var(--gold-light); font-weight: 700; font-size: 17px; font-variant-numeric: tabular-nums; }
     .item-usd { font-size: 11px; color: var(--muted); font-weight: 400; margin-top: 2px; }
-    .price {
+    /* painéis (preço total, forma de pagamento e incluso — mesmo estilo) */
+    .panel {
       margin: 12px 0; padding: 18px 22px; border: 1px solid #6b5431;
       border-radius: 16px; background: linear-gradient(120deg, #11100d, #080807);
     }
-    .price-top { display: flex; justify-content: space-between; align-items: center; gap: 14px; }
+    .panel-top { display: flex; justify-content: space-between; align-items: center; gap: 14px; }
     .label { color: var(--muted); letter-spacing: .13em; font-size: 14px; }
     .amount { margin: 0; color: var(--gold-light); font-weight: 800; font-size: clamp(24px, 5vw, 34px); line-height: 1.1; text-align: right; white-space: nowrap; }
     .usd { color: var(--muted); font-size: 13px; text-align: right; margin-top: 2px; }
-    .cards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .card {
-      display: grid; grid-template-columns: 1fr; gap: 16px;
-      padding: 16px 18px; margin: 12px 0; border: 1px solid #51432d;
-      border-radius: 16px; background: #0b0b0a;
-    }
-    .card h3 { margin: 0 0 3px; font-size: 16px; letter-spacing: .08em; text-align: center; }
-    .card ul { list-style: none; margin: 0; padding: 0; color: var(--muted); }
+    .panel-list { list-style: none; margin: 12px 0 0; padding: 0; color: var(--muted); font-size: 14px; }
+    .panel-list li { padding: 3px 0; }
     .validity { font-size: 11px; color: var(--muted); text-align: center; margin: 14px 2px 0; }
     .actions { display: grid; gap: 10px; margin-top: 16px; }
     .button {
@@ -103,11 +95,8 @@
     @media (max-width: 420px) {
       .hero { padding: 14px 14px 12px; }
       .content { padding: 16px; }
-      .detail-row { grid-template-columns: 62px 1fr auto; gap: 10px; }
-      .item-price { font-size: 14px; }
       .item-line { font-size: 14px; }
-      .cards-row { grid-template-columns: 1fr; }
-      .card { padding: 14px 12px; }
+      .panel { padding: 14px 16px; }
     }
   </style>
 </head>
@@ -130,17 +119,15 @@
     <section class="content">
       {% for it in items %}
       <div class="detail-row">
-        <div class="item-num">ITEM {{ loop.index }}</div>
-        <div>
-          <p class="item-date">
-            <span data-i18n-html="date{{ loop.index }}">{{ (it.date_en ~ ' at ' ~ it.time_en if lang == 'en' else it.date_pt ~ ' às ' ~ it.time_pt) }}</span>
-            - <span class="svc">{{ it.description }}</span>
-          </p>
-          <p class="item-line">
-            <span data-i18n-html="veh{{ loop.index }}">{{ (it.category_en if lang == 'en' else it.category_pt) }}{% if it.model %} ({{ it.model }}){% endif %}</span>
-            <span class="item-driver" data-i18n-html="driver{{ loop.index }}">{{ _driver(it.driver, lang) }}</span>
-          </p>
-        </div>
+        <p class="item-num">ITEM {{ loop.index }}</p>
+        <p class="item-date">
+          <span data-i18n-html="date{{ loop.index }}">{{ (it.date_en ~ ' at ' ~ it.time_en if lang == 'en' else it.date_pt ~ ' às ' ~ it.time_pt) }}</span>
+          - <span class="svc" data-i18n-html="svc{{ loop.index }}">{{ it.service_en if lang == 'en' else it.service_pt }}</span>
+        </p>
+        <p class="item-line" data-i18n-html="veh{{ loop.index }}">
+          {{ (it.category_en if lang == 'en' else it.category_pt) }}{% if (it.model_en if lang == 'en' else it.model_pt) %} ({{ it.model_en if lang == 'en' else it.model_pt }}){% endif %}
+        </p>
+        <p class="item-line" data-i18n-html="driver{{ loop.index }}">{{ it.driver_en if lang == 'en' else it.driver_pt }}</p>
         <div class="item-price">
           <div data-i18n="price{{ loop.index }}">{{ _money(it.unit, lang) }}</div>
           {% if it.unit_usd %}<div class="item-usd">USD {{ it.unit_usd }}</div>{% endif %}
@@ -148,8 +135,8 @@
       </div>
       {% endfor %}
 
-      <section class="price">
-        <div class="price-top">
+      <section class="panel">
+        <div class="panel-top">
           <div class="label" data-i18n="total_label">{{ 'PREÇO TOTAL' if lang != 'en' else 'TOTAL PRICE' }}</div>
           <div>
             <p class="amount">{{ _money(total, lang) }}</p>
@@ -158,48 +145,38 @@
         </div>
       </section>
 
-      <div class="cards-row">
-        <section class="card">
-          <div>
-            <h3 data-i18n="pay_title">{{ 'FORMA DE PAGAMENTO' if lang != 'en' else 'PAYMENT METHOD' }}</h3>
-            <ul>
-              {% if payment_method %}<li data-i18n="pay1">• {{ payment_method }}</li>{% endif %}
-              {% if payment_terms %}<li data-i18n="pay2">• {{ payment_terms }}</li>{% endif %}
-            </ul>
-          </div>
-        </section>
+      <section class="panel">
+        <div class="label" data-i18n="pay_title">{{ 'FORMA DE PAGAMENTO' if lang != 'en' else 'PAYMENT METHOD' }}</div>
+        <ul class="panel-list">
+          {% if payment_method_pt %}<li data-i18n="pay1">• {{ payment_method_en if lang == 'en' else payment_method_pt }}</li>{% endif %}
+          {% if payment_terms_pt %}<li data-i18n="pay2">• {{ payment_terms_en if lang == 'en' else payment_terms_pt }}</li>{% endif %}
+        </ul>
+      </section>
 
-        <section class="card">
-          <div>
-            <h3 data-i18n="inc_title">{{ 'INCLUSO' if lang != 'en' else 'INCLUDED' }}</h3>
-            <ul>
-              {% for inc in inclusions %}
-              <li data-i18n="inc{{ loop.index }}">• {{ inc.text_en if lang == 'en' else inc.text_pt }}</li>
-              {% endfor %}
-            </ul>
-          </div>
-        </section>
-      </div>
+      <section class="panel">
+        <div class="label" data-i18n="inc_title">{{ 'INCLUSO' if lang != 'en' else 'INCLUDED' }}</div>
+        <ul class="panel-list">
+          {% for inc in inclusions %}
+          <li data-i18n="inc{{ loop.index }}">• {{ inc.text_en if lang == 'en' else inc.text_pt }}</li>
+          {% endfor %}
+        </ul>
+      </section>
 
-      <section class="card">
-        <div>
-          <h3 data-i18n="cancel_title">{{ 'POLÍTICA DE CANCELAMENTO' if lang != 'en' else 'CANCELLATION POLICY' }}</h3>
-          <ul>
-            {% for line in cancellation[lang] %}
-            <li data-i18n="cancel{{ loop.index }}">• {{ line }}</li>
-            {% endfor %}
-          </ul>
-        </div>
+      <section class="panel">
+        <div class="label" data-i18n="cancel_title">{{ 'POLÍTICA DE CANCELAMENTO' if lang != 'en' else 'CANCELLATION POLICY' }}</div>
+        <ul class="panel-list">
+          {% for line in cancellation[lang] %}
+          <li data-i18n="cancel{{ loop.index }}">• {{ line }}</li>
+          {% endfor %}
+        </ul>
       </section>
 
       {% if quote.obs %}
-      <section class="card">
-        <div>
-          <h3 data-i18n="obs_title">{{ 'OBSERVAÇÕES' if lang != 'en' else 'NOTES' }}</h3>
-          <ul>
-            <li>{{ quote.obs }}</li>
-          </ul>
-        </div>
+      <section class="panel">
+        <div class="label" data-i18n="obs_title">{{ 'OBSERVAÇÕES' if lang != 'en' else 'NOTES' }}</div>
+        <ul class="panel-list">
+          <li>{{ quote.obs }}</li>
+        </ul>
       </section>
       {% endif %}
 
