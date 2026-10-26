@@ -1,3 +1,4 @@
+import io
 import json
 import os
 from flask import make_response, render_template, request, redirect, url_for, flash, jsonify, current_app, abort, send_file
@@ -13,6 +14,7 @@ from ...models.company import Company
 from ...extensions import db
 from ...utils.decorators import require_permission
 from ...services.quote_service   import QuoteService
+from ...services.quote_html      import build_context, public_token
 from ...utils import now_br, make_client_token
 from ...utils.export import csv_response
 from ...utils.audit import log_activity
@@ -334,6 +336,33 @@ def pdf(qid, lang):
                            as_attachment=True, download_name=filename,
                            conditional=False))
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
+
+
+@quotes_bp.route("/<int:qid>/html")
+@login_required
+@require_permission("quote.view")
+def html_view(qid):
+    """Abre o orçamento formatado em HTML (link público com token)."""
+    quote = Quote.query.filter_by(id=qid, company_id=current_user.company_id, deleted_at=None).first_or_404()
+    token = public_token(quote.id)
+    return redirect(url_for("public_quotes.view", number=quote.number, token=token))
+
+
+@quotes_bp.route("/<int:qid>/html/download")
+@login_required
+@require_permission("quote.view")
+def html_download(qid):
+    """Baixa o orçamento formatado como arquivo HTML autocontido (para anexar em e-mail)."""
+    quote = Quote.query.filter_by(id=qid, company_id=current_user.company_id, deleted_at=None).first_or_404()
+    ctx = build_context(quote)
+    html = render_template("quotes/public_quote.html", **ctx)
+    resp = make_response(send_file(io.BytesIO(html.encode("utf-8")), mimetype="text/html",
+                                   as_attachment=True, download_name=f"{quote.number}.html",
+                                   conditional=False))
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     resp.headers["Pragma"] = "no-cache"
     resp.headers["Expires"] = "0"
     return resp

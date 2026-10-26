@@ -184,6 +184,28 @@
       </div>
     </div>
 
+    {# HTML para envio (WhatsApp/e-mail) — dropdown unificado #}
+    <div class="relative pa-header" x-data="{htmlOpen:false}" @click.outside="htmlOpen=false">
+      <button type="button" @click="htmlOpen=!htmlOpen" title="Orçamento em HTML para envio"
+              class="h-8 w-8 rounded-lg inline-flex items-center justify-center transition-colors bg-amber-100 hover:bg-amber-200 border border-amber-300 dark:bg-amber-900/30 dark:hover:bg-amber-900/50 dark:border-amber-700">
+        <i class="fa-solid fa-file-code text-amber-600 dark:text-amber-400 text-xs"></i>
+      </button>
+      <div x-show="htmlOpen" x-cloak
+           class="absolute left-0 top-full mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 z-50 py-1 overflow-hidden"
+           style="min-width:210px">
+        <div style="display:grid;grid-template-columns:1fr 1fr">
+          <a href="{{ url_for('quotes.html_view', qid=quote.id) }}" target="_blank" rel="noopener" title="Abrir HTML para envio (link público com token)"
+             class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
+            <i class="fa-solid fa-arrow-up-right-from-square text-amber-500"></i> Ver HTML
+          </a>
+          <a href="{{ url_for('quotes.html_download', qid=quote.id) }}" title="Baixar HTML (para anexar em e-mail)"
+             class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
+            <i class="fa-solid fa-download text-amber-600"></i> Baixar
+          </a>
+        </div>
+      </div>
+    </div>
+
     {# Excluir #}
     {% if has_perm('quote.delete') %}
     <button type="button" onclick="window.dispatchEvent(new CustomEvent('open-delete-modal'))" title="Excluir orçamento"
