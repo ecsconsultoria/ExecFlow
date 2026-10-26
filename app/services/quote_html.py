@@ -12,6 +12,7 @@ from __future__ import annotations
 from urllib.parse import quote as _urlquote
 
 from flask import current_app
+from markupsafe import Markup
 from ..models.quote import Quote
 from ..utils import make_client_token
 from .quote_pdf import (
@@ -167,12 +168,12 @@ def _num(value, lang: str) -> str:
 
 def money_html(value, lang: str) -> str:
     """HTML do valor em R$ — símbolo dourado e número branco."""
-    return f'<span class="cur">R$</span> <span class="val">{_num(value, lang)}</span>'
+    return Markup(f'<span class="cur">R$</span> <span class="val">{_num(value, lang)}</span>')
 
 
 def usd_html(value, lang: str) -> str:
     """HTML do valor em USD — pipe branco, símbolo dourado e número branco."""
-    return f'<span class="pipe">|</span> <span class="cur">USD</span> <span class="val">{_num(value, lang)}</span>'
+    return Markup(f'<span class="pipe">|</span> <span class="cur">USD</span> <span class="val">{_num(value, lang)}</span>')
 
 
 def _i18n_dict(ctx: dict) -> dict:
