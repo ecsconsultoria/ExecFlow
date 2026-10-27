@@ -116,6 +116,16 @@
     .pay-line { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; font-size: 14px; color: #fff; }
     .pay-item { display: inline-flex; align-items: center; gap: 6px; }
     .pay-item svg { color: var(--gold); flex-shrink: 0; }
+    .pay-link { color: #fff; text-decoration: none; }
+    .pay-link:hover { text-decoration: underline; }
+    .pix-btn { background: none; border: none; cursor: pointer; font: inherit; padding: 0; color: #fff; }
+    .pix-box { margin-top: 14px; text-align: center; }
+    .pix-box img { border-radius: 10px; border: 1px solid #4b4030; background: #fff; padding: 8px; }
+    .pix-code-row { display: flex; gap: 8px; justify-content: center; margin-top: 10px; }
+    .pix-code-row input { flex: 1; max-width: 340px; background: #10100f; color: #fff; border: 1px solid #51432d; border-radius: 8px; padding: 8px 10px; font-size: 12px; }
+    .pix-code-row button { background: linear-gradient(100deg, #f8d17c, #c08a32); color: #171107; border: none; border-radius: 8px; font-weight: 800; padding: 8px 14px; cursor: pointer; font-size: 12px; }
+    .pix-status { margin-top: 8px; font-size: 13px; color: var(--gold-light); }
+    .pix-err { margin-top: 8px; font-size: 13px; color: #e8a9a2; }
     .pay-sep { color: #fff; }
     .validity { font-size: 11px; color: #fff; text-align: center; margin: 14px 2px 0; }
     .validity span { display: block; }
@@ -217,15 +227,24 @@
             <span data-i18n="pay_bank">{{ 'Transferência Bancária' if lang != 'en' else 'Wire Transfer' }}</span>
           </span>
           <span class="pay-sep">|</span>
-          <span class="pay-item">
+          <button type="button" id="pix-button" class="pay-item pix-btn" onclick="openPix()" title="Gerar QR Code PIX">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l10 10-10 10L2 12z"/><path d="M8 12l4 4 6-6"/></svg>
             <span data-i18n="pay_pix">PIX</span>
-          </span>
+          </button>
           <span class="pay-sep">|</span>
-          <span class="pay-item">
+          <a class="pay-item pay-link" href="{{ paypal_url }}" title="Pagar com PayPal">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/><path d="M7 15h4"/></svg>
             <span data-i18n="pay_paypal">PayPal</span>
-          </span>
+          </a>
+        </div>
+        <div id="pix-box" class="pix-box" style="display:none">
+          <img id="pix-qr" width="200" height="200" alt="QR Code PIX">
+          <div class="pix-code-row">
+            <input id="pix-code" readonly aria-label="PIX copia e cola">
+            <button type="button" id="pix-copy-btn" onclick="copyPixCode()" data-i18n="pix_copy">Copiar</button>
+          </div>
+          <div id="pix-status" class="pix-status"></div>
+          <div id="pix-err" class="pix-err"></div>
         </div>
       </section>
 
@@ -302,6 +321,74 @@
       document.querySelectorAll('.lang-link').forEach(el => {
         el.style.display = el.classList.contains('lang-' + lang) ? 'flex' : 'none';
       });
+    }
+    let pixPoll = null;
+    function curLang() { return document.documentElement.lang === 'en' ? 'en' : 'pt'; }
+    function openPix() {
+      const box = document.getElementById('pix-box');
+      const btn = document.getElementById('pix-button');
+      const err = document.getElementById('pix-err');
+      const status = document.getElementById('pix-status');
+      err.textContent = '';
+      status.textContent = '';
+      box.style.display = 'block';
+      btn.disabled = true;
+      btn.querySelector('span').textContent = I18N[curLang()].pix_paying;
+      fetch(window.location.pathname + '/pix', { method: 'POST' })
+        .then(r => r.json())
+        .then(d => {
+          if (!d.ok) throw new Error(d.erro || 'erro');
+          const qr = d.qrcode_base64 || '';
+          document.getElementById('pix-qr').src =
+            (qr.startsWith('data:') ? '' : 'data:image/png;base64,') + qr;
+          document.getElementById('pix-code').value = d.pix_codigo || '';
+          if (d.txid) {
+            startPixPoll(d.txid);
+          } else {
+            document.getElementById('pix-status').textContent = I18N[curLang()].pix_static_note;
+          }
+        })
+        .catch(e => { err.textContent = I18N[curLang()].pix_err + ' ' + e.message; })
+        .finally(() => {
+          btn.disabled = false;
+          btn.querySelector('span').textContent = I18N[curLang()].pay_pix;
+        });
+    }
+    function startPixPoll(txid) {
+      clearInterval(pixPoll);
+      const status = document.getElementById('pix-status');
+      pixPoll = setInterval(() => {
+        fetch(window.location.pathname + '/pix/' + txid + '/status')
+          .then(r => r.json())
+          .then(d => {
+            if (d.ok && d.status === 'pago') {
+              clearInterval(pixPoll);
+              status.textContent = I18N[curLang()].pix_paid;
+            }
+          }).catch(() => {});
+      }, 5000);
+    }
+    function copyPixCode() {
+      const input = document.getElementById('pix-code');
+      const btn = document.getElementById('pix-copy-btn');
+      if (!input.value) return;
+      const done = () => {
+        const old = btn.textContent;
+        btn.textContent = I18N[curLang()].pix_copied;
+        setTimeout(() => { btn.textContent = old; }, 1500);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(input.value).then(done).catch(() => fallbackCopyPix(input.value, done));
+      } else {
+        fallbackCopyPix(input.value, done);
+      }
+    }
+    function fallbackCopyPix(text, done) {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (_) {}
+      document.body.removeChild(ta);
     }
   </script>
 </body>

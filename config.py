@@ -34,6 +34,24 @@ class Config:
     PAYPAL_CLIENT_SECRET = os.environ.get("PAYPAL_CLIENT_SECRET", "")
     PAYPAL_MODE          = os.environ.get("PAYPAL_MODE", "sandbox")
 
+    # Banco Inter (Pix) — OAuth2 com mTLS (certificado .crt/.key em base64)
+    INTER_ENV           = os.environ.get("INTER_ENV", "sandbox")
+    INTER_CLIENT_ID     = os.environ.get("INTER_CLIENT_ID", "")
+    INTER_CLIENT_SECRET = os.environ.get("INTER_CLIENT_SECRET", "")
+    INTER_CERT_BASE64   = os.environ.get("INTER_CERT_BASE64", "")
+    INTER_KEY_BASE64    = os.environ.get("INTER_KEY_BASE64", "")
+    INTER_PIX_KEY       = os.environ.get("INTER_PIX_KEY", "")
+
+    # PIX estático (fallback enquanto a integração Banco Inter está em análise).
+    # Payload EMV "copia e cola" — o valor da cobrança é injetado no campo 54.
+    # (dado público: aparece em todo QR Code gerado — pode ser sobrescrito por env var)
+    PIX_STATIC_CODE = os.environ.get(
+        "PIX_STATIC_CODE",
+        "00020101021126570014br.gov.bcb.pix0114111831250001100217VipTransportation"
+        "5204000053039865802BR5922EXECUTIVE C E SERVICOS6009SAO PAULO"
+        "62180514ShuttleService630404BF",
+    )
+
     # PIX static key
     PIX_KEY           = os.environ.get("PIX_KEY", "")
     PIX_MERCHANT_NAME = os.environ.get("PIX_MERCHANT_NAME", "Executive Car SP")

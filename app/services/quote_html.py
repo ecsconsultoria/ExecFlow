@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from urllib.parse import quote as _urlquote
 
-from flask import current_app
+from flask import current_app, url_for
 from markupsafe import Markup
 from ..models.quote import Quote
 from ..utils import make_client_token
@@ -191,6 +191,15 @@ def _i18n_dict(ctx: dict) -> dict:
     pt["pay_bank"], en["pay_bank"] = "Transferência Bancária", "Wire Transfer"
     pt["pay_pix"], en["pay_pix"] = "PIX", "PIX"
     pt["pay_paypal"], en["pay_paypal"] = "PayPal", "PayPal"
+    pt["pix_paying"], en["pix_paying"] = "Gerando QR Code...", "Generating QR Code..."
+    pt["pix_err"], en["pix_err"] = "Não foi possível gerar o QR Code.", "Could not generate the QR Code."
+    pt["pix_copy"], en["pix_copy"] = "Copiar", "Copy"
+    pt["pix_copied"], en["pix_copied"] = "Copiado!", "Copied!"
+    pt["pix_paid"], en["pix_paid"] = "✓ Pagamento confirmado!", "✓ Payment confirmed!"
+    pt["pix_static_note"], en["pix_static_note"] = (
+        "Pague o valor exato do orçamento. A confirmação será feita pela empresa.",
+        "Please pay the exact quotation amount. Confirmation will be done by the company.",
+    )
     pt["inc_title"], en["inc_title"] = "INCLUSO", "INCLUDED"
     pt["cancel_title"], en["cancel_title"] = "POLÍTICA DE CANCELAMENTO", "CANCELLATION POLICY"
     pt["obs_title"], en["obs_title"] = "OBSERVAÇÕES", "NOTES"
@@ -289,6 +298,7 @@ def build_context(quote: Quote) -> dict:
         "payment_terms_en": _translate_payment_terms(quote.payment_terms or "", "en") or "",
         "emission_pt": f"{created.day:02d}/{created.month:02d}/{created.year}" if created else "",
         "emission_en": f"{created.month:02d}/{created.day:02d}/{created.year}" if created else "",
+        "paypal_url": url_for("public_quotes.paypal", number=quote.number, token=public_token(quote.id)),
     }
     ctx["i18n"] = _i18n_dict(ctx)
     return ctx
