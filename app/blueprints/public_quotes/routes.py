@@ -8,12 +8,13 @@ import hmac
 from flask import abort, current_app, jsonify, make_response, redirect, render_template, request, url_for
 
 from . import public_quotes_bp
-from ...extensions import csrf
+from ...extensions import csrf, db
 from ...models.quote import Quote
 from ...services.quote_html import build_context, public_token
 from ...services.paypal_service import capture_order, create_order, paypal_approve_url
 from ...services.inter_pix_service import create_pix, check_pix
 from ...services.static_pix_service import build_static_pix
+from ...utils.audit import log_activity
 
 
 def _get_quote_or_404(number, token):
@@ -69,17 +70,26 @@ def paypal_create_order(number, token):
 @public_quotes_bp.route("/<number>/<token>/paypal/capture", methods=["POST"])
 @csrf.exempt
 def paypal_capture(number, token):
-    """Captura o pedido aprovado pelo cliente (move o dinheiro de fato)."""
-    _get_quote_or_404(number, token)
+    """Captura o pedido aprovado pelo cliente (move o dinheiro de fato).
+
+    Com a captura concluída, o RFQ passa para 'aprovado' (ação auditada;
+    sem usuário logado — é o próprio cliente pagando pela página pública).
+    """
+    quote = _get_quote_or_404(number, token)
     data = request.get_json(silent=True) or {}
     order_id = (data.get("order_id") or "").strip()
     if not order_id:
         return jsonify({"ok": False, "erro": "order_id ausente"}), 400
     try:
         status = capture_order(order_id)
-        return jsonify({"ok": True, "status": status})
     except Exception as exc:
         return jsonify({"ok": False, "erro": f"Falha na captura: {str(exc)[:200]}"}), 502
+    if status == "COMPLETED" and quote.status not in ("cancelado", "excluido"):
+        quote.status = "aprovado"
+        log_activity("quote", quote.id, quote.company_id,
+                     "Pagamento PayPal aprovado (captura)", None)
+        db.session.commit()
+    return jsonify({"ok": True, "status": status})
 
 
 @public_quotes_bp.route("/<number>/<token>/pix", methods=["POST"])
