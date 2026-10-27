@@ -85,12 +85,11 @@
     }
     .item-line { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.5; }
     .item-driver-price {
-      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      display: flex; justify-content: flex-end;
       border-bottom: 1px dashed var(--line); padding-bottom: 12px;
     }
     .detail-row.last .item-driver-price { border-bottom: none; padding-bottom: 0; }
     .item-price {
-      margin: 0 0 0 auto;
       display: flex; flex-direction: column; align-items: flex-end;
       color: var(--gold-light); font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums;
       white-space: nowrap;
@@ -231,11 +230,11 @@
           <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h-2v-6l2-5h14l2 5v6h-2"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/></svg>
           <span data-i18n-html="veh{{ loop.index }}">{{ (it.category_en if lang == 'en' else it.category_pt) }}{% if (it.model_en if lang == 'en' else it.model_pt) %} ({{ it.model_en if lang == 'en' else it.model_pt }}){% endif %}</span>
         </p>
-        <p class="item-line item-driver-price">
-          <span>
-            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            <span data-i18n-html="driver{{ loop.index }}">{{ it.driver_en if lang == 'en' else it.driver_pt }}</span>
-          </span>
+        <p class="item-line">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span data-i18n-html="driver{{ loop.index }}">{{ it.driver_en if lang == 'en' else it.driver_pt }}</span>
+        </p>
+        <p class="item-driver-price">
           <span class="item-price">
             <span class="item-price-label" data-i18n="unit_label">{{ 'Preço Unitário' if lang != 'en' else 'Unit Price' }}</span>
             <span class="price-vals">
