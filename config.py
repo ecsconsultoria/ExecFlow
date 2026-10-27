@@ -32,7 +32,9 @@ class Config:
     # PayPal
     PAYPAL_CLIENT_ID     = os.environ.get("PAYPAL_CLIENT_ID", "")
     PAYPAL_CLIENT_SECRET = os.environ.get("PAYPAL_CLIENT_SECRET", "")
-    PAYPAL_MODE          = os.environ.get("PAYPAL_MODE", "sandbox")
+    # Aceita PAYPAL_MODE (V3) ou PAYPAL_ENV (nome do sistema antigo);
+    # qualquer valor diferente de "sandbox" = produção
+    PAYPAL_MODE = os.environ.get("PAYPAL_MODE") or os.environ.get("PAYPAL_ENV", "sandbox")
 
     # Banco Inter (Pix) — OAuth2 com mTLS (certificado .crt/.key em base64)
     INTER_ENV           = os.environ.get("INTER_ENV", "sandbox")
