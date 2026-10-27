@@ -186,7 +186,7 @@ def _i18n_dict(ctx: dict) -> dict:
     pt["total_label"], en["total_label"] = "PREÇO TOTAL", "TOTAL PRICE"
     pt["total_brl"], en["total_brl"] = ctx["total_brl_pt"], ctx["total_brl_en"]
     pt["total_usd_line"], en["total_usd_line"] = ctx["total_usd_pt"], ctx["total_usd_en"]
-    pt["unit_label"], en["unit_label"] = "Preço Unit.", "Unit Price"
+    pt["unit_label"], en["unit_label"] = "Preço Unitário", "Unit Price"
     pt["pay_title"], en["pay_title"] = "FORMA DE PAGAMENTO", "PAYMENT METHOD"
     pt["pay_bank"], en["pay_bank"] = "Transferência Bancária", "Wire Transfer"
     pt["pay_pix"], en["pay_pix"] = "PIX", "PIX"
