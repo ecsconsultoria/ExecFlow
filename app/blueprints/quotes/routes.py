@@ -245,9 +245,16 @@ def detail(qid):
     all_orders = Order.query.filter_by(quote_id=quote.id, deleted_at=None).order_by(Order.id.desc()).all()
     service_order = ServiceOrder.query.filter_by(quote_id=quote.id).filter(ServiceOrder.deleted_at.is_(None)).first()
     audit_logs    = AuditLog.query.filter_by(entity="quote", entity_id=quote.id).order_by(AuditLog.created_at.asc()).all()
+    # Link público (tokenizado) para o botão "Copiar link" do dropdown de HTML
+    token = public_token(quote.id)
+    base = current_app.config.get("PUBLIC_QUOTE_BASE", "").rstrip("/")
+    if base:
+        public_url = f"{base}/{quote.number}/{token}"
+    else:
+        public_url = request.host_url.rstrip("/") + url_for("public_quotes.view", number=quote.number, token=token)
     resp = make_response(render_template("quotes/detail.html", quote=quote, billing_types=BILLING_TYPES,
                            service_order=service_order, quote_order=quote_order,
-                           all_orders=all_orders, audit_logs=audit_logs))
+                           all_orders=all_orders, audit_logs=audit_logs, public_url=public_url))
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     resp.headers["Pragma"] = "no-cache"
     resp.headers["Expires"] = "0"
@@ -348,6 +355,11 @@ def html_view(qid):
     """Abre o orçamento formatado em HTML (link público com token)."""
     quote = Quote.query.filter_by(id=qid, company_id=current_user.company_id, deleted_at=None).first_or_404()
     token = public_token(quote.id)
+    # Com PUBLIC_QUOTE_BASE configurado (domínio da marca), abre o link absoluto —
+    # assim o operador copia a URL que o cliente vai ver, sem expor o domínio do Render.
+    base = current_app.config.get("PUBLIC_QUOTE_BASE", "").rstrip("/")
+    if base:
+        return redirect(f"{base}/{quote.number}/{token}")
     return redirect(url_for("public_quotes.view", number=quote.number, token=token))
 
 

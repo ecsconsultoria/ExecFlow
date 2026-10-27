@@ -45,6 +45,10 @@ class Config:
 
     # App
     BASE_URL       = os.environ.get("BASE_URL", "http://localhost:5004")
+
+    # Base pública do link do orçamento em HTML (domínio da marca, ex.: https://orcamento.executivecarsp.com).
+    # Vazio = usa o host da requisição (dev/local).
+    PUBLIC_QUOTE_BASE = os.environ.get("PUBLIC_QUOTE_BASE", "")
     ORCAMENTOS_DIR = os.environ.get("ORCAMENTOS_DIR", "orcamentos")
     WPP_NUMBER     = os.environ.get("WPP_NUMBER", "5511989178312")
     # Persistent upload folder (set UPLOAD_FOLDER=/orcamentos/uploads on Render)

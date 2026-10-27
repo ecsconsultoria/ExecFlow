@@ -202,6 +202,10 @@
              class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
             <i class="fa-solid fa-download text-amber-600"></i> Baixar
           </a>
+          <a href="#" data-copy-link onclick="copyPublicLink(event)" title="Copiar link público (número + token) para enviar ao cliente"
+             class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-t border-slate-100 dark:border-slate-700" style="grid-column:1/-1">
+            <i class="fa-solid fa-link text-amber-500"></i> Copiar link
+          </a>
         </div>
       </div>
     </div>
@@ -542,7 +546,31 @@
     phone:   "{{ ((quote.client.whatsapp if quote.client and quote.client.whatsapp else quote.phone) or '')|e }}",
     pdfPT:   "{{ url_for('quotes.pdf', qid=quote.id, lang='pt') }}?_cb={{ quote.updated_at.timestamp() if quote.updated_at else 0 }}",
     pdfEN:   "{{ url_for('quotes.pdf', qid=quote.id, lang='en') }}?_cb={{ quote.updated_at.timestamp() if quote.updated_at else 0 }}",
+    link:    {{ public_url|tojson }},
   };
+
+  window.copyPublicLink = function(e) {
+    if (e) e.preventDefault();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(q.link).then(() => copyLinkFeedback()).catch(() => copyLinkFallback());
+    } else {
+      copyLinkFallback();
+    }
+  };
+  function copyLinkFallback() {
+    const ta = document.createElement('textarea');
+    ta.value = q.link; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); copyLinkFeedback(); } catch (_) {}
+    document.body.removeChild(ta);
+  }
+  function copyLinkFeedback() {
+    const b = document.querySelector('[data-copy-link]');
+    if (!b) return;
+    const old = b.innerHTML;
+    b.innerHTML = '<i class="fa-solid fa-check text-green-600"></i> Copiado!';
+    setTimeout(() => { b.innerHTML = old; }, 1600);
+  }
 
   window.sendEmail = function(lang) {
     const pt = lang === 'pt';
