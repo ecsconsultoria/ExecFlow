@@ -90,12 +90,12 @@
     }
     .detail-row.last .item-driver-price { border-bottom: none; padding-bottom: 0; }
     .item-price {
-      display: flex; flex-direction: column; align-items: flex-end;
+      display: flex; align-items: baseline; justify-content: flex-end; gap: 6px;
       color: var(--gold-light); font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums;
       white-space: nowrap;
     }
     .price-vals { display: inline-flex; align-items: baseline; gap: 6px; }
-    .item-price-label { font-size: 10px; color: #fff; font-weight: 400; letter-spacing: .12em; text-transform: uppercase; margin-right: 0; }
+    .item-price-label { font-size: 10px; color: #fff; font-weight: 400; letter-spacing: .12em; text-transform: uppercase; margin-right: 2px; }
     .item-usd { color: var(--muted); font-weight: 400; font-size: 13px; }
     /* painéis (preço total, forma de pagamento e incluso — mesmo estilo) */
     .panel {
@@ -136,7 +136,8 @@
     .pix-err { margin-top: 8px; font-size: 13px; color: #e8a9a2; }
     /* popups modais (pagamento aprovado / dados bancários) */
     .modal-overlay {
-      position: fixed; inset: 0; background: rgba(0, 0, 0, .74); z-index: 999;
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0; overflow: hidden;
+      background: rgba(0, 0, 0, .74); z-index: 999;
       display: none; align-items: center; justify-content: center; padding: 16px;
     }
     .pay-ok-card {
