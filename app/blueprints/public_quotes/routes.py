@@ -59,8 +59,12 @@ def pix_create(number, token):
     amount = quote.total_amount or 0.0
     if amount <= 0:
         return jsonify({"ok": False, "erro": f"Orçamento {quote.number} sem valor para pagamento."}), 400
-    # Integração Banco Inter ativa? senão usa o QR estático com o valor injetado
-    if not current_app.config.get("INTER_PIX_KEY", ""):
+    # Integração Banco Inter ativa só com o conjunto completo de credenciais;
+    # caso contrário usa o QR estático com o valor injetado
+    inter_ready = all(current_app.config.get(k, "") for k in (
+        "INTER_CLIENT_ID", "INTER_CLIENT_SECRET",
+        "INTER_CERT_BASE64", "INTER_KEY_BASE64", "INTER_PIX_KEY"))
+    if not inter_ready:
         try:
             data = build_static_pix(amount)
             return jsonify({"ok": True, **data})
