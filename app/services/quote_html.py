@@ -15,6 +15,7 @@ from flask import current_app, url_for
 from markupsafe import Markup
 from ..models.quote import Quote
 from ..utils import make_client_token
+from ..utils.translate import translate_obs
 from .quote_pdf import (
     _translate_vehicle,
     _translate_service,
@@ -200,10 +201,16 @@ def _i18n_dict(ctx: dict) -> dict:
         "Pague o valor exato do orçamento. A confirmação será feita pela empresa.",
         "Please pay the exact quotation amount. Confirmation will be done by the company.",
     )
-    pt["paypal_paid"], en["paypal_paid"] = "✓ Pagamento aprovado!", "✓ Payment approved!"
+    pt["pay_ok_title"], en["pay_ok_title"] = "Pagamento efetuado com sucesso", "Payment successful"
+    pt["pay_ok_sub"], en["pay_ok_sub"] = (
+        "Seu pagamento foi efetuado com sucesso.",
+        "You have paid successfully.",
+    )
+    pt["pay_ok_done"], en["pay_ok_done"] = "Concluído", "Done"
     pt["inc_title"], en["inc_title"] = "INCLUSO", "INCLUDED"
     pt["cancel_title"], en["cancel_title"] = "POLÍTICA DE CANCELAMENTO", "CANCELLATION POLICY"
     pt["obs_title"], en["obs_title"] = "OBSERVAÇÕES", "NOTES"
+    pt["obs"], en["obs"] = ctx["obs_pt"], ctx["obs_en"]
     pt["accept"] = "✓   ACEITAR ORÇAMENTO"
     en["accept"] = "✓   ACCEPT QUOTATION"
     pt["ask"] = "♡   FALAR NO WHATSAPP"
@@ -277,6 +284,9 @@ def build_context(quote: Quote) -> dict:
 
     total = quote.total_amount or 0.0
     total_usd = round(total / rate) if rate else None
+    # observações: original + tradução automática para o seletor EN (com cache)
+    obs_pt = quote.obs or ""
+    obs_en = translate_obs(obs_pt, "en")
     ctx = {
         "quote": quote,
         "items": items,
@@ -299,6 +309,8 @@ def build_context(quote: Quote) -> dict:
         "payment_terms_en": _translate_payment_terms(quote.payment_terms or "", "en") or "",
         "emission_pt": f"{created.day:02d}/{created.month:02d}/{created.year}" if created else "",
         "emission_en": f"{created.month:02d}/{created.day:02d}/{created.year}" if created else "",
+        "obs_pt": obs_pt,
+        "obs_en": obs_en,
         "paypal_url": url_for("public_quotes.paypal", number=quote.number, token=public_token(quote.id)),
         # client id público (o SDK do PayPal exige expor no HTML; o segredo fica só no servidor)
         "paypal_client_id": current_app.config.get("PAYPAL_CLIENT_ID", ""),

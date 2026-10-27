@@ -121,6 +121,8 @@ class TestTranslateObs:
 
     def test_falha_devolve_original(self, monkeypatch):
         # Simula rede fora: GoogleTranslator explode → fallback silencioso
+        import app.utils.translate as T
+        monkeypatch.setattr(T, "_translate_deepseek", lambda *a, **k: None)
         fake = types.ModuleType("deep_translator")
 
         class _Boom:
@@ -134,6 +136,8 @@ class TestTranslateObs:
         assert translate_obs(texto, "en") == texto
 
     def test_sucesso_traduz(self, monkeypatch):
+        import app.utils.translate as T
+        monkeypatch.setattr(T, "_translate_deepseek", lambda *a, **k: None)
         fake = types.ModuleType("deep_translator")
 
         class _Fake:
@@ -151,6 +155,8 @@ class TestTranslateObs:
     def test_pagina_de_erro_do_google_e_descartada(self, monkeypatch):
         # Caso SO 65: Google respondeu com página de erro (status 200) e o
         # deep-translator entregou o texto do erro como "tradução".
+        import app.utils.translate as T
+        monkeypatch.setattr(T, "_translate_deepseek", lambda *a, **k: None)
         fake = types.ModuleType("deep_translator")
 
         class _ErroGoogle:
@@ -172,6 +178,7 @@ class TestTranslateObs:
         # Gerações consecutivas do mesmo PDF não chamam o Google de novo.
         import app.utils.translate as T
         T._CACHE.clear()
+        monkeypatch.setattr(T, "_translate_deepseek", lambda *a, **k: None)
         chamadas = []
         fake = types.ModuleType("deep_translator")
 
@@ -198,6 +205,7 @@ class TestTranslateObs:
         # tentativa pode chamar o serviço de novo).
         import app.utils.translate as T
         T._CACHE.clear()
+        monkeypatch.setattr(T, "_translate_deepseek", lambda *a, **k: None)
         fake = types.ModuleType("deep_translator")
 
         class _FalhaUmaVez:
@@ -218,6 +226,28 @@ class TestTranslateObs:
         from app.utils.translate import translate_obs
         assert translate_obs("TESTE PEIDO 2", "en") == "TESTE PEIDO 2"
         assert translate_obs("TESTE PEIDO 2", "en") == "EN[TESTE PEIDO 2]"
+
+    def test_deepseek_primario_sem_chamar_google(self, monkeypatch):
+        # DeepSeek disponível → traduz e o Google nem é chamado
+        import app.utils.translate as T
+        T._CACHE.clear()
+        monkeypatch.setattr(T, "_translate_deepseek", lambda text, lang: f"DS[{text}]")
+        chamadas = []
+        fake = types.ModuleType("deep_translator")
+
+        class _NaoDeveChamar:
+            def __init__(self, *a, **k):
+                pass
+
+            def translate(self, text):
+                chamadas.append(text)
+                return f"EN[{text}]"
+
+        fake.GoogleTranslator = _NaoDeveChamar
+        monkeypatch.setitem(sys.modules, "deep_translator", fake)
+        from app.utils.translate import translate_obs
+        assert translate_obs("ABC", "en") == "DS[ABC]"
+        assert len(chamadas) == 0
 
 
 # ── 4. Integração: observações dentro do PDF da RFQ ────────────────────────
