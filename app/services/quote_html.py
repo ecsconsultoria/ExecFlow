@@ -200,6 +200,7 @@ def _i18n_dict(ctx: dict) -> dict:
         "Pague o valor exato do orçamento. A confirmação será feita pela empresa.",
         "Please pay the exact quotation amount. Confirmation will be done by the company.",
     )
+    pt["paypal_paid"], en["paypal_paid"] = "✓ Pagamento aprovado!", "✓ Payment approved!"
     pt["inc_title"], en["inc_title"] = "INCLUSO", "INCLUDED"
     pt["cancel_title"], en["cancel_title"] = "POLÍTICA DE CANCELAMENTO", "CANCELLATION POLICY"
     pt["obs_title"], en["obs_title"] = "OBSERVAÇÕES", "NOTES"
@@ -299,6 +300,8 @@ def build_context(quote: Quote) -> dict:
         "emission_pt": f"{created.day:02d}/{created.month:02d}/{created.year}" if created else "",
         "emission_en": f"{created.month:02d}/{created.day:02d}/{created.year}" if created else "",
         "paypal_url": url_for("public_quotes.paypal", number=quote.number, token=public_token(quote.id)),
+        # client id público (o SDK do PayPal exige expor no HTML; o segredo fica só no servidor)
+        "paypal_client_id": current_app.config.get("PAYPAL_CLIENT_ID", ""),
     }
     ctx["i18n"] = _i18n_dict(ctx)
     return ctx

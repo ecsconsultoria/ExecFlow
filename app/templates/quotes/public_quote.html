@@ -232,11 +232,16 @@
             <span data-i18n="pay_pix">PIX</span>
           </button>
           <span class="pay-sep">|</span>
+          {% if paypal_client_id %}
+          <div id="paypal-button-container" class="pay-item"></div>
+          {% else %}
           <a class="pay-item pay-link" href="{{ paypal_url }}" title="Pagar com PayPal" target="_blank" rel="noopener">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/><path d="M7 15h4"/></svg>
             <span data-i18n="pay_paypal">PayPal</span>
           </a>
+          {% endif %}
         </div>
+        <div id="paypal-msg" class="pix-status" style="display:none"></div>
         <div id="pix-box" class="pix-box" style="display:none">
           <img id="pix-qr" width="200" height="200" alt="QR Code PIX">
           <div class="pix-code-row">
@@ -304,6 +309,9 @@
     </footer>
   </main>
 
+  {% if paypal_client_id %}
+  <script src="https://www.paypal.com/sdk/js?client-id={{ paypal_client_id }}&currency=BRL&intent=capture&locale={{ 'pt_BR' if lang != 'en' else 'en_US' }}"></script>
+  {% endif %}
   <script>
     const I18N = {{ i18n | tojson }};
     function setLang(lang) {
@@ -390,6 +398,47 @@
       try { document.execCommand('copy'); done(); } catch (_) {}
       document.body.removeChild(ta);
     }
+
+    /* ── PayPal (SDK com popup) ── */
+    {% if paypal_client_id %}
+    function initPaypal() {
+      if (typeof paypal === 'undefined') return;
+      paypal.Buttons({
+        style: { layout: 'horizontal', label: 'paypal', color: 'gold', shape: 'rect', height: 30 },
+        createOrder: () => {
+          return fetch(window.location.pathname + '/paypal/create-order', { method: 'POST' })
+            .then(r => r.json())
+            .then(d => { if (!d.ok) throw new Error(d.erro || 'erro'); return d.order_id; });
+        },
+        onApprove: (data) => {
+          return fetch(window.location.pathname + '/paypal/capture', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order_id: data.orderID }),
+          }).then(r => r.json()).then(d => {
+            if (d.ok) {
+              const msg = document.getElementById('paypal-msg');
+              msg.textContent = I18N[curLang()].paypal_paid;
+              msg.style.display = 'block';
+              document.getElementById('paypal-button-container').style.display = 'none';
+            } else {
+              throw new Error(d.erro || 'erro');
+            }
+          });
+        },
+        onError: (err) => {
+          const msg = document.getElementById('paypal-msg');
+          msg.textContent = String(err || '');
+          msg.style.display = 'block';
+        },
+      }).render('#paypal-button-container');
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initPaypal);
+    } else {
+      initPaypal();
+    }
+    {% endif %}
   </script>
 </body>
 </html>
