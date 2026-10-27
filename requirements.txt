@@ -11,3 +11,5 @@ reportlab
 openpyxl
 requests
 deep-translator
+qrcode
+Pillow
