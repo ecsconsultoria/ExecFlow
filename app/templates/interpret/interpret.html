@@ -91,7 +91,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ texto }),
         });
-        const data = await resp.json();
+        const data = await resp.json().catch(() => { throw new Error('Servidor respondeu erro (HTTP ' + resp.status + '). Recarregue a página com Ctrl+F5 e tente de novo.'); });
         if (!data.ok) throw new Error(data.erro || 'Erro desconhecido');
         render(data.resultado);
       } catch (e) {
@@ -194,7 +194,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-      }).then(r => r.json()).then(d => {
+      }).then(r => r.json().catch(() => { throw new Error('Servidor respondeu erro (HTTP ' + r.status + '). Recarregue a página com Ctrl+F5 e tente de novo.'); })).then(d => {
         if (!d.ok) throw new Error(d.erro || 'Erro desconhecido');
         const out = document.getElementById('resultado');
         const linkBox =

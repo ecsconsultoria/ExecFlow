@@ -60,9 +60,14 @@ _CAT_MAP = None
 
 
 def _categories() -> dict:
+    """Mapa nome normalizado → id da categoria.
+
+    Guarda apenas os IDs (nunca os objetos ORM): instâncias ficam
+    desanexadas da sessão ao fim da requisição (DetachedInstanceError).
+    """
     global _CAT_MAP
     if _CAT_MAP is None:
-        _CAT_MAP = {_norm(c.name): c for c in VehicleCategory.query.all()}
+        _CAT_MAP = {_norm(c.name): c.id for c in VehicleCategory.query.all()}
     return _CAT_MAP
 
 
@@ -135,7 +140,7 @@ def criar_rfq():
         if extras:
             desc = (desc + " — " + " / ".join(extras)).strip(" —")
         cat_name = (it.get("categoria_veiculo") or "").strip()
-        cat = cats.get(_norm(cat_name)) if cat_name else None
+        cat_id = cats.get(_norm(cat_name)) if cat_name else None
         try:
             qty = int(it.get("quantidade") or 1) or 1
         except (TypeError, ValueError):
@@ -147,8 +152,8 @@ def criar_rfq():
         item = QuoteItem(
             quote_id=quote.id,
             description=desc or None,
-            vehicle_description=(cat_name if cat_name and not cat else None),
-            category_id=cat.id if cat else None,
+            vehicle_description=(cat_name if cat_name and not cat_id else None),
+            category_id=cat_id,
             driver_name=(it.get("motorista") or "").strip() or None,
             service_date=_parse_date(it.get("data")),
             service_time=_parse_time(it.get("hora")),
