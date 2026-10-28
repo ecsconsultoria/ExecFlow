@@ -136,6 +136,7 @@
           campo('Origem', 'i' + i + '_origem', it.origem) +
           campo('Destino', 'i' + i + '_destino', it.destino) +
           '</div>' +
+          campo('Preço unitário (R$)', 'i' + i + '_preco', it.preco_unitario) +
           campo('Quantidade', 'i' + i + '_qtde', it.quantidade, 'number') +
           '</div>';
       });
@@ -172,6 +173,7 @@
           passageiros: val('i' + i + '_pax'),
           origem: val('i' + i + '_origem'),
           destino: val('i' + i + '_destino'),
+          preco_unitario: val('i' + i + '_preco'),
           quantidade: val('i' + i + '_qtde'),
         });
       }

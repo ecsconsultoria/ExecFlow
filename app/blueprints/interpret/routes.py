@@ -9,7 +9,7 @@ import unicodedata
 from datetime import date as _date
 from datetime import time as _time
 
-from flask import current_app, jsonify, render_template, request, url_for
+from flask import current_app, jsonify, make_response, render_template, request, url_for
 
 from . import interpret_bp
 from ...extensions import csrf, db
@@ -20,11 +20,16 @@ from ...services.message_interpret import interpret_message
 from ...services.numbering_service import next_rfq
 from ...services.quote_html import public_token
 from ...utils.audit import log_activity
+from ...utils.helpers import parse_brl
 
 
 @interpret_bp.route("/interpretar")
 def page():
-    resp = render_template("interpret/interpret.html")
+    resp = make_response(render_template("interpret/interpret.html"))
+    # evita que o navegador sirva versão velha da tela (JS/HTML em cache)
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
     return resp
 
 
@@ -135,6 +140,10 @@ def criar_rfq():
             qty = int(it.get("quantidade") or 1) or 1
         except (TypeError, ValueError):
             qty = 1
+        # Preço: só entra se o operador anexou um valor (parse_brl tolera formatos)
+        unit = parse_brl(it.get("preco_unitario"))
+        if unit < 0:
+            unit = 0.0
         item = QuoteItem(
             quote_id=quote.id,
             description=desc or None,
@@ -144,8 +153,8 @@ def criar_rfq():
             service_date=_parse_date(it.get("data")),
             service_time=_parse_time(it.get("hora")),
             quantity=qty,
-            unit_price=0.0,
-            total_price=0.0,
+            unit_price=unit,
+            total_price=round(unit * qty, 2),
             sort_order=idx,
         )
         db.session.add(item)
@@ -161,6 +170,8 @@ def criar_rfq():
             included=True,
             sort_order=i,
         ))
+
+    quote.recalculate_total()
 
     log_activity("quote", quote.id, company.id, "Criado pela tela de interpretação", None)
     db.session.commit()

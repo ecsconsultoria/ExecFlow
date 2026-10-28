@@ -37,7 +37,8 @@ Responda SEMPRE com um único JSON, sem texto fora do JSON, com este formato:
       "origem": "..." | null,  // opcional
       "destino": "..." | null,  // opcional
       "passageiros": 0 | null,  // opcional
-      "quantidade": 0 | null
+      "quantidade": 0 | null,
+      "preco_unitario": 0 | null  // preço em R$ (número) SOMENTE se estiver explícito na mensagem
     }
   ],
   "observacoes": "informações que não cabem nos campos acima (bagagens, perguntas comerciais, condições)" | null,
@@ -46,7 +47,7 @@ Responda SEMPRE com um único JSON, sem texto fora do JSON, com este formato:
 
 REGRAS OBRIGATÓRIAS:
 1. NUNCA invente dados. Se a mensagem não informa, use null.
-2. NUNCA invente preços. Preço não é campo de extração.
+2. NUNCA invente preços. Extraia "preco_unitario" SOMENTE quando houver valor explícito na mensagem (ex.: "Valor: R$ 1.200,00", "R$ 850" — o operador costuma anexar o valor junto ao texto do cliente). Sem valor escrito, use null.
 3. Datas relativas (ex.: "amanhã") vão em "incompletude" com a explicação — não chute a data.
 4. Veículos citados em linguagem natural devem ser mapeados para a categoria ExecFlow mais próxima; se ambíguo, null e registre em "incompletude".
 5. "English-Speaking" ou "inglês" no motorista -> "Bilíngue"; "Portuguese" -> "Monolíngue".
