@@ -21,49 +21,61 @@
       background: #171307; border: 1px solid #4b4030; border-radius: 10px;
       color: #c8b184; font-size: 12px; padding: 10px 14px; margin: 10px 0 16px;
     }
-    textarea {
-      width: 100%; min-height: 180px; resize: vertical;
-      background: var(--panel); color: var(--text); border: 1px solid #51432d;
-      border-radius: 12px; padding: 14px; font-size: 14px; font-family: inherit;
+    textarea, input, select {
+      width: 100%; background: var(--panel); color: var(--text);
+      border: 1px solid #51432d; border-radius: 10px;
+      padding: 10px 12px; font-size: 14px; font-family: inherit;
     }
-    button {
+    textarea { min-height: 150px; resize: vertical; }
+    .btn {
       margin-top: 12px; padding: 12px 28px; border-radius: 10px; border: none;
       font-weight: 800; letter-spacing: .05em; cursor: pointer;
       background: linear-gradient(100deg, #f8d17c, #c08a32); color: #171107;
     }
-    button:disabled { opacity: .6; cursor: wait; }
+    .btn:disabled { opacity: .6; cursor: wait; }
     .resultado { margin-top: 22px; }
     .card {
       background: var(--panel); border: 1px solid #51432d; border-radius: 12px;
       padding: 14px 16px; margin: 10px 0;
     }
-    .card h2 { margin: 0 0 8px; font-size: 13px; letter-spacing: .12em; color: var(--gold); text-transform: uppercase; }
-    .linha { font-size: 14px; margin: 4px 0; }
+    .card h2 { margin: 0 0 10px; font-size: 13px; letter-spacing: .12em; color: var(--gold); text-transform: uppercase; }
+    .linha { font-size: 14px; margin: 6px 0; }
     .linha b { color: var(--gold-light); font-weight: 600; }
-    .vazio { color: #8a8680; font-style: italic; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th { text-align: left; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; padding: 4px 6px; border-bottom: 1px solid var(--line); }
-    td { padding: 6px; border-bottom: 1px dashed rgba(179,147,98,.14); vertical-align: top; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .campo { margin: 0 0 10px; }
+    .campo label { display: block; font-size: 11px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 4px; }
     .erro { background: #2a1210; border: 1px solid #7a2e28; color: #e8a9a2; border-radius: 10px; padding: 10px 14px; margin-top: 12px; font-size: 13px; }
     .pend { list-style: none; padding: 0; margin: 0; font-size: 13px; color: var(--muted); }
     .pend li { padding: 3px 0; }
     .pend li::before { content: "⚠ "; color: var(--gold); }
+    .item-box { border-top: 1px dashed rgba(179,147,98,.25); padding-top: 12px; margin-top: 12px; }
+    .link-box {
+      background: #171307; border: 1px solid #6b5431; border-radius: 12px;
+      padding: 16px; margin-top: 14px; text-align: center;
+    }
+    .link-box .url {
+      display: block; color: var(--gold-light); font-size: 13px; margin: 8px 0;
+      word-break: break-all;
+    }
+    .link-box a { color: var(--gold-light); }
   </style>
 </head>
 <body>
   <div class="wrap">
     <h1>Interpretar Mensagem</h1>
-    <div class="note">Fase de teste — cole a mensagem recebida no WhatsApp/e-mail e clique em Interpretar.
-    Nada é salvo: a tela apenas mostra os campos extraídos. (Sem token nesta fase.)</div>
+    <div class="note">Cole a mensagem recebida no WhatsApp/e-mail → <b>Interpretar</b> → ajuste os campos →
+    <b>Criar RFQ</b> (pendente, sem preço, empresa padrão). A tela devolve o link público do orçamento pronto para enviar ao cliente.</div>
 
     <textarea id="texto" placeholder="Cole aqui a mensagem do cliente..."></textarea>
-    <button id="btn" onclick="interpretar()">✨ Interpretar</button>
+    <button class="btn" id="btn" onclick="interpretar()">✨ Interpretar</button>
     <div id="erro" class="erro" style="display:none"></div>
 
     <div id="resultado" class="resultado" style="display:none"></div>
   </div>
 
   <script>
+    let itemCount = 0;
+
     async function interpretar() {
       const texto = document.getElementById('texto').value.trim();
       const erro = document.getElementById('erro');
@@ -90,44 +102,127 @@
       }
     }
 
+    function esc(s) {
+      return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function campo(label, id, valor, tipo) {
+      const v = esc(valor ?? '');
+      return '<div class="campo"><label>' + label + '</label><input id="' + id + '" value="' + v + '"' +
+        (tipo === 'number' ? ' type="number"' : '') + '></div>';
+    }
+
     function render(r) {
       const out = document.getElementById('resultado');
-      const vazio = (v) => v ? escapeHtml(String(v)) : '<span class="vazio">—</span>';
       const itens = r.itens || [];
-      // Colunas opcionais (origem, destino, passageiros...): só aparecem se algum item tiver valor
-      const colunas = [
-        ['descricao', 'Serviço'], ['categoria_veiculo', 'Categoria'], ['motorista', 'Motorista'],
-        ['data', 'Data'], ['hora', 'Hora'], ['origem', 'Origem'], ['destino', 'Destino'],
-        ['passageiros', 'Pax'], ['quantidade', 'Qtde'],
-      ].filter(([campo]) => itens.some(it => it[campo] !== null && it[campo] !== undefined && it[campo] !== ''));
-      let head = '';
-      for (const [, rotulo] of colunas) head += '<th>' + rotulo + '</th>';
-      let linhas = '';
-      for (const it of itens) {
-        linhas += '<tr>';
-        for (const [campo] of colunas) linhas += '<td>' + vazio(it[campo]) + '</td>';
-        linhas += '</tr>';
-      }
+      itemCount = itens.length;
+
       let pend = '';
-      for (const p of (r.incompletude || [])) pend += '<li>' + escapeHtml(p) + '</li>';
+      for (const p of (r.incompletude || [])) pend += '<li>' + esc(p) + '</li>';
+
+      let itensHtml = '';
+      itens.forEach((it, i) => {
+        itensHtml +=
+          '<div class="item-box"><b class="linha" style="color:var(--gold)">ITEM ' + (i + 1) + '</b>' +
+          campo('Serviço (descrição)', 'i' + i + '_descricao', it.descricao) +
+          campo('Categoria do veículo', 'i' + i + '_categoria', it.categoria_veiculo) +
+          '<div class="grid">' +
+          campo('Data (AAAA-MM-DD)', 'i' + i + '_data', it.data) +
+          campo('Hora (HH:MM)', 'i' + i + '_hora', it.hora) +
+          '</div><div class="grid">' +
+          campo('Motorista', 'i' + i + '_motorista', it.motorista) +
+          campo('Passageiros', 'i' + i + '_pax', it.passageiros, 'number') +
+          '</div><div class="grid">' +
+          campo('Origem', 'i' + i + '_origem', it.origem) +
+          campo('Destino', 'i' + i + '_destino', it.destino) +
+          '</div>' +
+          campo('Quantidade', 'i' + i + '_qtde', it.quantidade, 'number') +
+          '</div>';
+      });
 
       out.innerHTML =
-        '<div class="card"><h2>Tipo de mensagem</h2><div class="linha">' + vazio(r.tipo_mensagem) + '</div></div>' +
-        '<div class="card"><h2>Cliente</h2>' +
-          '<div class="linha"><b>Cliente:</b> ' + vazio(r.cliente_nome) + '</div>' +
-          '<div class="linha"><b>Contato:</b> ' + vazio(r.contato_nome) + '</div>' +
-          '<div class="linha"><b>E-mail:</b> ' + vazio(r.email) + '</div>' +
-          '<div class="linha"><b>Telefone:</b> ' + vazio(r.telefone) + '</div>' +
-          '<div class="linha"><b>Idioma:</b> ' + vazio(r.idioma) + '</div></div>' +
-        '<div class="card"><h2>Itens</h2><table><thead><tr>' + head +
-          '</tr></thead><tbody>' + linhas + '</tbody></table></div>' +
-        '<div class="card"><h2>Observações</h2><div class="linha">' + vazio(r.observacoes) + '</div></div>' +
-        '<div class="card"><h2>Para completar (incompletude)</h2><ul class="pend">' + (pend || '<li class="vazio">nada pendente</li>') + '</ul></div>';
+        '<div class="card"><h2>Tipo de mensagem</h2><div class="linha">' + esc(r.tipo_mensagem) + '</div></div>' +
+        '<div class="card"><h2>Para completar (atenção)</h2><ul class="pend">' + (pend || '<li class="vazio">nada pendente</li>') + '</ul></div>' +
+        '<div class="card"><h2>Cliente</h2><div class="grid">' +
+        campo('Nome do cliente', 'f_nome', r.cliente_nome) +
+        campo('Contato', 'f_contato', r.contato_nome) +
+        campo('E-mail', 'f_email', r.email) +
+        campo('Telefone', 'f_telefone', r.telefone) +
+        '</div><div class="campo"><label>Idioma</label><select id="f_idioma">' +
+        '<option value="pt"' + (r.idioma !== 'en' ? ' selected' : '') + '>Português</option>' +
+        '<option value="en"' + (r.idioma === 'en' ? ' selected' : '') + '>Inglês</option>' +
+        '</select></div></div>' +
+        '<div class="card"><h2>Itens</h2>' + itensHtml + '</div>' +
+        '<div class="card"><h2>Observações</h2><textarea id="f_obs">' + esc(r.observacoes) + '</textarea></div>' +
+        '<button class="btn" id="btn-criar" onclick="criarRfq()">🚀 Criar RFQ e gerar link</button>';
       out.style.display = 'block';
     }
 
-    function escapeHtml(s) {
-      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    function val(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
+
+    function criarRfq() {
+      const itens = [];
+      for (let i = 0; i < itemCount; i++) {
+        itens.push({
+          descricao: val('i' + i + '_descricao'),
+          categoria_veiculo: val('i' + i + '_categoria'),
+          data: val('i' + i + '_data'),
+          hora: val('i' + i + '_hora'),
+          motorista: val('i' + i + '_motorista'),
+          passageiros: val('i' + i + '_pax'),
+          origem: val('i' + i + '_origem'),
+          destino: val('i' + i + '_destino'),
+          quantidade: val('i' + i + '_qtde'),
+        });
+      }
+      const payload = {
+        cliente_nome: val('f_nome'),
+        contato_nome: val('f_contato'),
+        email: val('f_email'),
+        telefone: val('f_telefone'),
+        idioma: val('f_idioma'),
+        observacoes: val('f_obs'),
+        itens,
+      };
+      const btn = document.getElementById('btn-criar');
+      const erro = document.getElementById('erro');
+      erro.style.display = 'none';
+      btn.disabled = true; btn.textContent = 'Criando...';
+      fetch('/r/criar-rfq', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).then(r => r.json()).then(d => {
+        if (!d.ok) throw new Error(d.erro || 'Erro desconhecido');
+        const out = document.getElementById('resultado');
+        const linkBox =
+          '<div class="link-box"><b>RFQ ' + esc(d.number) + ' criado!</b>' +
+          '<span class="url" id="link-url">' + esc(d.url) + '</span>' +
+          '<button class="btn" onclick="copiarLink()">📋 Copiar link</button> ' +
+          '<a class="btn" style="display:inline-block;text-decoration:none;color:#171107" href="' + esc(d.url) + '" target="_blank" rel="noopener">Abrir orçamento</a></div>';
+        out.insertAdjacentHTML('beforeend', linkBox);
+        btn.textContent = '✅ RFQ criado';
+      }).catch(e => {
+        erro.textContent = e.message;
+        erro.style.display = 'block';
+        btn.disabled = false; btn.textContent = '🚀 Criar RFQ e gerar link';
+      });
+    }
+
+    function copiarLink() {
+      const el = document.getElementById('link-url');
+      if (!el) return;
+      const done = () => { /* feedback simples */ };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(el.textContent).then(done).catch(() => fallback());
+      } else fallback();
+      function fallback() {
+        const ta = document.createElement('textarea');
+        ta.value = el.textContent; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); } catch (_) {}
+        document.body.removeChild(ta);
+      }
     }
   </script>
 </body>
