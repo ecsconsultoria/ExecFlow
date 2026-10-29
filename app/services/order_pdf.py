@@ -54,6 +54,8 @@ _T: dict[str, dict[str, str]] = {
     "delivery":         {"pt": "DATA ENTREGA",              "en": "DELIVERY DATE"},
     "subtotal":         {"pt": "SUBTOTAL",                 "en": "SUBTOTAL"},
     "discount":         {"pt": "DESCONTO",                 "en": "DISCOUNT"},
+    "final_price":      {"pt": "Preço Final",              "en": "Final Price"},
+    "with_discount":    {"pt": "C/ Desconto",              "en": "With Discount"},
     "freight":          {"pt": "FRETE",                    "en": "FREIGHT"},
     "other_costs":      {"pt": "CUSTOS EXTRAS",            "en": "EXTRA COSTS"},
     "final_total":      {"pt": "TOTAL FINAL",              "en": "TOTAL AMOUNT"},
@@ -439,16 +441,35 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
     # As celulas vazias da linha do total nao devem existir: junta as 3 primeiras
     _adj_style_cmds: list = [("SPAN", (0, item_data_end), (2, item_data_end))]
     if disc_amt:
-        # Discount row
+        # Discount row (valor em USD abaixo quando há cotação)
+        disc_cell = f'<font color="#c62828">- {_fmt_brl(disc_amt)}</font>'
+        if usd_rate and usd_rate > 0:
+            disc_cell += (f'<br/><font size="6" color="#c62828">'
+                          f'- USD {_fmt_usd_raw(round(disc_amt / usd_rate, 2))}</font>')
         r = len(items_rows)
         items_rows.append([
             Paragraph(f"<i>{disc_row_lbl}:</i>", cell_body_r),
             "", "", "",
-            Paragraph(f'<font color="#c62828">- {_fmt_brl(disc_amt)}</font>', cell_body_r),
+            Paragraph(disc_cell, cell_body_r),
         ])
         _adj_style_cmds += [
             ("SPAN",          (0, r), (3, r)),
             ("BACKGROUND",    (0, r), (-1, r), colors.HexColor("#fff8e1")),
+            ("ALIGN",         (0, r), (-1, r), "RIGHT"),
+            ("TOPPADDING",    (0, r), (-1, r), 4),
+            ("BOTTOMPADDING", (0, r), (-1, r), 4),
+        ]
+        # Preço Final (C/ Desconto) — logo após a linha do desconto
+        r = len(items_rows)
+        items_rows.append([
+            Paragraph(f"<b>{_t('final_price', lang)}</b>"
+                      f"<br/><font size=7>{_t('with_discount', lang)}</font>", cell_body_r),
+            "", "", "",
+            _price_brl_usd(round(grand_total - disc_amt, 2), cell_bold_r, usd_rate),
+        ])
+        _adj_style_cmds += [
+            ("SPAN",          (0, r), (3, r)),
+            ("BACKGROUND",    (0, r), (-1, r), colors.HexColor("#fdf3d8")),
             ("ALIGN",         (0, r), (-1, r), "RIGHT"),
             ("TOPPADDING",    (0, r), (-1, r), 4),
             ("BOTTOMPADDING", (0, r), (-1, r), 4),
@@ -540,19 +561,35 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
             Paragraph(status_label, st_p),
         ]
 
+    def _pmt_method_lbl(pmt):
+        # Forma escolhida no Gerar Contas para ESTA parcela; fallback na do SO
+        raw = (getattr(pmt, "payment_method", "") or order.payment_method or "").strip()
+        key = raw.upper()
+        lbl = _t(f"pay_{key}", lang)
+        if lbl == f"pay_{key}":
+            lbl = raw or "–"
+        return lbl
+
+    def _pmt_terms_lbl(pmt):
+        # Parcelamento escolhido no Gerar Contas para ESTA parcela; fallback no do SO
+        raw = (getattr(pmt, "payment_terms", "") or order.payment_terms or "").strip()
+        if not raw:
+            return "–"
+        return _translate_payment_terms(raw, lang) or raw
+
     # primeira linha de dados: faturamento/forma/prazo + a PRIMEIRA parcela
     primeira = _pmt_cells(sorted_pmts[0]) if sorted_pmts else [Paragraph("", cell_body_c)] * 4
     pay_rows.append([
         Paragraph(billing_lbl,            cell_body_c),
-        Paragraph(pay_method_lbl or "–", cell_body_c),
-        Paragraph(pay_terms_lbl,          cell_body_c),
+        Paragraph(_pmt_method_lbl(sorted_pmts[0]) if sorted_pmts else "–", cell_body_c),
+        Paragraph(_pmt_terms_lbl(sorted_pmts[0]) if sorted_pmts else "–", cell_body_c),
         *primeira,
     ])
     for pmt in sorted_pmts[1:]:
         pay_rows.append([
             Paragraph("", cell_body_c),
-            Paragraph("", cell_body_c),
-            Paragraph("", cell_body_c),
+            Paragraph(_pmt_method_lbl(pmt), cell_body_c),
+            Paragraph(_pmt_terms_lbl(pmt), cell_body_c),
             *_pmt_cells(pmt),
         ])
 
@@ -580,13 +617,13 @@ def generate_order_pdf(order, lang: str = "pt") -> io.BytesIO:
         # sombreados um pouco mais claros para todos os status
         st_bg = colors.HexColor("#388E3C") if pmt.is_paid else colors.HexColor("#F57C00")
         pay_style.add("BACKGROUND", (6, row_idx), (6, row_idx), st_bg)
-    # Com mais de uma parcela, Faturamento/Forma de Pagamento/Prazo Pagamento
-    # fazem merge vertical entre as linhas (uma unica celula alta)
+    # Com mais de uma parcela, o Faturamento faz merge vertical entre as
+    # linhas; Forma de Pagamento e Prazo são POR PARCELA (escolhidos no
+    # Gerar Contas de cada uma)
     if len(sorted_pmts) > 1:
         last_row = len(pay_rows) - 1
-        for col in (0, 1, 2):
-            pay_style.add("SPAN", (col, 1), (col, last_row))
-        pay_style.add("VALIGN", (0, 1), (2, last_row), "MIDDLE")
+        pay_style.add("SPAN", (0, 1), (0, last_row))
+        pay_style.add("VALIGN", (0, 1), (0, last_row), "MIDDLE")
     pay_tbl.setStyle(pay_style)
     story.append(pay_tbl)
     story.append(Spacer(1, 4 * mm))

@@ -363,6 +363,8 @@ def generate_payments(order: Order, custom_total: float = None) -> list:
             due_date       = today,
             amount         = amount_to_add,
             paid_amount    = 0,
+            payment_method = (order.payment_method or "").strip() or None,
+            payment_terms  = (order.payment_terms or "").strip() or None,
         )
         db.session.add(pmt)
         db.session.flush()
@@ -413,6 +415,8 @@ def generate_payments(order: Order, custom_total: float = None) -> list:
             due_date       = due,
             amount         = amount,
             paid_amount    = 0,
+            payment_method = (order.payment_method or "").strip() or None,
+            payment_terms  = (order.payment_terms or "").strip() or None,
         )
         db.session.add(pmt)
         created.append(pmt)

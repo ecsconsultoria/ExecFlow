@@ -727,8 +727,9 @@
         </div>
       </div>
 
-      {# Grupo direito: Desconto + Cotação USD + Total Final #}
-      <div class="flex flex-wrap items-end justify-end gap-4">
+      {# Grupo direito: Desconto + Cotação USD + Total Final (ml-auto garante
+         a direita mesmo quando quebra de linha em telas estreitas) #}
+      <div class="flex flex-wrap items-end justify-end gap-4 ml-auto">
       <div class="min-w-[155px]">
         <label class="lbl">Desconto</label>
         {% if locked %}

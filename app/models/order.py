@@ -241,6 +241,14 @@ class OrderPayment(db.Model, TimestampMixin):
     amount         = db.Column(db.Float,    default=0)
     notes          = db.Column(db.Text)
 
+    # Forma de pagamento escolhida no "Gerar Contas" para ESTA parcela
+    # (o PDF imprime a forma por linha, não a do topo do SO)
+    payment_method = db.Column(db.String(50), nullable=True)
+
+    # Parcelamento escolhido no "Gerar Contas" para ESTA parcela
+    # (o PDF imprime o prazo por linha, não o último selecionado)
+    payment_terms = db.Column(db.String(100), nullable=True)
+
     # Dados de baixa
     paid_at     = db.Column(db.DateTime, nullable=True)
     paid_amount = db.Column(db.Float,    default=0)
