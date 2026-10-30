@@ -119,6 +119,12 @@ def build_agenda_context(order: Order) -> dict:
             if not client_phone and quote.client:
                 client_phone = quote.client.whatsapp or quote.client.phone or ""
     items = [it for it in sorted(order.items, key=lambda x: x.sort_order or 0)]
+    # Observações SOMENTE dos dados operacionais (op_notes por item), nunca do SO original
+    op_notes_all = []
+    for it in items:
+        n = (it.op_notes or "").strip()
+        if n and n not in op_notes_all:
+            op_notes_all.append(n)
     inclusions = []
     if order.quote_id:
         from ..models.quote import Quote
@@ -134,7 +140,7 @@ def build_agenda_context(order: Order) -> dict:
         "client_phone_html": _phone_html(client_phone) if client_phone else "",
         "items": [_item_block(order, it) for it in items],
         "inclusions": inclusions,
-        "obs": order.obs or "",
+        "obs": "\n".join(op_notes_all),
         "lang": "pt",
     }
     ctx["i18n"] = _i18n_dict(ctx)
