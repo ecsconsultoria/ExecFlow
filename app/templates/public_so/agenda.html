@@ -31,7 +31,7 @@
     .b-white { color: var(--text); }
     .b-gold { background: linear-gradient(95deg, var(--gold-light), var(--gold) 70%); -webkit-background-clip: text; background-clip: text; color: transparent; }
     .hero .title { margin: 0; color: #fff; font-weight: 800; font-size: 17px; letter-spacing: .18em; }
-    .hero .ref { margin: 6px 0 0; color: #fff; font-size: 13px; letter-spacing: .1em; }
+    .ref-content { margin: 0 0 12px; color: #fff; font-size: 13px; letter-spacing: .1em; text-align: center; }
     .content { padding: 18px; }
     .panel {
       margin: 10px 0; padding: 14px 18px; border: 1px solid #6b5431;
@@ -64,12 +64,12 @@
         <div class="brand-line"></div>
         <div class="brand-sub">Shuttle Service</div>
       </div>
-      <p class="ref"><span data-i18n="ref">{{ 'PEDIDO DE VENDA' if lang != 'en' else 'SERVICE ORDER' }}</span>
-        {% if so_url %}<a href="{{ so_url }}" target="_blank" rel="noopener" style="color:var(--gold-light);text-decoration:underline">{{ number }}</a>{% else %}{{ number }}{% endif %}</p>
       <p class="title" data-i18n="title">{{ 'DETALHES DA AGENDA' if lang != 'en' else 'SCHEDULE DETAILS' }}</p>
     </header>
 
     <section class="content">
+      <p class="ref-content"><span data-i18n="ref">{{ 'PEDIDO DE VENDA' if lang != 'en' else 'SERVICE ORDER' }}</span>
+        {% if so_url %}<a href="{{ so_url }}" target="_blank" rel="noopener" style="color:var(--gold-light);text-decoration:underline">{{ number }}</a>{% else %}{{ number }}{% endif %}</p>
       {% for it in items %}
       <section class="panel">
         <div class="panel-title" style="text-align:left"><span data-i18n="item_lbl">{{ 'ITEM' if lang != 'en' else 'ITEM' }}</span> {{ loop.index }}</div>
