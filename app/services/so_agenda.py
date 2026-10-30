@@ -75,7 +75,8 @@ def _item_block(order: Order, it) -> dict:
     model = it.op_vehicle_model or (it.vehicle_description or "")
     driver = it.op_driver_name or (it.driver_name or "")
     driver_phone = it.op_driver_phone or ""
-    desc = it.description or ""
+    # Serviço dos dados operacionais primeiro; fallback no serviço original do item
+    desc = it.op_service or it.description or ""
     service_pt = _translate_service(desc, "pt")
     service_en = _translate_service(desc, "en")
     return {
