@@ -1348,8 +1348,8 @@
                     bg-slate-50 dark:bg-slate-700 rounded-lg" x-text="opItemService"></p>
         </div>
 
-        {# Linha 1: Data Pickup | Hora | Passageiro | Fone Passageiro #}
-        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        {# Linha 1: Data Pickup | Hora | Passageiro | Fone | Nº Voo (sempre na mesma linha) #}
+        <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px">
           <div>
             <label class="lbl">Data Pickup</label>
             <input type="date" name="op_pickup_date" class="fi text-sm" x-model="opPickupDate">
@@ -1363,13 +1363,17 @@
             <input type="text" name="op_passenger_name" class="fi text-sm" x-model="opPassengerName">
           </div>
           <div>
-            <label class="lbl">Fone Passageiro</label>
+            <label class="lbl">Fone</label>
             <input type="text" name="op_passenger_phone" class="fi text-sm" x-model="opPassengerPhone">
+          </div>
+          <div>
+            <label class="lbl">Nº Voo</label>
+            <input type="text" name="op_flight_number" class="fi text-sm" x-model="opFlightNumber">
           </div>
         </div>
 
-        {# Linha 2: Veículo | Placa | Nº Voo | Embarque | Desembarque #}
-        <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">
+        {# Linha 2: Veículo | Placa | Embarque | Desembarque #}
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
           <div>
             <label class="lbl">Veículo</label>
             <input type="text" name="op_vehicle_model" class="fi text-sm" x-model="opVehicleModel">
@@ -1379,15 +1383,11 @@
             <input type="text" name="op_vehicle_plate" class="fi text-sm" x-model="opVehiclePlate">
           </div>
           <div>
-            <label class="lbl">Nº Voo</label>
-            <input type="text" name="op_flight_number" class="fi text-sm" x-model="opFlightNumber">
-          </div>
-          <div>
-            <label class="lbl">Local de Embarque</label>
+            <label class="lbl">Embarque</label>
             <input type="text" name="op_pickup_location" class="fi text-sm" x-model="opPickupLocation">
           </div>
           <div>
-            <label class="lbl">Local de Desembarque</label>
+            <label class="lbl">Desembarque</label>
             <input type="text" name="op_dropoff_location" class="fi text-sm" x-model="opDropoffLocation">
           </div>
         </div>
