@@ -137,6 +137,9 @@ def build_agenda_context(order: Order) -> dict:
         "so_url": _so_url(order),
         "ref_pt": "PEDIDO DE VENDA",
         "ref_en": "SERVICE ORDER",
+        # Telefone de emergência exibido no rodapé (somente agenda do SO)
+        "emergency_phone": "+55 11 98917-9312",
+        "emergency_wa": "https://wa.me/5511989179312",
         "client": client_name,
         "client_phone": client_phone,
         "client_phone_html": _phone_html(client_phone) if client_phone else "",
@@ -166,6 +169,7 @@ def _i18n_dict(ctx: dict) -> dict:
     pt["service_lbl"], en["service_lbl"] = "Serviço", "Service"
     pt["vehicle_lbl"], en["vehicle_lbl"] = "Veículo", "Vehicle"
     pt["note_lbl"], en["note_lbl"] = "Notas", "Notes"
+    pt["emergency"], en["emergency"] = "Emergência", "Emergency"
     pt["dt_lbl"], en["dt_lbl"] = "Data/Hora", "Date/Time"
     pt["driver_lbl"], en["driver_lbl"] = "Motorista", "Driver"
     pt["pickup_lbl"], en["pickup_lbl"] = "Embarque", "Pickup"
