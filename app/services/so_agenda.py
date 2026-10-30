@@ -138,6 +138,8 @@ def build_agenda_context(order: Order) -> dict:
         # Telefone de emergência exibido no rodapé (somente agenda do SO)
         "emergency_phone": "+55 11 98917-9312",
         "emergency_wa": "https://wa.me/5511989179312",
+        # SO: placa em linha separada (PO usa inline)
+        "plate_inline": False,
         "client": client_name,
         "client_phone": client_phone,
         "client_phone_html": _phone_html(client_phone) if client_phone else "",

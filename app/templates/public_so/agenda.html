@@ -80,9 +80,9 @@
         <div class="row"><span class="lbl" data-i18n="service_lbl">{{ 'Serviço' if lang != 'en' else 'Service' }}</span><span class="val svc" data-i18n-html="it{{ loop.index0 }}_svc">{{ it.service_en if lang == 'en' else it.service_pt }}</span></div>
         {% endif %}
         {% if it.model %}
-        <div class="row"><span class="lbl" data-i18n="vehicle_lbl">{{ 'Veículo' if lang != 'en' else 'Vehicle' }}</span><span class="val">{{ it.model }}</span></div>
+        <div class="row"><span class="lbl" data-i18n="vehicle_lbl">{{ 'Veículo' if lang != 'en' else 'Vehicle' }}</span><span class="val">{{ it.model }}{% if plate_inline and it.plate %} · <span class="mini-lbl" data-i18n="plate_lbl">{{ 'Placa' if lang != 'en' else 'License Plate' }}</span> {{ it.plate }}{% endif %}</span></div>
         {% endif %}
-        {% if it.plate %}
+        {% if it.plate and not plate_inline %}
         <div class="row"><span class="lbl" data-i18n="plate_lbl">{{ 'Placa' if lang != 'en' else 'License Plate' }}</span><span class="val">{{ it.plate }}</span></div>
         {% endif %}
         {% if it.driver %}

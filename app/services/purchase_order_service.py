@@ -810,6 +810,8 @@ def update_item_operational(item: POItem, data: dict, apply_to_all: bool = False
         "op_dropoff_location": data.get("op_dropoff_location", "") or "",
         "op_passenger_name": data.get("op_passenger_name", "") or "",
         "op_passenger_phone": data.get("op_passenger_phone", "") or "",
+        "op_vehicle_model": data.get("op_vehicle_model", "") or "",
+        "op_vehicle_plate": data.get("op_vehicle_plate", "") or "",
         "op_flight_number": data.get("op_flight_number", "") or "",
         "op_pax_count": pax_count,
         "op_notes": data.get("op_notes", "") or "",

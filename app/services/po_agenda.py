@@ -75,6 +75,8 @@ def build_agenda_context(po: PurchaseOrder) -> dict:
         "so_url": url_for("purchase_orders.detail", po_id=po.id, _external=True),
         "ref_pt": "PEDIDO DE COMPRA",
         "ref_en": "PURCHASE ORDER",
+        # PO: placa exibida AO LADO do veículo (SO: linha separada)
+        "plate_inline": True,
         "items": [_item_block(po, it) for it in items],
         "inclusions": [],
         "obs": "\n".join(op_notes_all),

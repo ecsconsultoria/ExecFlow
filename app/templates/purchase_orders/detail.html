@@ -391,8 +391,9 @@
     this.opDropoffLocation = d.opDropoffLocation || '';
     this.opPassengerName   = d.opPassengerName || '';
     this.opPassengerPhone  = d.opPassengerPhone || '';
+    this.opVehicleModel    = d.opVehicleModel || '';
+    this.opVehiclePlate    = d.opVehiclePlate || '';
     this.opFlightNumber    = d.opFlightNumber || '';
-    this.opPaxCount        = d.opPaxCount || '';
     this.opNotes           = d.opNotes || '';
     this.placaReceptivo    = d.placaReceptivo === '1';
     this.placaReceptivoTexto = d.placaReceptivoTexto || '';
@@ -619,8 +620,9 @@
                     data-op-dropoff-location="{{ (item.op_dropoff_location or '')|e }}"
                     data-op-passenger-name="{{ (item.op_passenger_name or '')|e }}"
                     data-op-passenger-phone="{{ (item.op_passenger_phone or '')|e }}"
+                    data-op-vehicle-model="{{ (item.op_vehicle_model or (po.vehicle_model if po else '') or '')|e }}"
+                    data-op-vehicle-plate="{{ (item.op_vehicle_plate or (po.vehicle_plate if po else '') or '')|e }}"
                     data-op-flight-number="{{ (item.op_flight_number or '')|e }}"
-                    data-op-pax-count="{{ item.op_pax_count or '' }}"
                     data-op-notes="{{ (item.op_notes or '')|e }}"
                     data-placa-receptivo="{{ '1' if item.placa_receptivo else '0' }}"
                     data-placa-receptivo-texto="{{ (item.placa_receptivo_texto or '')|e }}"
@@ -1366,16 +1368,19 @@
           </div>
         </div>
 
-        {# Linha 2: Nº Voo | PAX | Embarque | Desembarque #}
-        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        {# Linha 2: Veículo | Placa | Nº Voo | Embarque | Desembarque #}
+        <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">
+          <div>
+            <label class="lbl">Veículo</label>
+            <input type="text" name="op_vehicle_model" class="fi text-sm" x-model="opVehicleModel">
+          </div>
+          <div>
+            <label class="lbl">Placa</label>
+            <input type="text" name="op_vehicle_plate" class="fi text-sm" x-model="opVehiclePlate">
+          </div>
           <div>
             <label class="lbl">Nº Voo</label>
             <input type="text" name="op_flight_number" class="fi text-sm" x-model="opFlightNumber">
-          </div>
-          <div>
-            <label class="lbl">PAX</label>
-            <input type="number" name="op_pax_count" min="1" step="1"
-                   class="fi text-sm text-right font-mono" x-model="opPaxCount">
           </div>
           <div>
             <label class="lbl">Local de Embarque</label>
