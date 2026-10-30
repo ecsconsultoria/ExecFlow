@@ -780,7 +780,6 @@ def update_item_operational(item: OrderItem, data: dict, apply_to_all: bool = Fa
         "op_driver_phone": data.get("op_driver_phone", "") or "",
         "op_vehicle_model": data.get("op_vehicle_model", "") or "",
         "op_vehicle_plate": data.get("op_vehicle_plate", "") or "",
-        "op_pickup_datetime": pickup_dt,
         "op_pickup_location": data.get("op_pickup_location", "") or "",
         "op_dropoff_location": data.get("op_dropoff_location", "") or "",
         "op_passenger_name": data.get("op_passenger_name", "") or "",
@@ -796,17 +795,19 @@ def update_item_operational(item: OrderItem, data: dict, apply_to_all: bool = Fa
         for field, value in base_payload.items():
             setattr(target, field, value)
 
+    # Data/hora do pickup: aplica SOMENTE no item atual — o botão
+    # "Aplicar para todos" não substitui data/hora dos demais itens.
+    item.op_pickup_datetime = pickup_dt
     if "op_pickup_date" in data or "op_pickup_time" in data:
-        # Pickup alterado: replica data/hora no servico do item e nos itens
+        # Pickup alterado: replica data/hora no serviço do item e nos itens
         # espelhados das POs ativas (bidirecional SO<->PO).
-        for target in targets:
-            if pickup_dt:
-                target.service_date = pickup_dt.date()
-                target.service_time = pickup_dt.time()
-            elif "op_pickup_date" in data:
-                target.service_date = None
-                target.service_time = None
-            _sync_po_items_from_order_item(target)
+        if pickup_dt:
+            item.service_date = pickup_dt.date()
+            item.service_time = pickup_dt.time()
+        elif "op_pickup_date" in data:
+            item.service_date = None
+            item.service_time = None
+        _sync_po_items_from_order_item(item)
 
     db.session.commit()
 

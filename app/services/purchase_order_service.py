@@ -806,7 +806,6 @@ def update_item_operational(item: POItem, data: dict, apply_to_all: bool = False
         pax_count = None
 
     base_payload = {
-        "op_pickup_datetime": pickup_dt,
         "op_pickup_location": data.get("op_pickup_location", "") or "",
         "op_dropoff_location": data.get("op_dropoff_location", "") or "",
         "op_passenger_name": data.get("op_passenger_name", "") or "",
@@ -825,16 +824,18 @@ def update_item_operational(item: POItem, data: dict, apply_to_all: bool = False
         for field, value in base_payload.items():
             setattr(target, field, value)
 
+    # Data/hora do pickup: aplica SOMENTE no item atual — o botão
+    # "Aplicar para todos" não substitui data/hora dos demais itens.
+    item.op_pickup_datetime = pickup_dt
     if "op_pickup_date" in data or "op_pickup_time" in data:
-        # Pickup alterado: replica data/hora no servico do item e no item
+        # Pickup alterado: replica data/hora no serviço do item e no item
         # espelhado da SO de origem (bidirecional PO<->SO).
-        for target in targets:
-            if pickup_dt:
-                target.service_date = pickup_dt.date()
-                target.service_time = pickup_dt.time()
-            elif "op_pickup_date" in data:
-                target.service_date = None
-                target.service_time = None
-            _sync_order_item_from_po_item(target)
+        if pickup_dt:
+            item.service_date = pickup_dt.date()
+            item.service_time = pickup_dt.time()
+        elif "op_pickup_date" in data:
+            item.service_date = None
+            item.service_time = None
+        _sync_order_item_from_po_item(item)
 
     db.session.flush()
