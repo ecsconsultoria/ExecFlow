@@ -219,6 +219,8 @@ class OrderItem(db.Model, TimestampMixin):
     op_passenger_phone  = db.Column(db.String(50))
     op_flight_number    = db.Column(db.String(50))
     op_notes            = db.Column(db.String(500))
+    # Serviço editável nos dados operacionais (não altera o serviço original do item)
+    op_service          = db.Column(db.String(500))
     # Conclusão POR ITEM na agenda (despacho) — alimenta a regra de conclusão do pedido
     op_completed_at     = db.Column(db.DateTime, nullable=True)
 

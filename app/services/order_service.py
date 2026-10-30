@@ -787,6 +787,8 @@ def update_item_operational(item: OrderItem, data: dict, apply_to_all: bool = Fa
         "op_passenger_phone": data.get("op_passenger_phone", "") or "",
         "op_flight_number": data.get("op_flight_number", "") or "",
         "op_notes": data.get("op_notes", "") or "",
+        # Serviço dos dados operacionais — NÃO toca o serviço original do item
+        "op_service": data.get("op_service", "") or "",
     }
 
     targets = item.order.items if apply_to_all else [item]
