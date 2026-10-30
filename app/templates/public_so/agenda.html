@@ -68,7 +68,7 @@
     </header>
 
     <section class="content">
-      <p class="ref-content"><span data-i18n="ref">{{ 'PEDIDO DE VENDA' if lang != 'en' else 'SERVICE ORDER' }}</span>
+      <p class="ref-content"><span data-i18n="ref">{{ ref_en if lang == 'en' else ref_pt }}</span>
         {% if so_url %}<a href="{{ so_url }}" target="_blank" rel="noopener" style="color:var(--gold-light);text-decoration:underline">{{ number }}</a>{% else %}{{ number }}{% endif %}</p>
       {% for it in items %}
       <section class="panel">

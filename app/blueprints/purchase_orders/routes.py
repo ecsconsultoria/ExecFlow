@@ -423,6 +423,11 @@ def detail(po_id):
     suppliers, services, categories, suppliers_json, services_json = _build_context(cid)
     audit_logs = AuditLog.query.filter_by(entity="po", entity_id=po.id).order_by(AuditLog.created_at.asc()).all()
 
+    # Link público da agenda do fornecedor (endereço do próprio ExecFlow + token)
+    from ...services.po_agenda import po_token
+    agenda_url = (request.host_url.rstrip("/")
+                  + url_for("public_po.agenda", po_id=po.id, token=po_token(po.id)))
+
     # Etapa 11B: timeline de baixas SOMENTE LEITURA (audit_logs) para exibição
     from ...services.payment_history_service import build_baixa_history
     payments_by_no = {p.installment_no: p for p in po.payments}
@@ -435,7 +440,8 @@ def detail(po_id):
                            linked_order=po.order,
                            PO_STATUSES=PO_STATUSES,
                            audit_logs=audit_logs,
-                           baixa_history=baixa_history))
+                           baixa_history=baixa_history,
+                           agenda_url=agenda_url))
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     resp.headers["Pragma"] = "no-cache"
     resp.headers["Expires"] = "0"

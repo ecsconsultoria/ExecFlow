@@ -135,6 +135,8 @@ def build_agenda_context(order: Order) -> dict:
         "order": order,
         "number": order.number,
         "so_url": _so_url(order),
+        "ref_pt": "PEDIDO DE VENDA",
+        "ref_en": "SERVICE ORDER",
         "client": client_name,
         "client_phone": client_phone,
         "client_phone_html": _phone_html(client_phone) if client_phone else "",
