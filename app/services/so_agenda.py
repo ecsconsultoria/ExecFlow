@@ -84,8 +84,6 @@ def _item_block(order: Order, it) -> dict:
         "dt_en": dt_en,
         "service_pt": service_pt,
         "service_en": service_en,
-        "vehicle_pt": _translate_vehicle(cat_name, "pt"),
-        "vehicle_en": _translate_vehicle(cat_name, "en"),
         "model": model,
         "plate": it.op_vehicle_plate or "",
         "driver": driver,
@@ -168,6 +166,7 @@ def _i18n_dict(ctx: dict) -> dict:
     pt["client_lbl"], en["client_lbl"] = "Cliente", "Client"
     pt["service_lbl"], en["service_lbl"] = "Serviço", "Service"
     pt["vehicle_lbl"], en["vehicle_lbl"] = "Veículo", "Vehicle"
+    pt["plate_lbl"], en["plate_lbl"] = "Placa", "License Plate"
     pt["note_lbl"], en["note_lbl"] = "Notas", "Notes"
     pt["emergency"], en["emergency"] = "Emergência", "Emergency"
     pt["dt_lbl"], en["dt_lbl"] = "Data/Hora", "Date/Time"
@@ -182,7 +181,6 @@ def _i18n_dict(ctx: dict) -> dict:
     for i, it in enumerate(ctx["items"]):
         pt[f"it{i}_dt"], en[f"it{i}_dt"] = it["dt_pt"], it["dt_en"]
         pt[f"it{i}_svc"], en[f"it{i}_svc"] = it["service_pt"], it["service_en"]
-        pt[f"it{i}_veh"], en[f"it{i}_veh"] = it["vehicle_pt"], it["vehicle_en"]
 
         def _drv(driver, phone):
             if not driver:

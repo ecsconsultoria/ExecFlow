@@ -44,8 +44,6 @@ def _item_block(po: PurchaseOrder, it) -> dict:
         "dt_en": dt_en,
         "service_pt": _translate_service(desc, "pt"),
         "service_en": _translate_service(desc, "en"),
-        "vehicle_pt": _translate_vehicle(cat_name, "pt"),
-        "vehicle_en": _translate_vehicle(cat_name, "en"),
         "model": model,
         "plate": plate,
         "driver": driver,

@@ -79,8 +79,11 @@
         {% if it.service_pt %}
         <div class="row"><span class="lbl" data-i18n="service_lbl">{{ 'Serviço' if lang != 'en' else 'Service' }}</span><span class="val svc" data-i18n-html="it{{ loop.index0 }}_svc">{{ it.service_en if lang == 'en' else it.service_pt }}</span></div>
         {% endif %}
-        {% if it.vehicle_pt %}
-        <div class="row"><span class="lbl" data-i18n="vehicle_lbl">{{ 'Veículo' if lang != 'en' else 'Vehicle' }}</span><span class="val" data-i18n-html="it{{ loop.index0 }}_veh">{{ it.vehicle_en if lang == 'en' else it.vehicle_pt }}{% if it.model %} · {{ it.model }}{% endif %}{% if it.plate %} ({{ it.plate }}){% endif %}</span></div>
+        {% if it.model %}
+        <div class="row"><span class="lbl" data-i18n="vehicle_lbl">{{ 'Veículo' if lang != 'en' else 'Vehicle' }}</span><span class="val">{{ it.model }}</span></div>
+        {% endif %}
+        {% if it.plate %}
+        <div class="row"><span class="lbl" data-i18n="plate_lbl">{{ 'Placa' if lang != 'en' else 'License Plate' }}</span><span class="val">{{ it.plate }}</span></div>
         {% endif %}
         {% if it.driver %}
         <div class="row"><span class="lbl" data-i18n="driver_lbl">{{ 'Motorista' if lang != 'en' else 'Driver' }}</span><span class="val" data-i18n-html="it{{ loop.index0 }}_drv">{{ it.driver_en if lang == 'en' else it.driver }}{% if it.driver_phone %} · <span class="mini-lbl">Mobile</span> {{ it.driver_phone_html|safe }}{% endif %}</span></div>
