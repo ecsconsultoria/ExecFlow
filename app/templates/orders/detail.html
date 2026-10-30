@@ -163,6 +163,27 @@
           </a>
         </div>
         {% endif %}
+        <hr class="my-1 border-slate-100 dark:border-slate-700">
+        <div style="display:grid;grid-template-columns:1fr 1fr">
+          {% if quote_public_url %}
+          <a href="{{ quote_public_url }}" target="_blank" rel="noopener" title="Abrir link do orçamento (RFQ)"
+             class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
+            <i class="fa-solid fa-file-invoice text-amber-500"></i> Ver Orçamento
+          </a>
+          <a href="#" data-copy-quote onclick="copySoQuote(event)" title="Copiar link do orçamento (RFQ)"
+             class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
+            <i class="fa-solid fa-link text-amber-600"></i> Copiar orçamento
+          </a>
+          {% endif %}
+          <a href="{{ agenda_url }}" target="_blank" rel="noopener" title="Abrir agenda (sem preços, com dados operacionais)"
+             class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
+            <i class="fa-solid fa-calendar-days text-amber-500"></i> Ver Agenda
+          </a>
+          <a href="#" data-copy-agenda onclick="copySoAgenda(event)" title="Copiar link da agenda"
+             class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
+            <i class="fa-solid fa-link text-amber-600"></i> Copiar agenda
+          </a>
+        </div>
       </div>
     </div>
 
@@ -1825,7 +1846,29 @@
     phone:   "{{ ((order.client.whatsapp if order.client and order.client.whatsapp else (order.celular or order.phone)) or '')|e }}",
     pdfPT:   "{{ url_for('orders.pdf', oid=order.id, lang='pt') }}?_cb={{ order.updated_at.timestamp() if order.updated_at else 0 }}",
     pdfEN:   "{{ url_for('orders.pdf', oid=order.id, lang='en') }}?_cb={{ order.updated_at.timestamp() if order.updated_at else 0 }}",
+    agenda:  {{ (agenda_url or '')|tojson }},
+    quote:   {{ (quote_public_url or '')|tojson }},
   };
+  function _copy(url, sel) {
+    const done = () => {
+      const b = document.querySelector(sel);
+      if (!b) return;
+      const old = b.innerHTML;
+      b.innerHTML = '<i class="fa-solid fa-check text-green-600"></i> Copiado!';
+      setTimeout(() => { b.innerHTML = old; }, 1500);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(done).catch(() => {});
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (_) {}
+      document.body.removeChild(ta);
+    }
+  }
+  window.copySoAgenda = function(e){ if (e) e.preventDefault(); _copy(o.agenda, '[data-copy-agenda]'); };
+  window.copySoQuote  = function(e){ if (e) e.preventDefault(); _copy(o.quote,  '[data-copy-quote]'); };
   window.orderSendEmail = function(lang){
     const pt = lang === 'pt';
     const sub  = pt ? `Pedido ${o.number} – Executive Car SP`

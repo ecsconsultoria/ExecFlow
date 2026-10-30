@@ -9,6 +9,7 @@ def register_blueprints(app):
     from .services      import services_bp
     from .quotes        import quotes_bp
     from .public_quotes import public_quotes_bp
+    from .public_so     import public_so_bp
     from .interpret     import interpret_bp
     from .financial     import financial_bp
     from .reports       import reports_bp
@@ -29,6 +30,7 @@ def register_blueprints(app):
     app.register_blueprint(services_bp,         url_prefix="/services")
     app.register_blueprint(quotes_bp,           url_prefix="/quotes")
     app.register_blueprint(public_quotes_bp,    url_prefix="/q")
+    app.register_blueprint(public_so_bp,        url_prefix="/so-link")
     app.register_blueprint(interpret_bp,        url_prefix="/r")
     app.register_blueprint(financial_bp,        url_prefix="/financial")
     app.register_blueprint(reports_bp,          url_prefix="/reports")

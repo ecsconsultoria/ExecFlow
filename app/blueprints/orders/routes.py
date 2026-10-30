@@ -399,6 +399,18 @@ def detail(oid):
     include_cancel_policy = (order.include_cancel_policy
                              if order.include_cancel_policy is not None else True)
 
+    # Links públicos: agenda do SO (sem preços, com dados operacionais) e,
+    # quando o SO tem RFQ, o link do orçamento já existente
+    from ...services.so_agenda import so_token
+    from ...services.quote_html import public_token
+    agenda_url = (request.host_url.rstrip("/")
+                  + url_for("public_so.agenda", order_id=order.id, token=so_token(order.id)))
+    quote_public_url = ""
+    if order.quote_id and order.quote:
+        quote_public_url = (request.host_url.rstrip("/")
+                            + url_for("public_quotes.view", number=order.quote.number,
+                                      token=public_token(order.quote.id)))
+
     resp = make_response(render_template(
         "orders/detail.html",
         order=order,
@@ -414,6 +426,8 @@ def detail(oid):
         clients=clients,
         inclusion_options=inclusion_options,
         include_cancel_policy=include_cancel_policy,
+        agenda_url=agenda_url,
+        quote_public_url=quote_public_url,
     ))
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     resp.headers["Pragma"] = "no-cache"

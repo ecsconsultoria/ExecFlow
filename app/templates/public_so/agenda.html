@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="{{ 'en' if lang == 'en' else 'pt-BR' }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080807">
+  <title>SCHEDULE DETAILS | {{ number }}</title>
+  <style>
+    :root {
+      --bg: #080807; --panel: #10100f; --gold: #d9ad56; --gold-light: #f6d17d;
+      --text: #f7f7f5; --muted: #c3c1bd; --line: #38332a;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #050505; color: var(--text); font-family: Arial, Helvetica, sans-serif; line-height: 1.45; }
+    .lang-switch { position: fixed; top: 10px; left: 10px; display: flex; flex-direction: column; gap: 6px; z-index: 99; }
+    .lang-switch button {
+      background: rgba(8, 8, 7, .85); border: 1px solid #51432d; color: var(--muted);
+      font-size: 11px; font-weight: 700; letter-spacing: .12em;
+      padding: 5px 12px; border-radius: 4px; cursor: pointer;
+    }
+    .lang-switch button.active {
+      border-color: var(--gold-light); color: #171107;
+      background: linear-gradient(100deg, #f8d17c, #c08a32);
+    }
+    .sheet { width: min(100%, 640px); margin: 0 auto; background: var(--bg); border: 1px solid #24221e; overflow: hidden; }
+    .hero { padding: 20px 20px 16px; background: #10100f; text-align: center; }
+    .brand-block { display: inline-block; text-align: center; margin-bottom: 12px; }
+    .brand { margin: 0; color: var(--gold-light); font-weight: 800; font-size: clamp(20px, 4.5vw, 30px); letter-spacing: .08em; }
+    .brand-line { height: 2px; margin: 6px auto; background: linear-gradient(90deg, var(--gold), var(--gold-light)); border-radius: 1px; }
+    .brand-sub { font-size: 10px; letter-spacing: .34em; text-indent: .34em; color: #fff; text-transform: uppercase; }
+    .b-white { color: var(--text); }
+    .b-gold { background: linear-gradient(95deg, var(--gold-light), var(--gold) 70%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .hero .title { margin: 0; color: #fff; font-weight: 800; font-size: 17px; letter-spacing: .18em; }
+    .hero .ref { margin: 6px 0 0; color: #fff; font-size: 13px; letter-spacing: .1em; }
+    .content { padding: 18px; }
+    .panel {
+      margin: 10px 0; padding: 14px 18px; border: 1px solid #6b5431;
+      border-radius: 16px; background: linear-gradient(120deg, #11100d, #080807);
+    }
+    .panel-title { margin: 0 0 10px; color: #fff; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; text-align: center; font-weight: 800; }
+    .row { display: flex; align-items: baseline; gap: 10px; margin: 7px 0; font-size: 14px; }
+    .row .lbl { color: var(--gold-light); font-weight: 700; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; min-width: 96px; }
+    .row .mini-lbl { color: var(--gold-light); font-weight: 700; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
+    .row .wa-ic { width: 13px; height: 13px; vertical-align: -2px; margin-left: 4px; }
+    .row .val { color: #fff; }
+    .row .ic { width: 15px; height: 15px; color: var(--gold); margin-right: 8px; vertical-align: -2px; flex-shrink: 0; }
+    .svc { color: var(--text); font-weight: 800; }
+    .panel-list { list-style: none; margin: 8px 0 0; padding: 0; color: #fff; font-size: 14px; }
+    .panel-list li { padding: 3px 0; }
+    .obs-text { white-space: pre-line; color: #fff; font-size: 13px; }
+    .footer { padding: 14px 20px 22px; text-align: center; color: #fff; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="lang-switch">
+    <button id="btn-pt" class="{{ 'active' if lang != 'en' else '' }}" onclick="setLang('pt')">PT</button>
+    <button id="btn-en" class="{{ 'active' if lang == 'en' else '' }}" onclick="setLang('en')">EN</button>
+  </div>
+
+  <main class="sheet">
+    <header class="hero">
+      <div class="brand-block">
+        <div class="brand"><span class="b-white">EXECUTIVE</span> <span class="b-gold">CAR</span> <span class="b-white">SP</span></div>
+        <div class="brand-line"></div>
+        <div class="brand-sub">Shuttle Service</div>
+      </div>
+      <p class="ref"><span data-i18n="ref">{{ 'PEDIDO DE VENDA' if lang != 'en' else 'SERVICE ORDER' }}</span>
+        {% if so_url %}<a href="{{ so_url }}" target="_blank" rel="noopener" style="color:var(--gold-light);text-decoration:underline">{{ number }}</a>{% else %}{{ number }}{% endif %}</p>
+      <p class="title" data-i18n="title">{{ 'DETALHES DA AGENDA' if lang != 'en' else 'SCHEDULE DETAILS' }}</p>
+    </header>
+
+    <section class="content">
+      {% for it in items %}
+      <section class="panel">
+        <div class="panel-title" style="text-align:left"><span data-i18n="item_lbl">{{ 'ITEM' if lang != 'en' else 'ITEM' }}</span> {{ loop.index }}</div>
+        {% if it.dt_pt %}
+        <div class="row"><span class="lbl" data-i18n="dt_lbl">{{ 'Data/Hora' if lang != 'en' else 'Date/Time' }}</span><span class="val" data-i18n-html="it{{ loop.index0 }}_dt">{{ it.dt_en if lang == 'en' else it.dt_pt }}</span></div>
+        {% endif %}
+        {% if it.service_pt %}
+        <div class="row"><span class="lbl" data-i18n="service_lbl">{{ 'Serviço' if lang != 'en' else 'Service' }}</span><span class="val svc" data-i18n-html="it{{ loop.index0 }}_svc">{{ it.service_en if lang == 'en' else it.service_pt }}</span></div>
+        {% endif %}
+        {% if it.vehicle_pt %}
+        <div class="row"><span class="lbl" data-i18n="vehicle_lbl">{{ 'Veículo' if lang != 'en' else 'Vehicle' }}</span><span class="val" data-i18n-html="it{{ loop.index0 }}_veh">{{ it.vehicle_en if lang == 'en' else it.vehicle_pt }}{% if it.model %} · {{ it.model }}{% endif %}{% if it.plate %} ({{ it.plate }}){% endif %}</span></div>
+        {% endif %}
+        {% if it.driver %}
+        <div class="row"><span class="lbl" data-i18n="driver_lbl">{{ 'Motorista' if lang != 'en' else 'Driver' }}</span><span class="val" data-i18n-html="it{{ loop.index0 }}_drv">{{ it.driver_en if lang == 'en' else it.driver }}{% if it.driver_phone %} · <span class="mini-lbl">Mobile</span> {{ it.driver_phone_html|safe }}{% endif %}</span></div>
+        {% endif %}
+        {% if it.pickup %}
+        <div class="row"><span class="lbl" data-i18n="pickup_lbl">{{ 'Embarque' if lang != 'en' else 'Pickup' }}</span><span class="val">{{ it.pickup }}</span></div>
+        {% endif %}
+        {% if it.dropoff %}
+        <div class="row"><span class="lbl" data-i18n="dropoff_lbl">{{ 'Desembarque' if lang != 'en' else 'Drop-off' }}</span><span class="val">{{ it.dropoff }}</span></div>
+        {% endif %}
+        {% if it.pax_name %}
+        <div class="row"><span class="lbl" data-i18n="pax_lbl">{{ 'Passageiro' if lang != 'en' else 'Passenger' }}</span><span class="val">{{ it.pax_name }}{% if it.pax_phone %} · <span class="mini-lbl">Mobile</span> {{ it.pax_phone_html|safe }}{% endif %}</span></div>
+        {% endif %}
+        {% if it.flight %}
+        <div class="row"><span class="lbl" data-i18n="flight_lbl">{{ 'Voo' if lang != 'en' else 'Flight' }}</span><span class="val">{{ it.flight }}</span></div>
+        {% endif %}
+        {% if it.notes %}
+        <div class="row"><span class="lbl" data-i18n="note_lbl">{{ 'Notas' if lang != 'en' else 'Notes' }}</span><span class="val">{{ it.notes }}</span></div>
+        {% endif %}
+      </section>
+      {% endfor %}
+
+      {% if inclusions %}
+      <section class="panel">
+        <div class="panel-title" data-i18n="inc_title">{{ 'INCLUSO' if lang != 'en' else 'INCLUDED' }}</div>
+        <ul class="panel-list">
+          {% for inc in inclusions %}
+          <li>• {{ inc.text_en if lang == 'en' else inc.text_pt }}</li>
+          {% endfor %}
+        </ul>
+      </section>
+      {% endif %}
+
+      {% if obs %}
+      <section class="panel">
+        <div class="panel-title" data-i18n="notes_lbl">{{ 'OBSERVAÇÕES' if lang != 'en' else 'NOTES' }}</div>
+        <div class="obs-text">{{ obs }}</div>
+      </section>
+      {% endif %}
+    </section>
+    <footer class="footer">
+      <div data-i18n="company_line">{{ 'Executive Car SP • CNPJ 11.183.125/0001-10' if lang != 'en' else 'Executive Car SP • TAX ID 11.183.125/0001-10' }}</div>
+    </footer>
+  </main>
+
+  <script>
+    const I18N = {{ i18n | tojson }};
+    function setLang(lang) {
+      document.documentElement.lang = lang === 'en' ? 'en' : 'pt-BR';
+      document.getElementById('btn-pt').classList.toggle('active', lang === 'pt');
+      document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        el.textContent = I18N[lang][el.dataset.i18n] || el.textContent;
+      });
+      document.querySelectorAll('[data-i18n-html]').forEach(el => {
+        el.innerHTML = I18N[lang][el.dataset.i18nHtml] || el.innerHTML;
+      });
+    }
+  </script>
+</body>
+</html>
