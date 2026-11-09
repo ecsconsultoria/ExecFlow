@@ -90,8 +90,6 @@
     </header>
 
     <section class="content">
-      <p class="ref-content"><span data-i18n="ref">{{ ref_en if lang == 'en' else ref_pt }}</span>
-        {% if so_url %}<a href="{{ so_url }}" target="_blank" rel="noopener" style="color:var(--gold-light);text-decoration:underline">{{ number }}</a>{% else %}{{ number }}{% endif %}</p>
       {% for it in items %}
       <section class="panel">
         <div class="panel-title" style="text-align:left"><span data-i18n="item_lbl">{{ 'ITEM' if lang != 'en' else 'ITEM' }}</span> {{ loop.index }}</div>
@@ -177,6 +175,8 @@
       </a>
       <br>
       {% endif %}
+      <p class="ref-content" style="margin:0 0 10px;"><span data-i18n="ref">{{ ref_en if lang == 'en' else ref_pt }}</span>
+        {% if so_url %}<a href="{{ so_url }}" target="_blank" rel="noopener" style="color:var(--gold-light);text-decoration:underline">{{ number }}</a>{% else %}{{ number }}{% endif %}</p>
       <div data-i18n="company_line">{{ 'Executive Car SP • CNPJ 11.183.125/0001-10' if lang != 'en' else 'Executive Car SP • TAX ID 11.183.125/0001-10' }}</div>
     </footer>
   </main>
