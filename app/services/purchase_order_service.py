@@ -808,6 +808,8 @@ def update_item_operational(item: POItem, data: dict, apply_to_all: bool = False
     base_payload = {
         "op_pickup_location": data.get("op_pickup_location", "") or "",
         "op_dropoff_location": data.get("op_dropoff_location", "") or "",
+        "op_driver_name": data.get("op_driver_name", "") or "",
+        "op_driver_phone": data.get("op_driver_phone", "") or "",
         "op_passenger_name": data.get("op_passenger_name", "") or "",
         "op_passenger_phone": data.get("op_passenger_phone", "") or "",
         "op_vehicle_model": data.get("op_vehicle_model", "") or "",

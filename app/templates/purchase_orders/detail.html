@@ -371,6 +371,8 @@
   opPickupTime:      '',
   opPickupLocation:  '',
   opDropoffLocation: '',
+  opDriverName:      '',
+  opDriverPhone:     '',
   opPassengerName:   '',
   opPassengerPhone:  '',
   opFlightNumber:    '',
@@ -389,6 +391,8 @@
     this.opPickupTime      = d.opPickupTime || '';
     this.opPickupLocation  = d.opPickupLocation || '';
     this.opDropoffLocation = d.opDropoffLocation || '';
+    this.opDriverName      = d.opDriverName || '';
+    this.opDriverPhone     = d.opDriverPhone || '';
     this.opPassengerName   = d.opPassengerName || '';
     this.opPassengerPhone  = d.opPassengerPhone || '';
     this.opVehicleModel    = d.opVehicleModel || '';
@@ -618,6 +622,8 @@
                     data-op-pickup-time="{{ item.op_pickup_datetime.strftime('%H:%M') if item.op_pickup_datetime else (item.service_time.strftime('%H:%M') if item.service_time else '') }}"
                     data-op-pickup-location="{{ (item.op_pickup_location or '')|e }}"
                     data-op-dropoff-location="{{ (item.op_dropoff_location or '')|e }}"
+                    data-op-driver-name="{{ (item.op_driver_name or '')|e }}"
+                    data-op-driver-phone="{{ (item.op_driver_phone or '')|e }}"
                     data-op-passenger-name="{{ (item.op_passenger_name or '')|e }}"
                     data-op-passenger-phone="{{ (item.op_passenger_phone or '')|e }}"
                     data-op-vehicle-model="{{ (item.op_vehicle_model or (po.vehicle_model if po else '') or '')|e }}"
@@ -1348,27 +1354,23 @@
                     bg-slate-50 dark:bg-slate-700 rounded-lg" x-text="opItemService"></p>
         </div>
 
-        {# Linha 1: Data Pickup | Hora | Passageiro | Fone | Nº Voo (sempre na mesma linha) #}
-        <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px">
+        {# Linha 1: Data Pickup | Hora Pickup | Motorista | Celular #}
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
           <div>
             <label class="lbl">Data Pickup</label>
             <input type="date" name="op_pickup_date" class="fi text-sm" x-model="opPickupDate">
           </div>
           <div>
-            <label class="lbl">Hora</label>
+            <label class="lbl">Hora Pickup</label>
             <input type="time" name="op_pickup_time" class="fi text-sm" x-model="opPickupTime">
           </div>
           <div>
-            <label class="lbl">Passageiro</label>
-            <input type="text" name="op_passenger_name" class="fi text-sm" x-model="opPassengerName">
+            <label class="lbl">Motorista</label>
+            <input type="text" name="op_driver_name" class="fi text-sm" x-model="opDriverName">
           </div>
           <div>
-            <label class="lbl">Fone</label>
-            <input type="text" name="op_passenger_phone" class="fi text-sm" x-model="opPassengerPhone">
-          </div>
-          <div>
-            <label class="lbl">Nº Voo</label>
-            <input type="text" name="op_flight_number" class="fi text-sm" x-model="opFlightNumber">
+            <label class="lbl">Celular</label>
+            <input type="text" name="op_driver_phone" class="fi text-sm" x-model="opDriverPhone">
           </div>
         </div>
 
@@ -1389,6 +1391,22 @@
           <div>
             <label class="lbl">Desembarque</label>
             <input type="text" name="op_dropoff_location" class="fi text-sm" x-model="opDropoffLocation">
+          </div>
+        </div>
+
+        {# Linha 3: Passageiro | Fone | Nº Voo (ultimos, depois do Desembarque) #}
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="lbl">Passageiro</label>
+            <input type="text" name="op_passenger_name" class="fi text-sm" x-model="opPassengerName">
+          </div>
+          <div>
+            <label class="lbl">Fone</label>
+            <input type="text" name="op_passenger_phone" class="fi text-sm" x-model="opPassengerPhone">
+          </div>
+          <div>
+            <label class="lbl">Nº Voo</label>
+            <input type="text" name="op_flight_number" class="fi text-sm" x-model="opFlightNumber">
           </div>
         </div>
 

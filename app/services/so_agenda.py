@@ -177,6 +177,7 @@ def _i18n_dict(ctx: dict) -> dict:
     pt["emergency"], en["emergency"] = "Emergência", "Emergency"
     pt["dt_lbl"], en["dt_lbl"] = "Data/Hora", "Date/Time"
     pt["driver_lbl"], en["driver_lbl"] = "Motorista", "Driver"
+    pt["celular_lbl"], en["celular_lbl"] = "Celular", "Mobile"
     pt["pickup_lbl"], en["pickup_lbl"] = "Embarque", "Pickup"
     pt["dropoff_lbl"], en["dropoff_lbl"] = "Desembarque", "Drop-off"
     pt["pax_lbl"], en["pax_lbl"] = "Passageiro", "Passenger"
@@ -201,11 +202,8 @@ def _i18n_dict(ctx: dict) -> dict:
         pt[f"it{i}_svc"], en[f"it{i}_svc"] = it["service_pt"], it["service_en"]
 
         def _drv(driver, phone):
-            if not driver:
-                return ""
-            if phone:
-                return f'{driver} · <span class="mini-lbl">Mobile</span> {_phone_html(phone)}'
-            return driver
+            # Celular virou linha própria — o rótulo do motorista é só o nome
+            return driver or ""
 
         pt[f"it{i}_drv"] = _drv(it["driver"], it["driver_phone"])
         en[f"it{i}_drv"] = _drv(it["driver_en"] or it["driver"], it["driver_phone"])

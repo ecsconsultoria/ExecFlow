@@ -104,7 +104,8 @@
         <div class="row"><span class="lbl" data-i18n="plate_lbl">{{ 'Placa' if lang != 'en' else 'License Plate' }}</span><span class="val">{{ it.plate }}</span></div>
         {% endif %}
         {% if it.driver %}
-        <div class="row"><span class="lbl" data-i18n="driver_lbl">{{ 'Motorista' if lang != 'en' else 'Driver' }}</span><span class="val" data-i18n-html="it{{ loop.index0 }}_drv">{{ it.driver_en if lang == 'en' else it.driver }}{% if it.driver_phone %} · <span class="mini-lbl">Mobile</span> {{ it.driver_phone_html|safe }}{% endif %}</span></div>
+        <div class="row"><span class="lbl" data-i18n="driver_lbl">{{ 'Motorista' if lang != 'en' else 'Driver' }}</span><span class="val" data-i18n-html="it{{ loop.index0 }}_drv">{{ it.driver_en if lang == 'en' else it.driver }}</span></div>
+        <div class="row"><span class="lbl" data-i18n="celular_lbl">{{ 'Celular' if lang != 'en' else 'Mobile' }}</span><span class="val">{{ it.driver_phone or '–' }}</span></div>
         {% endif %}
         {% if it.pickup %}
         <div class="row"><span class="lbl" data-i18n="pickup_lbl">{{ 'Embarque' if lang != 'en' else 'Pickup' }}</span><span class="val">{{ it.pickup }}</span></div>
@@ -137,7 +138,7 @@
             {% endfor %}
             </div>
           </form>
-          {% if it.status == 'finalizado' %}
+          {% if it.status in ('finalizado', 'no_show') %}
           <form method="post" action="{{ revert_url }}">
             <input type="hidden" name="item_id" value="{{ it.id }}">
             <div class="checkin-actions">

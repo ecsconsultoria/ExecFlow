@@ -44,20 +44,24 @@ CHECKIN_LABELS = {
 
 
 def visible_statuses(current: str | None) -> list[str]:
-    """Botões visíveis para o status atual (fluxo progressivo)."""
+    """Botões visíveis para o status atual (fluxo progressivo LINEAR).
+
+    Cada etapa mostra apenas o(s) próximo(s) passo(s) — sem botão de voltar
+    no meio do fluxo (o Reverter só existe em Finalizado).
+    """
     current = current or ""
     if not current:
         return ["aceito"]
     if current == "aceito":
         return ["a_caminho_cliente", "aguardando_cliente"]
     if current == "a_caminho_cliente":
-        return ["aceito", "aguardando_cliente", "cliente_embarcou"]
+        return ["aguardando_cliente", "cliente_embarcou"]
     if current == "aguardando_cliente":
-        return ["aceito", "cliente_embarcou", "no_show"]
+        return ["cliente_embarcou", "no_show"]
     if current == "cliente_embarcou":
-        return ["aceito", "finalizado"]
+        return ["finalizado"]
     if current == "no_show":
-        return ["aceito"]
+        return []  # somente o Reverter (igual ao finalizado)
     # finalizado (ou desconhecido): nenhum botão — só o Reverter
     return []
 
