@@ -125,7 +125,6 @@
         {# ── Check-in do motorista (somente no link da PO) ── #}
         {% if checkin_enabled %}
         <div class="checkin">
-          <div class="checkin-title" data-i18n="status_lbl">{{ 'ALTERAR STATUS' if lang != 'en' else 'CHANGE STATUS HERE' }}</div>
           <p class="checkin-cur"><span data-i18n="status_cur_lbl">{{ 'Status atual' if lang != 'en' else 'Current status' }}</span>: <strong data-i18n="it{{ loop.index0 }}_status">{{ checkin_labels['pt' if lang != 'en' else 'en'].get(it.status, 'Não iniciado' if lang != 'en' else 'Not started') }}</strong></p>
           <form method="post" action="{{ status_url }}">
             <input type="hidden" name="item_id" value="{{ it.id }}">
