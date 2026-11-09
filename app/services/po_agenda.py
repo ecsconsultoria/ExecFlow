@@ -63,7 +63,10 @@ def _item_block(po: PurchaseOrder, it) -> dict:
         # Check-in do motorista (somente no link da PO)
         "status": getattr(it, "op_driver_status", None) or "",
         "status_prev": bool(getattr(it, "op_driver_status_prev", None)),
-        # Botões visíveis conforme o status atual (fluxo progressivo)
+        # Cor da "sombra" do status selecionado
+        "status_color": _checkin.STATUS_COLORS.get(
+            getattr(it, "op_driver_status", None) or "", "#64748b"),
+        # Botões visíveis conforme o status atual (anterior + próximos)
         "buttons": _checkin.visible_statuses(getattr(it, "op_driver_status", None)),
     }
 

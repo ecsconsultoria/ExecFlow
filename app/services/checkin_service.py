@@ -27,7 +27,7 @@ CHECKIN_STATUSES = [
 
 CHECKIN_LABELS = {
     "pt": {
-        "aceito": "Aceita",
+        "aceito": "Aceito",
         "a_caminho_cliente": "A Caminho do Cliente",
         "aguardando_cliente": "Aguardando Cliente",
         "cliente_embarcou": "Cliente Embarcou",
@@ -44,12 +44,24 @@ CHECKIN_LABELS = {
     },
 }
 
+# Cor da "sombra" exibida no status selecionado (chip + brilho)
+STATUS_COLORS = {
+    "aceito":             "#1d4ed8",  # azul
+    "a_caminho_cliente":  "#eab308",  # amarelo
+    "aguardando_cliente": "#cdb891",  # bege
+    "cliente_embarcou":   "#84cc16",  # verde limao
+    "finalizado":         "#16a34a",  # verde
+    "no_show":            "#dc2626",  # vermelho
+}
+
 
 def visible_statuses(current: str | None) -> list[str]:
-    """Botões visíveis para o status atual (fluxo progressivo LINEAR).
+    """Botões visíveis para o status atual — anterior + próximos.
 
-    Cada etapa mostra apenas o(s) próximo(s) passo(s) — sem botão de voltar
-    no meio do fluxo (o Reverter só existe em Finalizado).
+    A Caminho   -> [Aceito (anterior)] [Aguardando] [Embarcou]
+    Aguardando  -> [A Caminho (anterior)] [Embarcou] [No Show]
+    Embarcou    -> [Aguardando (anterior)] [Finalizado]
+    Finalizado  -> só Reverter; No Show -> só Reverter.
     """
     current = current or ""
     if not current:
@@ -57,13 +69,13 @@ def visible_statuses(current: str | None) -> list[str]:
     if current == "aceito":
         return ["a_caminho_cliente", "aguardando_cliente"]
     if current == "a_caminho_cliente":
-        return ["aguardando_cliente", "cliente_embarcou"]
+        return ["aceito", "aguardando_cliente", "cliente_embarcou"]
     if current == "aguardando_cliente":
-        return ["cliente_embarcou", "no_show"]
+        return ["a_caminho_cliente", "cliente_embarcou", "no_show"]
     if current == "cliente_embarcou":
-        return ["finalizado"]
+        return ["aguardando_cliente", "finalizado"]
     if current == "no_show":
-        return []  # somente o Reverter (igual ao finalizado)
+        return []
     # finalizado (ou desconhecido): nenhum botão — só o Reverter
     return []
 

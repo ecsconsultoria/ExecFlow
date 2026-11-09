@@ -53,6 +53,10 @@
     .checkin-title { color: var(--gold-light); font-weight: 800; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; text-align: center; margin-bottom: 8px; }
     .checkin-cur { color: var(--muted); font-size: 13px; text-align: center; margin: 0 0 10px; }
     .checkin-cur strong { color: #fff; }
+    .status-chip {
+      display: inline-block; padding: 3px 12px; border-radius: 999px;
+      font-size: 12px; letter-spacing: .04em; margin-left: 6px; vertical-align: middle;
+    }
     .checkin form { margin: 0; }
     .checkin-actions { text-align: center; }
     .st-btn {
@@ -126,7 +130,9 @@
         {# ── Check-in do motorista (somente no link da PO) ── #}
         {% if checkin_enabled %}
         <div class="checkin">
-          <p class="checkin-cur"><span data-i18n="status_cur_lbl">{{ 'Status atual' if lang != 'en' else 'Current status' }}</span>: <strong data-i18n="it{{ loop.index0 }}_status">{{ checkin_labels['pt' if lang != 'en' else 'en'].get(it.status, 'Não iniciado' if lang != 'en' else 'Not started') }}</strong></p>
+          <p class="checkin-cur"><span data-i18n="status_cur_lbl">{{ 'Status atual' if lang != 'en' else 'Current status' }}</span>:
+            <strong class="status-chip" style="background:{{ it.status_color }}; box-shadow:0 0 14px {{ it.status_color }};"
+                    data-i18n="it{{ loop.index0 }}_status">{{ checkin_labels['pt' if lang != 'en' else 'en'].get(it.status, 'Não iniciado' if lang != 'en' else 'Not started') }}</strong></p>
           <form method="post" action="{{ status_url }}">
             <input type="hidden" name="item_id" value="{{ it.id }}">
             <div class="checkin-actions">
