@@ -31,6 +31,7 @@
     .b-white { color: var(--text); }
     .b-gold { background: linear-gradient(95deg, var(--gold-light), var(--gold) 70%); -webkit-background-clip: text; background-clip: text; color: transparent; }
     .hero .title { margin: 0; color: #fff; font-weight: 800; font-size: 17px; letter-spacing: .18em; }
+    .content-title { margin: 0 0 12px; color: #fff; font-weight: 800; font-size: 13px; letter-spacing: .14em; text-align: center; text-transform: uppercase; }
     .ref-content { margin: 0 0 12px; color: #fff; font-size: 13px; letter-spacing: .1em; text-align: center; }
     .content { padding: 18px; }
     .panel {
@@ -86,10 +87,10 @@
         <div class="brand-line"></div>
         <div class="brand-sub">Shuttle Service</div>
       </div>
-      <p class="title" data-i18n="title">{{ 'DETALHES DA AGENDA' if lang != 'en' else 'SCHEDULE DETAILS' }}</p>
     </header>
 
     <section class="content">
+      <p class="content-title" data-i18n="title">{{ 'DETALHES DA AGENDA' if lang != 'en' else 'SCHEDULE DETAILS' }}</p>
       {% for it in items %}
       <section class="panel">
         <div class="panel-title" style="text-align:left"><span data-i18n="item_lbl">{{ 'ITEM' if lang != 'en' else 'ITEM' }}</span> {{ loop.index }}</div>
