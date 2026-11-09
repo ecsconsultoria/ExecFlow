@@ -12,6 +12,7 @@ from flask import current_app, url_for
 
 from ..models.purchase_order import PurchaseOrder
 from ..utils import make_client_token
+from . import checkin_service as _checkin
 from .checkin_service import CHECKIN_LABELS, CHECKIN_STATUSES
 from .so_agenda import _dt_pt_en, _phone_html
 
@@ -62,6 +63,8 @@ def _item_block(po: PurchaseOrder, it) -> dict:
         # Check-in do motorista (somente no link da PO)
         "status": getattr(it, "op_driver_status", None) or "",
         "status_prev": bool(getattr(it, "op_driver_status_prev", None)),
+        # Botões visíveis conforme o status atual (fluxo progressivo)
+        "buttons": _checkin.visible_statuses(getattr(it, "op_driver_status", None)),
     }
 
 

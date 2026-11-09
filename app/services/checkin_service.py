@@ -1,9 +1,13 @@
 """checkin_service.py — Check-in do motorista pelo link público da agenda.
 
-Fluxo de status: A CAMINHO DO CLIENTE → AGUARDANDO CLIENTE →
-CLIENTE EMBARCADO → A CAMINHO DESTINO → FINALIZADO. "Finalizado" marca o
-op_completed_at do item (integra com a regra de conclusão do pedido).
-Revert volta um passo (status anterior).
+Fluxo progressivo de status:
+  INICIAL           → [Aceitar]
+  aceito            → [A Caminho do Cliente] [Aguardando Cliente]
+  a_caminho_cliente → [Aceitar] [Aguardando Cliente] [Cliente Embarcou]
+  aguardando_cliente→ [Aceitar] [Cliente Embarcou] [No Show]
+  cliente_embarcou  → [Aceitar] [Finalizado]
+  finalizado        → somente [Reverter] (volta um passo)
+  no_show           → [Aceitar] (recomeçar)
 """
 from __future__ import annotations
 
@@ -11,29 +15,51 @@ from ..extensions import db
 from ..utils import now_br
 
 CHECKIN_STATUSES = [
+    "aceito",
     "a_caminho_cliente",
     "aguardando_cliente",
-    "cliente_embarcado",
-    "a_caminho_destino",
+    "cliente_embarcou",
     "finalizado",
+    "no_show",
 ]
 
 CHECKIN_LABELS = {
     "pt": {
+        "aceito": "Aceita",
         "a_caminho_cliente": "A Caminho do Cliente",
         "aguardando_cliente": "Aguardando Cliente",
-        "cliente_embarcado": "Cliente Embarcado",
-        "a_caminho_destino": "A Caminho do Destino",
+        "cliente_embarcou": "Cliente Embarcou",
         "finalizado": "Finalizado",
+        "no_show": "No Show",
     },
     "en": {
-        "a_caminho_cliente": "En Route to Client",
-        "aguardando_cliente": "Waiting for Client",
-        "cliente_embarcado": "Client On Board",
-        "a_caminho_destino": "En Route to Destination",
-        "finalizado": "Completed",
+        "aceito": "Accept",
+        "a_caminho_cliente": "En route to Pickup",
+        "aguardando_cliente": "At Pickup",
+        "cliente_embarcou": "Pax on Board",
+        "finalizado": "Finished",
+        "no_show": "No Show",
     },
 }
+
+
+def visible_statuses(current: str | None) -> list[str]:
+    """Botões visíveis para o status atual (fluxo progressivo)."""
+    current = current or ""
+    if not current:
+        return ["aceito"]
+    if current == "aceito":
+        return ["a_caminho_cliente", "aguardando_cliente"]
+    if current == "a_caminho_cliente":
+        return ["aceito", "aguardando_cliente", "cliente_embarcou"]
+    if current == "aguardando_cliente":
+        return ["aceito", "cliente_embarcou", "no_show"]
+    if current == "cliente_embarcou":
+        return ["aceito", "finalizado"]
+    if current == "no_show":
+        return ["aceito"]
+    # finalizado (ou desconhecido): nenhum botão — só o Reverter
+    return []
 
 
 def apply_status(item, status: str) -> None:

@@ -130,14 +130,14 @@
           <form method="post" action="{{ status_url }}">
             <input type="hidden" name="item_id" value="{{ it.id }}">
             <div class="checkin-actions">
-            {% for st in checkin_statuses %}
+            {% for st in it.buttons %}
             <button type="submit" name="status" value="{{ st }}"
-                    class="st-btn {% if it.status == st %}st-active{% endif %}"
+                    class="st-btn"
                     data-i18n="st_{{ st }}">{{ checkin_labels['pt' if lang != 'en' else 'en'][st] }}</button>
             {% endfor %}
             </div>
           </form>
-          {% if it.status_prev %}
+          {% if it.status == 'finalizado' %}
           <form method="post" action="{{ revert_url }}">
             <input type="hidden" name="item_id" value="{{ it.id }}">
             <div class="checkin-actions">
