@@ -864,7 +864,7 @@
           <select id="gp-payment-terms"
                   class="fi bg-slate-600 dark:bg-slate-700 text-white border-slate-500 text-xs">
             <option value="">– Selecione –</option>
-            {% for t in ['À vista','À vista + 1 parcela','5 dias','10 dias','15 dias','25 dias','30 dias'] %}
+            {% for t in ['À vista','À vista + 1 parcela','5 dias','10 dias','15 dias','25 dias','30 dias','45 dias','60 dias','75 dias','90 dias'] %}
             <option value="{{ t }}" {{ 'selected' if order.payment_terms and order.payment_terms.lower()==t.lower() }}>{{ t }}</option>
             {% endfor %}
           </select>

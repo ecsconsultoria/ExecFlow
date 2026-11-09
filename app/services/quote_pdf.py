@@ -330,6 +330,10 @@ _PAYMENT_TERMS_EN: dict[str, str] = {
     "15 dias":               "15 Days",
     "25 dias":               "25 Days",
     "30 dias":               "30 Days",
+    "45 dias":               "45 Days",
+    "60 dias":               "60 Days",
+    "75 dias":               "75 Days",
+    "90 dias":               "90 Days",
 }
 
 _VEHICLE_MODEL_PT: dict[str, str] = {
