@@ -131,7 +131,7 @@
         {% if checkin_enabled %}
         <div class="checkin">
           <p class="checkin-cur"><span data-i18n="status_cur_lbl">{{ 'Status atual' if lang != 'en' else 'Current status' }}</span>:
-            <strong class="status-chip" style="background:{{ it.status_color }}; box-shadow:0 0 14px {{ it.status_color }};"
+            <strong class="status-chip" style="background:{{ it.status_color }};"
                     data-i18n="it{{ loop.index0 }}_status">{{ checkin_labels['pt' if lang != 'en' else 'en'].get(it.status, 'Não iniciado' if lang != 'en' else 'Not started') }}</strong></p>
           <form method="post" action="{{ status_url }}">
             <input type="hidden" name="item_id" value="{{ it.id }}">
@@ -143,7 +143,7 @@
             {% endfor %}
             </div>
           </form>
-          {% if it.status_prev %}
+          {% if it.status in ('finalizado', 'no_show') %}
           <form method="post" action="{{ revert_url }}">
             <input type="hidden" name="item_id" value="{{ it.id }}">
             <div class="checkin-actions">
