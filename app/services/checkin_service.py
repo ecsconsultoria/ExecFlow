@@ -14,6 +14,8 @@ from __future__ import annotations
 from ..extensions import db
 from ..utils import now_br
 
+import json as _json
+
 CHECKIN_STATUSES = [
     "aceito",
     "a_caminho_cliente",
@@ -66,8 +68,17 @@ def visible_statuses(current: str | None) -> list[str]:
     return []
 
 
+def _load_hist(item) -> list[str]:
+    raw = getattr(item, "op_driver_status_hist", None)
+    try:
+        hist = _json.loads(raw) if raw else []
+        return [s for s in hist if s in CHECKIN_STATUSES]
+    except (TypeError, ValueError):
+        return []
+
+
 def apply_status(item, status: str) -> None:
-    """Aplica um novo status do motorista (guarda o anterior p/ revert).
+    """Aplica um novo status do motorista (empilha o anterior p/ revert).
 
     Vale para OrderItem (SO) e POItem (PO). "Finalizado" marca o
     op_completed_at do item; no SO, integra com a regra de conclusão do pedido.
@@ -76,7 +87,12 @@ def apply_status(item, status: str) -> None:
         raise ValueError("Status inválido")
     if getattr(item, "op_driver_status", None) == status:
         return
-    item.op_driver_status_prev = getattr(item, "op_driver_status", None)
+    hist = _load_hist(item)
+    cur = getattr(item, "op_driver_status", None)
+    if cur:
+        hist.append(cur)
+    item.op_driver_status_hist = _json.dumps(hist[-20:])
+    item.op_driver_status_prev = hist[-1] if hist else None
     item.op_driver_status      = status
     item.op_driver_status_at   = now_br()
     if status == "finalizado" and not getattr(item, "op_completed_at", None):
@@ -91,10 +107,14 @@ def apply_status(item, status: str) -> None:
 
 
 def revert_status(item) -> None:
-    """Volta ao status anterior (um passo)."""
-    if not getattr(item, "op_driver_status_prev", None):
+    """Volta um passo no histórico — o botão Reverter continua disponível
+    enquanto houver passos anteriores."""
+    hist = _load_hist(item)
+    if not hist:
         return
-    item.op_driver_status      = item.op_driver_status_prev
-    item.op_driver_status_prev = None
+    prev = hist.pop()
+    item.op_driver_status_hist = _json.dumps(hist)
+    item.op_driver_status_prev = hist[-1] if hist else None
+    item.op_driver_status      = prev
     item.op_driver_status_at   = now_br()
     db.session.commit()

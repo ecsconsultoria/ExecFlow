@@ -262,6 +262,7 @@ def _ensure_schema_columns():
                 ('op_completed_at', 'TIMESTAMP'),
                 ('op_driver_status', 'VARCHAR(50)'),
                 ('op_driver_status_prev', 'VARCHAR(50)'),
+                ('op_driver_status_hist', 'TEXT'),
                 ('op_driver_status_at', 'TIMESTAMP'),
                 ('placa_receptivo', 'BOOLEAN DEFAULT FALSE'),
                 ('placa_receptivo_texto', 'TEXT'),

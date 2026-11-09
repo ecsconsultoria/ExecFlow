@@ -238,6 +238,7 @@ class POItem(db.Model, TimestampMixin):
     op_completed_at      = db.Column(db.DateTime, nullable=True)
     op_driver_status      = db.Column(db.String(50), nullable=True)
     op_driver_status_prev = db.Column(db.String(50), nullable=True)
+    op_driver_status_hist = db.Column(db.Text, nullable=True)  # pilha p/ revert passo a passo
     op_driver_status_at   = db.Column(db.DateTime, nullable=True)
     # Placa de receptivo
     placa_receptivo        = db.Column(db.Boolean, default=False)

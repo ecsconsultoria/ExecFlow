@@ -137,7 +137,7 @@
             {% endfor %}
             </div>
           </form>
-          {% if it.status in ('finalizado', 'no_show') %}
+          {% if it.status_prev %}
           <form method="post" action="{{ revert_url }}">
             <input type="hidden" name="item_id" value="{{ it.id }}">
             <div class="checkin-actions">
@@ -161,12 +161,6 @@
       </section>
       {% endif %}
 
-      {% if obs %}
-      <section class="panel">
-        <div class="panel-title" data-i18n="notes_lbl">{{ 'OBSERVAÇÕES' if lang != 'en' else 'NOTES' }}</div>
-        <div class="obs-text">{{ obs }}</div>
-      </section>
-      {% endif %}
     </section>
     <footer class="footer">
       {% if emergency_phone %}
