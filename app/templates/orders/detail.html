@@ -816,8 +816,10 @@
       Total do pedido <strong>{{ order.computed_total|currency }}</strong> diverge do total parcelado <strong>{{ ns_div.pmts_total|currency }}</strong>.
     </span>
     {% if not locked %}
-    <form method="post" action="{{ url_for('orders.recalculate_payments', oid=order.id) }}" class="shrink-0">
+    <form method="post" action="{{ url_for('orders.recalculate_payments', oid=order.id) }}" class="shrink-0"
+          onsubmit="var el=document.getElementById('gp-custom-amount'); document.getElementById('recalc-amount').value = (el ? el.value.trim() : '');">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="custom_amount" id="recalc-amount" value="">
       <button type="submit"
               class="text-xs bg-amber-500 hover:bg-amber-600 text-white font-semibold px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap">
         <i class="fa-solid fa-rotate mr-1"></i>Recalcular

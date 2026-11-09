@@ -603,13 +603,27 @@ def generate_payments(oid):
 @login_required
 @require_permission("so.edit")
 def recalculate_payments(oid):
-    """Apaga parcelas não-pagas e regera com base no total atual."""
+    """Apaga parcelas não-pagas e regera com base no total atual.
+
+    Regra 11/2026: se um novo valor for informado (campo Valor), as parcelas
+    não-pagas são apagadas e recriadas com ESSE valor (uma parcela).
+    """
     order = _get_order(oid)
     if order.status in ("concluido", "cancelado"):
         flash("Pedido não pode ser editado no status atual.", "warning")
         return redirect(url_for("orders.detail", oid=oid))
+    raw_custom = request.form.get("custom_amount", "").strip()
+    custom_total = parse_brl(raw_custom) if raw_custom else None
     try:
-        pmts = order_service.generate_payments(order)  # REGENERATE MODE
+        if custom_total is not None:
+            # novo valor informado: remove as não-pagas e cria uma parcela com ele
+            unpaid = [p for p in order.payments if not p.is_paid]
+            for p in unpaid:
+                db.session.delete(p)
+            db.session.flush()
+            pmts = order_service.generate_payments(order, custom_total=custom_total)
+        else:
+            pmts = order_service.generate_payments(order)  # REGENERATE MODE
     except ValueError as e:
         db.session.rollback()
         flash(str(e), "warning")
