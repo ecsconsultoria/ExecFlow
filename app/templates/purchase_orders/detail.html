@@ -1867,7 +1867,7 @@ async function estornarPmt(pid) {
     {% else %}
     pdfPT: "", pdfEN: "",
     {% endif %}
-    agenda: {{ (agenda_url or '')|tojson }},
+    agenda: {{ (agenda_short_url or agenda_url or '')|tojson }},
   };
   window.copyPoAgenda = function(e){
     if (e) e.preventDefault();

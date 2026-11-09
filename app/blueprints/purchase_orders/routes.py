@@ -1,6 +1,6 @@
 """Purchase Orders blueprint routes."""
 import json
-from flask import make_response, render_template, request, redirect, url_for, flash, send_file, jsonify
+from flask import current_app, make_response, render_template, request, redirect, url_for, flash, send_file, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy.orm import joinedload, selectinload, lazyload
 from . import purchase_orders_bp
@@ -427,6 +427,11 @@ def detail(po_id):
     from ...services.po_agenda import po_token
     agenda_url = (request.host_url.rstrip("/")
                   + url_for("public_po.agenda", po_id=po.id, token=po_token(po.id)))
+    # Link curto (base62 do id) — copiado pelo botão "Copiar agenda"
+    from ...services.short_link import encode as _short_encode
+    _short_base = current_app.config.get("SHORT_BASE_URL",
+                                         "https://checkin.executivecarsp.com").rstrip("/")
+    agenda_short_url = f"{_short_base}/l/{_short_encode(po.id)}"
 
     # Etapa 11B: timeline de baixas SOMENTE LEITURA (audit_logs) para exibição
     from ...services.payment_history_service import build_baixa_history
@@ -441,7 +446,8 @@ def detail(po_id):
                            PO_STATUSES=PO_STATUSES,
                            audit_logs=audit_logs,
                            baixa_history=baixa_history,
-                           agenda_url=agenda_url))
+                           agenda_url=agenda_url,
+                           agenda_short_url=agenda_short_url))
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     resp.headers["Pragma"] = "no-cache"
     resp.headers["Expires"] = "0"

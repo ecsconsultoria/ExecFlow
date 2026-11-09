@@ -65,6 +65,8 @@ class Config:
 
     # App
     BASE_URL       = os.environ.get("BASE_URL", "http://localhost:5004")
+    # Base dos links curtos (check-in do motorista) — subdomínio próprio
+    SHORT_BASE_URL = os.environ.get("SHORT_BASE_URL", "https://checkin.executivecarsp.com")
 
     # Base pública do link do orçamento em HTML (domínio da marca, ex.: https://orcamento.executivecarsp.com).
     # Vazio = usa o host da requisição (dev/local).

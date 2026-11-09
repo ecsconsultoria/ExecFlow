@@ -11,6 +11,7 @@ def register_blueprints(app):
     from .public_quotes import public_quotes_bp
     from .public_po     import public_po_bp
     from .public_so     import public_so_bp
+    from .short_links   import short_links_bp
     from .interpret     import interpret_bp
     from .financial     import financial_bp
     from .reports       import reports_bp
@@ -33,6 +34,7 @@ def register_blueprints(app):
     app.register_blueprint(public_quotes_bp,    url_prefix="/q")
     app.register_blueprint(public_po_bp,        url_prefix="/po-link")
     app.register_blueprint(public_so_bp,        url_prefix="/so-link")
+    app.register_blueprint(short_links_bp)
     app.register_blueprint(interpret_bp,        url_prefix="/r")
     app.register_blueprint(financial_bp,        url_prefix="/financial")
     app.register_blueprint(reports_bp,          url_prefix="/reports")
