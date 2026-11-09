@@ -231,6 +231,9 @@ def _ensure_schema_columns():
                 ('op_flight_number', 'VARCHAR(50)'),
                 ('op_notes', 'VARCHAR(500)'),
                 ('op_completed_at', 'TIMESTAMP'),
+                ('op_driver_status', 'VARCHAR(50)'),
+                ('op_driver_status_prev', 'VARCHAR(50)'),
+                ('op_driver_status_at', 'TIMESTAMP'),
             ]
             with db.engine.begin() as conn:
                 for col_name, col_type in new_item_cols:

@@ -48,6 +48,23 @@
     .panel-list { list-style: none; margin: 8px 0 0; padding: 0; color: #fff; font-size: 14px; }
     .panel-list li { padding: 3px 0; }
     .obs-text { white-space: pre-line; color: #fff; font-size: 13px; }
+    /* Check-in do motorista */
+    .checkin { margin-top: 12px; padding-top: 12px; border-top: 1px solid #38332a; }
+    .checkin-title { color: var(--gold-light); font-weight: 800; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; text-align: center; margin-bottom: 8px; }
+    .checkin-cur { color: var(--muted); font-size: 13px; text-align: center; margin: 0 0 10px; }
+    .checkin-cur strong { color: #fff; }
+    .checkin form { margin: 0; }
+    .st-btn {
+      display: block; width: 100%; margin: 6px 0; padding: 11px 10px;
+      background: #10100f; border: 1px solid #51432d; border-radius: 10px;
+      color: var(--muted); font-size: 13px; font-weight: 700; letter-spacing: .04em;
+      cursor: pointer; transition: border-color .15s, color .15s;
+    }
+    .st-btn.st-active, .st-btn:hover {
+      border-color: var(--gold-light); color: #171107;
+      background: linear-gradient(100deg, #f8d17c, #c08a32);
+    }
+    .st-btn.st-revert { background: #14100b; border-style: dashed; color: #d9ad56; }
     .footer { padding: 14px 20px 22px; text-align: center; color: #fff; font-size: 12px; }
   </style>
 </head>
@@ -103,6 +120,26 @@
         {% if it.notes %}
         <div class="row"><span class="lbl" data-i18n="note_lbl">{{ 'Notas' if lang != 'en' else 'Notes' }}</span><span class="val">{{ it.notes }}</span></div>
         {% endif %}
+
+        {# ── Check-in do motorista ── #}
+        <div class="checkin">
+          <div class="checkin-title" data-i18n="status_lbl">{{ 'ALTERAR STATUS' if lang != 'en' else 'CHANGE STATUS HERE' }}</div>
+          <p class="checkin-cur"><span data-i18n="status_cur_lbl">{{ 'Status atual' if lang != 'en' else 'Current status' }}</span>: <strong data-i18n="it{{ loop.index0 }}_status">{{ checkin_labels['pt' if lang != 'en' else 'en'].get(it.status, 'Não iniciado' if lang != 'en' else 'Not started') }}</strong></p>
+          <form method="post" action="{{ url_for('public_so.set_status', order_id=order.id, token=token) }}">
+            <input type="hidden" name="item_id" value="{{ it.id }}">
+            {% for st in checkin_statuses %}
+            <button type="submit" name="status" value="{{ st }}"
+                    class="st-btn {% if it.status == st %}st-active{% endif %}"
+                    data-i18n="st_{{ st }}">{{ checkin_labels['pt' if lang != 'en' else 'en'][st] }}</button>
+            {% endfor %}
+          </form>
+          {% if it.status_prev %}
+          <form method="post" action="{{ url_for('public_so.revert', order_id=order.id, token=token) }}">
+            <input type="hidden" name="item_id" value="{{ it.id }}">
+            <button type="submit" class="st-btn st-revert" data-i18n="revert_lbl">{{ '↺ Reverter (voltar um passo)' if lang != 'en' else '↺ Revert (go back one step)' }}</button>
+          </form>
+          {% endif %}
+        </div>
       </section>
       {% endfor %}
 

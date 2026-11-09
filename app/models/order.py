@@ -223,6 +223,10 @@ class OrderItem(db.Model, TimestampMixin):
     op_service          = db.Column(db.String(500))
     # Conclusão POR ITEM na agenda (despacho) — alimenta a regra de conclusão do pedido
     op_completed_at     = db.Column(db.DateTime, nullable=True)
+    # Check-in do motorista (link público da agenda) — status + anterior (revert)
+    op_driver_status      = db.Column(db.String(50), nullable=True)
+    op_driver_status_prev = db.Column(db.String(50), nullable=True)
+    op_driver_status_at   = db.Column(db.DateTime, nullable=True)
 
     category = db.relationship("VehicleCategory", foreign_keys=[category_id], lazy="select")
 

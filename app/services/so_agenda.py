@@ -13,6 +13,7 @@ from flask import current_app
 
 from ..models.order import Order
 from ..utils import make_client_token
+from .checkin_service import CHECKIN_LABELS, CHECKIN_STATUSES
 
 
 def _clean_phone(v) -> str:
@@ -80,6 +81,7 @@ def _item_block(order: Order, it) -> dict:
     service_pt = _translate_service(desc, "pt")
     service_en = _translate_service(desc, "en")
     return {
+        "id": it.id,
         "dt_pt": dt_pt,
         "dt_en": dt_en,
         "service_pt": service_pt,
@@ -97,6 +99,9 @@ def _item_block(order: Order, it) -> dict:
         "pax_phone_html": _phone_html(it.op_passenger_phone) if it.op_passenger_phone else "",
         "flight": it.op_flight_number or "",
         "notes": it.op_notes or "",
+        # Check-in do motorista
+        "status": getattr(it, "op_driver_status", None) or "",
+        "status_prev": bool(getattr(it, "op_driver_status_prev", None)),
     }
 
 
@@ -133,6 +138,9 @@ def build_agenda_context(order: Order) -> dict:
         "order": order,
         "number": order.number,
         "so_url": _so_url(order),
+        "token": so_token(order.id),
+        "checkin_statuses": CHECKIN_STATUSES,
+        "checkin_labels": CHECKIN_LABELS,
         "ref_pt": "PEDIDO DE VENDA",
         "ref_en": "SERVICE ORDER",
         # Telefone de emergência exibido no rodapé (somente agenda do SO)
@@ -180,6 +188,17 @@ def _i18n_dict(ctx: dict) -> dict:
     pt["inc_title"], en["inc_title"] = "INCLUSO", "INCLUDED"
     pt["notes_lbl"], en["notes_lbl"] = "OBSERVAÇÕES", "NOTES"
     pt["item_lbl"], en["item_lbl"] = "ITEM", "ITEM"
+    # Check-in do motorista
+    pt["status_lbl"], en["status_lbl"] = "ALTERAR STATUS", "CHANGE STATUS HERE"
+    pt["status_cur_lbl"], en["status_cur_lbl"] = "Status atual", "Current status"
+    pt["revert_lbl"], en["revert_lbl"] = "↺ Reverter (voltar um passo)", "↺ Revert (go back one step)"
+    pt["status_none"], en["status_none"] = "Não iniciado", "Not started"
+    for _st in CHECKIN_STATUSES:
+        pt[f"st_{_st}"], en[f"st_{_st}"] = CHECKIN_LABELS["pt"][_st], CHECKIN_LABELS["en"][_st]
+    for i, it in enumerate(ctx["items"]):
+        _cur = it["status"]
+        pt[f"it{i}_status"] = CHECKIN_LABELS["pt"].get(_cur, "Não iniciado")
+        en[f"it{i}_status"] = CHECKIN_LABELS["en"].get(_cur, "Not started")
     for i, it in enumerate(ctx["items"]):
         pt[f"it{i}_dt"], en[f"it{i}_dt"] = it["dt_pt"], it["dt_en"]
         pt[f"it{i}_svc"], en[f"it{i}_svc"] = it["service_pt"], it["service_en"]
