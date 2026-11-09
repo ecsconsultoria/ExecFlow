@@ -27,7 +27,7 @@ CHECKIN_STATUSES = [
 
 CHECKIN_LABELS = {
     "pt": {
-        "aceito": "Aceito",
+        "aceito": "Aceitar",
         "a_caminho_cliente": "A Caminho do Cliente",
         "aguardando_cliente": "Aguardando Cliente",
         "cliente_embarcou": "Cliente Embarcou",
