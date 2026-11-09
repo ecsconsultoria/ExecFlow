@@ -234,6 +234,11 @@ class POItem(db.Model, TimestampMixin):
     op_flight_number    = db.Column(db.String(50))
     op_pax_count        = db.Column(db.Integer)
     op_notes            = db.Column(db.String(500))
+    # Conclusão POR ITEM + check-in do motorista (link público da agenda PO)
+    op_completed_at      = db.Column(db.DateTime, nullable=True)
+    op_driver_status      = db.Column(db.String(50), nullable=True)
+    op_driver_status_prev = db.Column(db.String(50), nullable=True)
+    op_driver_status_at   = db.Column(db.DateTime, nullable=True)
     # Placa de receptivo
     placa_receptivo        = db.Column(db.Boolean, default=False)
     placa_receptivo_texto  = db.Column(db.Text)

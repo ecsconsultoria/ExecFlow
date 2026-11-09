@@ -54,11 +54,12 @@
     .checkin-cur { color: var(--muted); font-size: 13px; text-align: center; margin: 0 0 10px; }
     .checkin-cur strong { color: #fff; }
     .checkin form { margin: 0; }
+    .checkin-actions { text-align: center; }
     .st-btn {
-      display: block; width: 100%; margin: 6px 0; padding: 11px 10px;
-      background: #10100f; border: 1px solid #51432d; border-radius: 10px;
-      color: var(--muted); font-size: 13px; font-weight: 700; letter-spacing: .04em;
-      cursor: pointer; transition: border-color .15s, color .15s;
+      display: inline-block; margin: 3px 2px; padding: 8px 8px;
+      background: #10100f; border: 1px solid #51432d; border-radius: 8px;
+      color: var(--muted); font-size: 10.5px; font-weight: 700; letter-spacing: .02em;
+      cursor: pointer; transition: border-color .15s, color .15s; vertical-align: middle;
     }
     .st-btn.st-active, .st-btn:hover {
       border-color: var(--gold-light); color: #171107;
@@ -121,25 +122,31 @@
         <div class="row"><span class="lbl" data-i18n="note_lbl">{{ 'Notas' if lang != 'en' else 'Notes' }}</span><span class="val">{{ it.notes }}</span></div>
         {% endif %}
 
-        {# ── Check-in do motorista ── #}
+        {# ── Check-in do motorista (somente no link da PO) ── #}
+        {% if checkin_enabled %}
         <div class="checkin">
           <div class="checkin-title" data-i18n="status_lbl">{{ 'ALTERAR STATUS' if lang != 'en' else 'CHANGE STATUS HERE' }}</div>
           <p class="checkin-cur"><span data-i18n="status_cur_lbl">{{ 'Status atual' if lang != 'en' else 'Current status' }}</span>: <strong data-i18n="it{{ loop.index0 }}_status">{{ checkin_labels['pt' if lang != 'en' else 'en'].get(it.status, 'Não iniciado' if lang != 'en' else 'Not started') }}</strong></p>
-          <form method="post" action="{{ url_for('public_so.set_status', order_id=order.id, token=token) }}">
+          <form method="post" action="{{ status_url }}">
             <input type="hidden" name="item_id" value="{{ it.id }}">
+            <div class="checkin-actions">
             {% for st in checkin_statuses %}
             <button type="submit" name="status" value="{{ st }}"
                     class="st-btn {% if it.status == st %}st-active{% endif %}"
                     data-i18n="st_{{ st }}">{{ checkin_labels['pt' if lang != 'en' else 'en'][st] }}</button>
             {% endfor %}
+            </div>
           </form>
           {% if it.status_prev %}
-          <form method="post" action="{{ url_for('public_so.revert', order_id=order.id, token=token) }}">
+          <form method="post" action="{{ revert_url }}">
             <input type="hidden" name="item_id" value="{{ it.id }}">
-            <button type="submit" class="st-btn st-revert" data-i18n="revert_lbl">{{ '↺ Reverter (voltar um passo)' if lang != 'en' else '↺ Revert (go back one step)' }}</button>
+            <div class="checkin-actions">
+              <button type="submit" class="st-btn st-revert" data-i18n="revert_lbl">{{ '↺ Reverter (voltar um passo)' if lang != 'en' else '↺ Revert (go back one step)' }}</button>
+            </div>
           </form>
           {% endif %}
         </div>
+        {% endif %}
       </section>
       {% endfor %}
 

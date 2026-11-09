@@ -12,6 +12,7 @@ from flask import current_app, url_for
 
 from ..models.purchase_order import PurchaseOrder
 from ..utils import make_client_token
+from .checkin_service import CHECKIN_LABELS, CHECKIN_STATUSES
 from .so_agenda import _dt_pt_en, _phone_html
 
 
@@ -40,6 +41,7 @@ def _item_block(po: PurchaseOrder, it) -> dict:
     pax_name = it.op_passenger_name or po.passenger_name or ""
     pax_phone = it.op_passenger_phone or po.passenger_phone or ""
     return {
+        "id": it.id,
         "dt_pt": dt_pt,
         "dt_en": dt_en,
         "service_pt": _translate_service(desc, "pt"),
@@ -57,6 +59,9 @@ def _item_block(po: PurchaseOrder, it) -> dict:
         "pax_phone_html": _phone_html(pax_phone) if pax_phone else "",
         "flight": it.op_flight_number or po.flight_number or "",
         "notes": it.op_notes or "",
+        # Check-in do motorista (somente no link da PO)
+        "status": getattr(it, "op_driver_status", None) or "",
+        "status_prev": bool(getattr(it, "op_driver_status_prev", None)),
     }
 
 
@@ -73,6 +78,13 @@ def build_agenda_context(po: PurchaseOrder) -> dict:
         "order": po,
         "number": po.number,
         "so_url": url_for("purchase_orders.detail", po_id=po.id, _external=True),
+        # Check-in do motorista: habilitado no link da PO (o SO é do cliente)
+        "checkin_enabled": True,
+        "token": po_token(po.id),
+        "status_url": url_for("public_po.set_status", po_id=po.id, token=po_token(po.id)),
+        "revert_url": url_for("public_po.revert", po_id=po.id, token=po_token(po.id)),
+        "checkin_statuses": CHECKIN_STATUSES,
+        "checkin_labels": CHECKIN_LABELS,
         "ref_pt": "PEDIDO DE COMPRA",
         "ref_en": "PURCHASE ORDER",
         # PO: placa exibida AO LADO do veículo (SO: linha separada)
