@@ -105,7 +105,7 @@
         {% endif %}
         {% if it.driver %}
         <div class="row"><span class="lbl" data-i18n="driver_lbl">{{ 'Motorista' if lang != 'en' else 'Driver' }}</span><span class="val" data-i18n-html="it{{ loop.index0 }}_drv">{{ it.driver_en if lang == 'en' else it.driver }}</span></div>
-        <div class="row"><span class="lbl" data-i18n="celular_lbl">{{ 'Celular' if lang != 'en' else 'Mobile' }}</span><span class="val">{{ it.driver_phone or '–' }}</span></div>
+        <div class="row"><span class="lbl" data-i18n="celular_lbl">{{ 'Celular' if lang != 'en' else 'Mobile' }}</span><span class="val">{% if it.driver_phone %}{{ it.driver_phone_html|safe }}{% else %}–{% endif %}</span></div>
         {% endif %}
         {% if it.pickup %}
         <div class="row"><span class="lbl" data-i18n="pickup_lbl">{{ 'Embarque' if lang != 'en' else 'Pickup' }}</span><span class="val">{{ it.pickup }}</span></div>
