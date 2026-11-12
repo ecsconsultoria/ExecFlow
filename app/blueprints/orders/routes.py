@@ -380,6 +380,12 @@ def detail(oid):
     baixa_history = build_baixa_history(audit_logs, payments_by_no)
     clients    = Client.query.filter_by(company_id=current_user.company_id, deleted_at=None).order_by(Client.name).all()
 
+    # Motoristas do cadastro p/ preenchimento rápido nos dados operacionais
+    from ...models.driver import Driver
+    drivers = (Driver.query
+               .filter_by(company_id=current_user.company_id, is_active=True, deleted_at=None)
+               .order_by(Driver.name).all())
+
     # Serviços inclusos (PDF) — opções da tela com estado atual do pedido
     import json as _json
     from ...models.quote import DEFAULT_INCLUSIONS
@@ -425,6 +431,7 @@ def detail(oid):
         baixa_history=baixa_history,
         clients=clients,
         inclusion_options=inclusion_options,
+        drivers=drivers,
         include_cancel_policy=include_cancel_policy,
         agenda_url=agenda_url,
         quote_public_url=quote_public_url,

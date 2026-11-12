@@ -405,6 +405,13 @@
     this.placaImagemPos    = d.placaImagemPos || 'abaixo';
     this.showOpItemModal = true;
   },
+  pickDriver(ev) {
+    const opt = ev.target.selectedOptions[0];
+    if (!opt || !opt.dataset.name) return;
+    this.opDriverName  = opt.dataset.name;
+    this.opDriverPhone = opt.dataset.phone || '';
+    ev.target.value = '';  // permite escolher de novo
+  },
 }" x-cloak
   @open-obs-modal.window="showObsModal = true"
   @open-po-cancel-modal.window="showCancelModal = true"
@@ -1366,7 +1373,13 @@
           </div>
           <div>
             <label class="lbl">Motorista</label>
-            <input type="text" name="op_driver_name" class="fi text-sm" x-model="opDriverName">
+            <select class="fi text-sm" @change="pickDriver($event)">
+              <option value="">– Selecione do cadastro –</option>
+              {% for d in drivers %}
+              <option value="{{ d.id }}" data-name="{{ d.name|e }}" data-phone="{{ d.phone or '' }}">{{ d.name }}</option>
+              {% endfor %}
+            </select>
+            <input type="text" name="op_driver_name" class="fi text-sm mt-1.5" x-model="opDriverName" placeholder="Ou digite o nome">
           </div>
           <div>
             <label class="lbl">Celular</label>
