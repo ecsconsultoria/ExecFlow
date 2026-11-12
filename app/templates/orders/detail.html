@@ -417,7 +417,7 @@
     const m = this.driverList.find(x => x[0] === this.opDriverName);
     if (m && m[1]) this.opDriverPhone = m[1];
   },
-  driverList: {{ drivers_json|safe }}
+  driverList: {{ drivers_json|e }}
 }" x-cloak
   @open-obs-modal.window="showObsModal = true"
   @open-cancel-modal.window="showCancelModal = true"

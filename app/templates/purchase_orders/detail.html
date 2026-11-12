@@ -382,7 +382,7 @@
   placaReceptivoTexto:  '',
   placaImagem:          '',
   placaImagemPos:       'abaixo',
-  driverList:           {{ drivers_json|safe }},
+  driverList:           {{ drivers_json|e }},
   openOpItem(el) {
     const d = el.dataset;
     this.opItemUrl         = d.opUrl || '';
