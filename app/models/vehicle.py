@@ -49,6 +49,7 @@ class Vehicle(db.Model, TimestampMixin, SoftDeleteMixin):
     id          = db.Column(db.Integer, primary_key=True)
     company_id  = db.Column(db.Integer, db.ForeignKey("companies.id"),         nullable=False)
     category_id = db.Column(db.Integer, db.ForeignKey("vehicle_categories.id"), nullable=False)
+    name        = db.Column(db.String(200))
     make        = db.Column(db.String(100))
     model       = db.Column(db.String(100))
     year        = db.Column(db.Integer)

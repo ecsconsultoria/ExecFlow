@@ -11,7 +11,7 @@ from ...utils.decorators import require_permission
 @login_required
 @require_permission("vehicles.view")
 def index():
-    vehicles = Vehicle.query.filter_by(company_id=current_user.company_id, deleted_at=None).order_by(Vehicle.make).all()
+    vehicles = Vehicle.query.filter_by(company_id=current_user.company_id, deleted_at=None).order_by(Vehicle.name).all()
     return render_template("vehicles/index.html", vehicles=vehicles)
 
 
@@ -24,13 +24,9 @@ def new():
         v = Vehicle(
             company_id  = current_user.company_id,
             category_id = request.form["category_id"],
-            make        = request.form.get("make"),
-            model       = request.form.get("model"),
-            year        = request.form.get("year") or None,
+            name        = request.form.get("name"),
             plate       = request.form.get("plate"),
             color       = request.form.get("color"),
-            capacity    = request.form.get("capacity") or None,
-            notes       = request.form.get("notes"),
         )
         db.session.add(v)
         db.session.commit()
@@ -47,13 +43,9 @@ def edit(vid):
     categories = VehicleCategory.query.filter_by(is_active=True).order_by(VehicleCategory.sort_order).all()
     if request.method == "POST":
         vehicle.category_id = request.form["category_id"]
-        vehicle.make        = request.form.get("make")
-        vehicle.model       = request.form.get("model")
-        vehicle.year        = request.form.get("year") or None
+        vehicle.name        = request.form.get("name")
         vehicle.plate       = request.form.get("plate")
         vehicle.color       = request.form.get("color")
-        vehicle.capacity    = request.form.get("capacity") or None
-        vehicle.notes       = request.form.get("notes")
         db.session.commit()
         flash("Veículo atualizado.", "success")
         return redirect(url_for("vehicles.index"))

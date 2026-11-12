@@ -215,6 +215,14 @@ def _ensure_schema_columns():
                         ))
                         log.info('Schema patch applied: orders.%s', _col_name)
 
+        # ── vehicles: name column (formulario VEICULO, 11/2026) ───────────────
+        if 'vehicles' in table_names:
+            existing_v = {c['name'] for c in insp.get_columns('vehicles')}
+            if 'name' not in existing_v:
+                with db.engine.begin() as conn:
+                    conn.execute(_text("ALTER TABLE vehicles ADD COLUMN name VARCHAR(200)"))
+                log.info('Schema patch applied: vehicles.name')
+
         # ── order_items: operational item columns (SO por item) ──────────────
         if 'order_items' in table_names:
             existing_oi = {c['name'] for c in insp.get_columns('order_items')}

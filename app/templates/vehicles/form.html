@@ -12,20 +12,18 @@
 {% call card(class='max-w-lg mx-auto', padding='p-6') %}
   <form method="post" class="space-y-4">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <div class="grid grid-cols-2 gap-4">
-      {{ input('plate', label='Placa *', required=True, value=vehicle.plate if vehicle else '') }}
-      {{ input('year', label='Ano', type='number', value=vehicle.year if vehicle else '') }}
-      {{ input('make', label='Marca', value=vehicle.make if vehicle else '') }}
-      {{ input('model', label='Modelo', value=vehicle.model if vehicle else '') }}
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+      {{ input('name', label='Veículo *', required=True, value=vehicle.name if vehicle else '') }}
+      {{ input('color', label='Cor', value=vehicle.color if vehicle else '') }}
+      {{ input('plate', label='Placa', value=vehicle.plate if vehicle else '') }}
+      {% set ns = namespace(options=[('', '– Selecione –')]) %}
+      {% for cat in categories %}
+        {% set ns.options = ns.options + [(cat.id, cat.name)] %}
+      {% endfor %}
+      {{ select('category_id', label='Categoria',
+                 options=ns.options,
+                 selected=vehicle.category_id if vehicle and vehicle.category_id else '') }}
     </div>
-    {% set ns = namespace(options=[('', '– Selecione –')]) %}
-    {% for cat in categories %}
-      {% set ns.options = ns.options + [(cat.id, cat.name)] %}
-    {% endfor %}
-    {{ select('category_id', label='Categoria',
-               options=ns.options,
-               selected=vehicle.category_id if vehicle and vehicle.category_id else '') }}
-    {{ input('color', label='Cor', value=vehicle.color if vehicle else '') }}
     <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer">
       <input type="checkbox" name="is_active" value="1"
              {% if (not vehicle) or vehicle.is_active %}checked{% endif %}
