@@ -299,6 +299,7 @@ def _build_context(cid):
     drivers = (Driver.query
                .filter_by(company_id=cid, is_active=True, deleted_at=None)
                .order_by(Driver.name).all())
+    drivers_json = json.dumps([[d.name, d.phone or ""] for d in drivers])
     suppliers_json = json.dumps({str(s.id): {
         'contact': s.contact or '', 'email': s.email or '',
         'phone': s.phone or '', 'document': s.document or '',
@@ -308,7 +309,7 @@ def _build_context(cid):
         'requires_route':   getattr(sv, 'requires_route',   False),
         'requires_passenger': getattr(sv, 'requires_passenger', False),
     } for sv in services})
-    return suppliers, services, categories, suppliers_json, services_json, drivers
+    return suppliers, services, categories, suppliers_json, services_json, drivers, drivers_json
 
 
 # ─── New — exibe formulário de criação de PO ────────────────────────────────
@@ -356,13 +357,13 @@ def new():
         flash(f"PO {po.number} criada a partir do pedido {linked_order.number}.", "success")
         return redirect(url_for("purchase_orders.detail", po_id=po.id))
     linked_order = None
-    suppliers, services, categories, suppliers_json, services_json, drivers = _build_context(cid)
+    suppliers, services, categories, suppliers_json, services_json, drivers, drivers_json = _build_context(cid)
     resp = make_response(render_template("purchase_orders/detail.html",
                            po=None,
                            linked_order=linked_order,
                            suppliers=suppliers, services=services, categories=categories,
                            suppliers_json=suppliers_json, services_json=services_json,
-                           drivers=drivers,
+                           drivers=drivers, drivers_json=drivers_json,
                            PO_STATUSES=PO_STATUSES,
                            audit_logs=[]))
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
@@ -425,7 +426,7 @@ def detail(po_id):
            .filter_by(id=po_id, company_id=current_user.company_id)
            .first_or_404())
     cid = current_user.company_id
-    suppliers, services, categories, suppliers_json, services_json, drivers = _build_context(cid)
+    suppliers, services, categories, suppliers_json, services_json, drivers, drivers_json = _build_context(cid)
     audit_logs = AuditLog.query.filter_by(entity="po", entity_id=po.id).order_by(AuditLog.created_at.asc()).all()
 
     # Link público da agenda do fornecedor (endereço do próprio ExecFlow + token)
@@ -447,7 +448,7 @@ def detail(po_id):
                            po=po,
                            suppliers=suppliers, services=services, categories=categories,
                            suppliers_json=suppliers_json, services_json=services_json,
-                           drivers=drivers,
+                           drivers=drivers, drivers_json=drivers_json,
                            linked_order=po.order,
                            PO_STATUSES=PO_STATUSES,
                            audit_logs=audit_logs,

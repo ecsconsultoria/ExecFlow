@@ -382,6 +382,7 @@
   placaReceptivoTexto:  '',
   placaImagem:          '',
   placaImagemPos:       'abaixo',
+  driverList:           {{ drivers_json|safe }},
   openOpItem(el) {
     const d = el.dataset;
     this.opItemUrl         = d.opUrl || '';
@@ -405,12 +406,9 @@
     this.placaImagemPos    = d.placaImagemPos || 'abaixo';
     this.showOpItemModal = true;
   },
-  pickDriver(ev) {
-    const opt = ev.target.selectedOptions[0];
-    if (!opt || !opt.dataset.name) return;
-    this.opDriverName  = opt.dataset.name;
-    this.opDriverPhone = opt.dataset.phone || '';
-    ev.target.value = '';  // permite escolher de novo
+  fillDriverPhone() {
+    const m = this.driverList.find(x => x[0] === this.opDriverName);
+    if (m && m[1]) this.opDriverPhone = m[1];
   },
 }" x-cloak
   @open-obs-modal.window="showObsModal = true"
@@ -1373,13 +1371,13 @@
           </div>
           <div>
             <label class="lbl">Motorista</label>
-            <select class="fi text-sm" @change="pickDriver($event)">
-              <option value="">– Selecione do cadastro –</option>
+            <input type="text" name="op_driver_name" class="fi text-sm" x-model="opDriverName"
+                   list="po-drivers-list" @change="fillDriverPhone()" placeholder="Nome ou selecione do cadastro">
+            <datalist id="po-drivers-list">
               {% for d in drivers %}
-              <option value="{{ d.id }}" data-name="{{ d.name|e }}" data-phone="{{ d.phone or '' }}">{{ d.name }}</option>
+              <option value="{{ d.name|e }}">{{ d.phone or '' }}</option>
               {% endfor %}
-            </select>
-            <input type="text" name="op_driver_name" class="fi text-sm mt-1.5" x-model="opDriverName" placeholder="Ou digite o nome">
+            </datalist>
           </div>
           <div>
             <label class="lbl">Celular</label>
