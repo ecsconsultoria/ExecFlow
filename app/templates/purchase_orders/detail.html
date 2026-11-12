@@ -383,6 +383,7 @@
   placaImagem:          '',
   placaImagemPos:       'abaixo',
   driverList:           {{ drivers_json|e }},
+  vehicleList:          {{ vehicles_json|e }},
   openOpItem(el) {
     const d = el.dataset;
     this.opItemUrl         = d.opUrl || '';
@@ -409,6 +410,10 @@
   fillDriverPhone() {
     const m = this.driverList.find(x => x[0] === this.opDriverName);
     if (m && m[1]) this.opDriverPhone = m[1];
+  },
+  fillVehiclePlate() {
+    const m = this.vehicleList.find(x => x[0] === this.opVehicleModel);
+    if (m && m[1]) this.opVehiclePlate = m[1];
   },
 }" x-cloak
   @open-obs-modal.window="showObsModal = true"
@@ -1389,7 +1394,13 @@
         <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
           <div>
             <label class="lbl">Veículo</label>
-            <input type="text" name="op_vehicle_model" class="fi text-sm" x-model="opVehicleModel">
+            <input type="text" name="op_vehicle_model" class="fi text-sm" x-model="opVehicleModel"
+                   list="po-vehicles-list" @change="fillVehiclePlate()" placeholder="Nome ou selecione do cadastro">
+            <datalist id="po-vehicles-list">
+              {% for v in vehicles %}
+              <option value="{{ v.name|e }}">{{ v.plate or '' }}</option>
+              {% endfor %}
+            </datalist>
           </div>
           <div>
             <label class="lbl">Placa</label>

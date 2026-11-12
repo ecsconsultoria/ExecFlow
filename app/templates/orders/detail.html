@@ -417,7 +417,12 @@
     const m = this.driverList.find(x => x[0] === this.opDriverName);
     if (m && m[1]) this.opDriverPhone = m[1];
   },
-  driverList: {{ drivers_json|e }}
+  fillVehiclePlate() {
+    const m = this.vehicleList.find(x => x[0] === this.opVehicleModel);
+    if (m && m[1]) this.opVehiclePlate = m[1];
+  },
+  driverList: {{ drivers_json|e }},
+  vehicleList: {{ vehicles_json|e }}
 }" x-cloak
   @open-obs-modal.window="showObsModal = true"
   @open-cancel-modal.window="showCancelModal = true"
@@ -1671,7 +1676,13 @@
         <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
           <div>
             <label class="lbl">Veículo</label>
-            <input type="text" name="op_vehicle_model" class="fi text-sm" x-model="opVehicleModel">
+            <input type="text" name="op_vehicle_model" class="fi text-sm" x-model="opVehicleModel"
+                   list="so-vehicles-list" @change="fillVehiclePlate()" placeholder="Nome ou selecione do cadastro">
+            <datalist id="so-vehicles-list">
+              {% for v in vehicles %}
+              <option value="{{ v.name|e }}">{{ v.plate or '' }}</option>
+              {% endfor %}
+            </datalist>
           </div>
           <div>
             <label class="lbl">Placa</label>

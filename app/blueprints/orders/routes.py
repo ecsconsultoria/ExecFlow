@@ -387,6 +387,12 @@ def detail(oid):
                .order_by(Driver.name).all())
     import json as _json_drv
     drivers_json = _json_drv.dumps([[d.name, d.phone or ""] for d in drivers])
+    # Veículos do cadastro p/ preenchimento rápido (nome + placa)
+    from ...models.vehicle import Vehicle
+    vehicles = (Vehicle.query
+                .filter_by(company_id=current_user.company_id, is_active=True, deleted_at=None)
+                .order_by(Vehicle.name).all())
+    vehicles_json = _json_drv.dumps([[v.name or "", v.plate or ""] for v in vehicles])
 
     # Serviços inclusos (PDF) — opções da tela com estado atual do pedido
     import json as _json
@@ -435,6 +441,8 @@ def detail(oid):
         inclusion_options=inclusion_options,
         drivers=drivers,
         drivers_json=drivers_json,
+        vehicles=vehicles,
+        vehicles_json=vehicles_json,
         include_cancel_policy=include_cancel_policy,
         agenda_url=agenda_url,
         quote_public_url=quote_public_url,
