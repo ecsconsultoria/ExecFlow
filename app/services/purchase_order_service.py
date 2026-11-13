@@ -91,7 +91,7 @@ def _add_items_from_so(po, order):
             unit_cost   = cost_price,
             total_cost  = round(cost_price * qty, 2),
             sort_order  = idx,
-            op_driver_name      = item.driver_name or "",
+            op_driver_name      = item.op_driver_name or "",
             op_driver_phone     = item.op_driver_phone or "",
             op_vehicle_model    = item.op_vehicle_model or "",
             op_vehicle_plate    = item.op_vehicle_plate or "",
@@ -657,7 +657,7 @@ def add_item(po: PurchaseOrder, data: dict) -> POItem:
         unit_cost   = unit_cost,
         total_cost  = total_cost,
         sort_order  = sort_order,
-        op_driver_name = driver_type,
+        op_driver_name = None,
         service_date   = svc_date,
         service_time   = svc_time,
     )
@@ -729,8 +729,9 @@ def update_item(item: POItem, data: dict) -> POItem:
     if "category_id" in data:
         cid = data.get("category_id")
         item.category_id = int(cid) if cid and str(cid).strip() else None
-    if "driver_name" in data:
-        item.op_driver_name = (data.get("driver_name") or "").strip() or None
+    # "driver_name" (tipo Monolíngue/Bilíngue) não existe em POItem — o nome
+    # do motorista operacional é op_driver_name, editado SOMENTE pelo modal
+    # de dados operacionais. Ignorado aqui de propósito.
     if "service_date" in data:
         raw = (data.get("service_date") or "").strip()
         try:
