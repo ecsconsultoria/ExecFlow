@@ -55,23 +55,27 @@
     .po-head{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
     .po-head>.grid{display:contents}
     .po-head>.card-divider{grid-column:1/-1;order:6}
-    .po-emissao{order:1}.po-entrega{order:2}.po-numero{order:3}.po-status{order:4}.po-criado{order:5}
+    .po-emissao{order:1}.po-entrega{order:2}.po-numero{order:3}.po-status{order:4}
     .po-forn{order:6}.po-contato{order:7}.po-email{order:8}.po-tel{order:9}.po-cnpj{order:10}
     /* Inputs nativos de data/hora estouram a coluna no celular (iOS/Android) —
        !important vence o min-width inline das parcelas */
     input[type=date],input[type=time]{-webkit-appearance:none;appearance:none;min-width:0!important;max-width:100%}
-    /* Ajustes financeiros: DESCONTO + COTAÇÃO USD na mesma linha no celular */
-    .po-ajustes{flex-wrap:nowrap!important;gap:6px!important}
-    .po-ajustes .min-w-\[155px\]{min-width:0!important;flex:1!important}
-    .po-ajustes .min-w-\[130px\]{min-width:0!important;flex:1!important}
-    .po-ajustes input[name=discount_value]{width:64px!important}
-    .po-ajustes input[name=usd_rate]{width:72px!important}
-    .po-ajustes .text-2xl{font-size:14px!important}
+    /* Ajustes financeiros: DESCONTO + COTAÇÃO USD + TOTAL FINAL na mesma linha */
+    .po-ajustes{flex-wrap:nowrap!important;gap:6px!important;min-width:0!important}
+    .po-ajustes .min-w-\[155px\]{min-width:0!important;flex:0 0 auto!important}
+    .po-ajustes .min-w-\[130px\]{min-width:0!important;flex:0 0 auto!important}
+    .po-ajustes input[name=discount_value]{width:52px!important}
+    .po-ajustes input[name=usd_rate]{width:56px!important}
+    .po-ajustes .text-right{flex:0 0 auto!important;min-width:0!important}
+    .po-ajustes .text-right p{font-size:13px!important;white-space:nowrap}
     .po-ajustes .lbl{font-size:9px!important}
     /* Modal de dados operacionais: espaçamento entre colunas garantido por
        padding (independe do suporte a gap no navegador do celular) */
     .op-row{column-gap:0!important;row-gap:12px!important;margin-left:-6px;margin-right:-6px}
     .op-row>div{padding-left:6px;padding-right:6px;min-width:0}
+  }
+  @media (max-width: 340px) {
+    .po-ajustes .text-right p{font-size:12px!important}
   }
 </style>
 {% endblock %}
@@ -464,7 +468,7 @@
 <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
   <div class="px-4 pt-3 pb-3 po-head">
 
-    {# ── Linha 1: Nº PO | Emissão | Data Entrega | Criado por | Status ── #}
+    {# ── Linha 1: Nº PO | Emissão | Data Entrega | Status ── #}
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-3 gap-y-3 pb-3">
 
       <div class="po-numero">
@@ -492,11 +496,6 @@
                value="{{ po.delivery_date.isoformat() if po and po.delivery_date else '' }}"
                class="fi">
         {% endif %}
-      </div>
-
-      <div class="po-criado">
-        <label class="lbl">Criado por</label>
-        <p class="fi-ro"><span class="truncate">{{ current_user.name if not po else (po.created_by_user.name if po.created_by_user is defined and po.created_by_user else current_user.name) }}</span></p>
       </div>
 
       <div class="po-status">

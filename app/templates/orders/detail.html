@@ -68,17 +68,21 @@
        Final à direita) e ACIMA dos Serviços Inclusos; inclusos em linha própria */
     .so-ajustes{flex-wrap:wrap!important;gap:6px!important}
     .so-ajustes-left{flex-basis:100%!important;order:2}
-    .so-ajustes-right{flex-basis:100%!important;justify-content:stretch!important;margin-left:0!important;order:1}
-    .so-ajustes .min-w-\[155px\]{min-width:0!important;flex:1!important}
-    .so-ajustes .min-w-\[130px\]{min-width:0!important;flex:1!important}
-    .so-ajustes input[name=discount_value]{width:64px!important}
-    .so-ajustes input[name=usd_rate]{width:72px!important}
-    .so-ajustes .text-2xl{font-size:14px!important}
+    .so-ajustes-right{flex-basis:100%!important;justify-content:flex-end!important;margin-left:0!important;order:1;flex-wrap:nowrap!important;min-width:0!important}
+    .so-ajustes .min-w-\[155px\]{min-width:0!important;flex:0 0 auto!important}
+    .so-ajustes .min-w-\[130px\]{min-width:0!important;flex:0 0 auto!important}
+    .so-ajustes input[name=discount_value]{width:52px!important}
+    .so-ajustes input[name=usd_rate]{width:56px!important}
+    .so-ajustes .text-right{flex:0 0 auto!important;min-width:0!important}
+    .so-ajustes .text-right p{font-size:13px!important;white-space:nowrap}
     .so-ajustes .lbl{font-size:9px!important}
     /* Modal de dados operacionais: espaçamento entre colunas garantido por
        padding (independe do suporte a gap no navegador do celular) */
     .op-row{column-gap:0!important;row-gap:12px!important;margin-left:-6px;margin-right:-6px}
     .op-row>div{padding-left:6px;padding-right:6px;min-width:0}
+  }
+  @media (max-width: 340px) {
+    .so-ajustes .text-right p{font-size:12px!important}
   }
 </style>
 {% endblock %}
