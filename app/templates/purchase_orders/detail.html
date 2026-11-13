@@ -52,6 +52,10 @@
     .po-head>.card-divider{grid-column:1/-1}
     .po-emissao{order:1}.po-entrega{order:2}.po-numero{order:3}.po-status{order:4}.po-criado{order:5}
     .po-forn{order:6}.po-contato{order:7}.po-email{order:8}.po-tel{order:9}.po-cnpj{order:10}
+    /* Modal de dados operacionais: espaçamento entre colunas garantido por
+       padding (independe do suporte a gap no navegador do celular) */
+    .op-row{column-gap:0!important;row-gap:12px!important;margin-left:-6px;margin-right:-6px}
+    .op-row>div{padding-left:6px;padding-right:6px;min-width:0}
   }
 </style>
 {% endblock %}
@@ -1366,7 +1370,7 @@
         </div>
 
         {# Linha 1: Data Pickup | Hora Pickup | Motorista | Celular #}
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 op-row">
           <div>
             <label class="lbl">Data Pickup</label>
             <input type="date" name="op_pickup_date" class="fi text-sm" x-model="opPickupDate">
@@ -1392,7 +1396,7 @@
         </div>
 
         {# Linha 2: Veículo | Placa | Embarque | Desembarque #}
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 op-row">
           <div>
             <label class="lbl">Veículo</label>
             <input type="text" name="op_vehicle_model" class="fi text-sm" x-model="opVehicleModel"
@@ -1418,7 +1422,7 @@
         </div>
 
         {# Linha 3: Passageiro | Fone | Nº Voo (ultimos, depois do Desembarque) #}
-        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 op-row">
           <div>
             <label class="lbl">Passageiro</label>
             <input type="text" name="op_passenger_name" class="fi text-sm" x-model="opPassengerName">

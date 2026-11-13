@@ -1,7 +1,7 @@
 """blueprints/orders/routes.py — Rotas do módulo Pedidos (Orders)."""
 from datetime import datetime
 
-from flask import make_response, render_template, request, redirect, url_for, flash, abort, send_file, jsonify
+from flask import current_app, make_response, render_template, request, redirect, url_for, flash, abort, send_file, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import lazyload, joinedload, selectinload
@@ -419,6 +419,11 @@ def detail(oid):
     from ...services.quote_html import public_token
     agenda_url = (request.host_url.rstrip("/")
                   + url_for("public_so.agenda", order_id=order.id, token=so_token(order.id)))
+    # Link curto (base62 do id) no domínio do check-in — copiado pelo botão "Copiar agenda"
+    from ...services.short_link import encode as _short_encode
+    _short_base = current_app.config.get("SHORT_BASE_URL",
+                                         "https://checkin.executivecarsp.com").rstrip("/")
+    agenda_short_url = f"{_short_base}/l/so/{_short_encode(order.id)}"
     quote_public_url = ""
     if order.quote_id and order.quote:
         quote_public_url = (request.host_url.rstrip("/")
@@ -445,6 +450,7 @@ def detail(oid):
         vehicles_json=vehicles_json,
         include_cancel_policy=include_cancel_policy,
         agenda_url=agenda_url,
+        agenda_short_url=agenda_short_url,
         quote_public_url=quote_public_url,
     ))
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"

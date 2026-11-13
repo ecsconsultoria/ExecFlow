@@ -61,6 +61,10 @@
     .so-ajustes>.min-w-\[130px\]{min-width:0!important;flex:1!important}
     .so-ajustes .text-2xl{font-size:14px!important}
     .so-ajustes .lbl{font-size:9px!important}
+    /* Modal de dados operacionais: espaçamento entre colunas garantido por
+       padding (independe do suporte a gap no navegador do celular) */
+    .op-row{column-gap:0!important;row-gap:12px!important;margin-left:-6px;margin-right:-6px}
+    .op-row>div{padding-left:6px;padding-right:6px;min-width:0}
   }
 </style>
 {% endblock %}
@@ -1649,7 +1653,7 @@
                  placeholder="Serviço dos dados operacionais">
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 op-row">
           <div>
             <label class="lbl">Data Pickup</label>
             <input type="date" name="op_pickup_date" class="fi text-sm" x-model="opPickupDate">
@@ -1674,7 +1678,7 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 op-row">
           <div>
             <label class="lbl">Veículo</label>
             <input type="text" name="op_vehicle_model" class="fi text-sm" x-model="opVehicleModel"
@@ -1699,7 +1703,7 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 op-row">
           <div>
             <label class="lbl">Passageiro</label>
             <input type="text" name="op_passenger_name" class="fi text-sm" x-model="opPassengerName">
@@ -1871,7 +1875,7 @@
     phone:   "{{ ((order.client.whatsapp if order.client and order.client.whatsapp else (order.celular or order.phone)) or '')|e }}",
     pdfPT:   "{{ url_for('orders.pdf', oid=order.id, lang='pt') }}?_cb={{ order.updated_at.timestamp() if order.updated_at else 0 }}",
     pdfEN:   "{{ url_for('orders.pdf', oid=order.id, lang='en') }}?_cb={{ order.updated_at.timestamp() if order.updated_at else 0 }}",
-    agenda:  {{ (agenda_url or '')|tojson }},
+    agenda:  {{ (agenda_short_url or agenda_url or '')|tojson }},
     quote:   {{ (quote_public_url or '')|tojson }},
   };
   function _copy(url, sel) {
