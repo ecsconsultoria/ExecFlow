@@ -64,11 +64,11 @@
     /* Inputs nativos de data/hora estouram a coluna no celular (iOS/Android) —
        !important vence o min-width inline das parcelas */
     input[type=date],input[type=time]{-webkit-appearance:none;appearance:none;min-width:0!important;max-width:100%}
-    /* Ajustes financeiros: inclusos em linha própria; DESCONTO + COTAÇÃO USD
-       na MESMA linha (com Total Final à direita) */
+    /* Ajustes financeiros: DESCONTO + COTAÇÃO USD na MESMA linha (com Total
+       Final à direita) e ACIMA dos Serviços Inclusos; inclusos em linha própria */
     .so-ajustes{flex-wrap:wrap!important;gap:6px!important}
-    .so-ajustes-left{flex-basis:100%!important}
-    .so-ajustes-right{flex-basis:100%!important;justify-content:stretch!important;margin-left:0!important}
+    .so-ajustes-left{flex-basis:100%!important;order:2}
+    .so-ajustes-right{flex-basis:100%!important;justify-content:stretch!important;margin-left:0!important;order:1}
     .so-ajustes .min-w-\[155px\]{min-width:0!important;flex:1!important}
     .so-ajustes .min-w-\[130px\]{min-width:0!important;flex:1!important}
     .so-ajustes input[name=discount_value]{width:64px!important}
