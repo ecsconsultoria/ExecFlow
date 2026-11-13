@@ -38,6 +38,11 @@
   .pa-wrap>.ml-auto button i{font-size:15px!important;margin:0!important}
   .pa-wrap>.ml-auto button span{display:none!important}
   .pa-wrap>.ml-auto button i.fa-chevron-down{display:none!important}
+  /* Inputs nativos date/time (iOS/Android) impõem largura mínima intrínseca
+     e estouram a coluna do grid, grudando no campo vizinho — appearance:none
+     remove o controle nativo e min-width:0 deixa a célula encolher */
+  .op-row input{min-width:0;max-width:100%}
+  .op-row input[type=date],.op-row input[type=time]{-webkit-appearance:none;appearance:none}
   @media (max-width: 639px) {
     .pa-wrap{gap:6px!important;align-items:center!important;margin-right:0!important}
     .pa-header{flex-shrink:0!important;min-width:0!important}
