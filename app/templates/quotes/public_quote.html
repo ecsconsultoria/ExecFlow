@@ -150,6 +150,16 @@
     .bank-field { color: #fff; font-size: 13px; line-height: 1.55; margin: 0 0 12px; }
     .bank-field b { color: var(--gold-light); font-weight: 700; }
     .bank-small { color: var(--muted); font-size: 12px; }
+    /* cards de moeda dentro do popup de transferência (USD / EUR) */
+    .wire-card {
+      border: 1px solid #51432d; border-radius: 12px; padding: 16px 16px 6px;
+      margin: 0 0 16px; background: rgba(8, 8, 7, .45);
+    }
+    .wire-card:last-of-type { margin-bottom: 2px; }
+    /* rolagem interna dos cards; botão Done fica sempre visível no rodapé */
+    #bank-overlay .pay-ok-card { display: flex; flex-direction: column; max-height: calc(100vh - 32px); }
+    .bank-scroll { overflow-y: auto; min-height: 0; scrollbar-width: thin; }
+    #bank-overlay .pay-ok-done { flex-shrink: 0; margin: 14px auto 0; }
     .pay-ok-icon {
       width: 52px; height: 52px; margin: 0 auto 14px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
@@ -351,7 +361,8 @@
 
   <div id="bank-overlay" class="modal-overlay" role="dialog" aria-modal="true">
     <div class="pay-ok-card bank-card">
-      <div id="bank-data-pt" class="bank-data"{% if lang == 'en' %} style="display:none"{% endif %}>
+      <div class="bank-scroll">
+        <div id="bank-data-pt" class="bank-data"{% if lang == 'en' %} style="display:none"{% endif %}>
         <div class="pay-ok-title" style="text-align:center;margin-bottom:14px">DADOS BANCÁRIOS</div>
         <p class="bank-field">
           <b>BANCO INTER</b><br>
@@ -360,20 +371,38 @@
         </p>
       </div>
       <div id="bank-data-en" class="bank-data"{% if lang != 'en' %} style="display:none"{% endif %}>
-        <div class="pay-ok-title" style="text-align:center;margin-bottom:14px">Payment in Dollar - USD</div>
-        <p class="bank-field"><b>Beneficiary (Field 59):</b><br>
-          Beneficiary in Brazil: EXECUTIVE COMERCIO E SERVICOS LTDA<br>
-          IBAN / Account: BR4100416968000010180917005C1</p>
-        <p class="bank-field"><b>Intermediary bank (Field 56):</b><br>
-          JP Morgan Chase N.A.<br>
-          SWIFT: CHASUS33<br>
-          ABA: 021000021</p>
-        <p class="bank-field"><b>Destination bank (Field 57):</b><br>
-          SWIFT: ITEMBRSP<br>
-          Beneficiary bank: Banco Inter S.A.</p>
-        <p class="bank-field bank-small"><b>Additional information:</b><br>
-          JP Morgan address: 270 Park Avenue, New York, NY, 10017, United States<br>
-          Banco Inter address: 1219 Barbacena Ave, Belo Horizonte, MG, 30190-924, Brazil</p>
+        <div class="wire-card">
+          <div class="pay-ok-title" style="text-align:center;margin-bottom:14px">Payment in Dollar - USD</div>
+          <p class="bank-field"><b>Beneficiary (Field 59):</b><br>
+            Beneficiary in Brazil: EXECUTIVE COMERCIO E SERVICOS LTDA<br>
+            IBAN / Account: BR4100416968000010180917005C1</p>
+          <p class="bank-field"><b>Intermediary bank (Field 56):</b><br>
+            JP Morgan Chase N.A.<br>
+            SWIFT: CHASUS33<br>
+            ABA: 021000021</p>
+          <p class="bank-field"><b>Destination bank (Field 57):</b><br>
+            SWIFT: ITEMBRSP<br>
+            Beneficiary bank: Banco Inter S.A.</p>
+          <p class="bank-field bank-small"><b>Additional information:</b><br>
+            JP Morgan address: 270 Park Avenue, New York, NY, 10017, United States<br>
+            Banco Inter address: 1219 Barbacena Ave, Belo Horizonte, MG, 30190-924, Brazil</p>
+        </div>
+        <div class="wire-card">
+          <div class="pay-ok-title" style="text-align:center;margin-bottom:14px">Payment in Euro - EUR</div>
+          <p class="bank-field"><b>Beneficiary (Field 59):</b><br>
+            Beneficiary in Brazil: EXECUTIVE COMERCIO E SERVICOS LTDA<br>
+            IBAN / Account: BR4100416968000010180917005C1</p>
+          <p class="bank-field"><b>Intermediary bank (Field 56):</b><br>
+            JP Morgan AG<br>
+            SWIFT: CHASDEFX</p>
+          <p class="bank-field"><b>Destination bank (Field 57):</b><br>
+            SWIFT: ITEMBRSP<br>
+            Beneficiary bank: Banco Inter S.A.</p>
+          <p class="bank-field bank-small"><b>Additional information:</b><br>
+            Intermediary bank address: Taunustor 1, Frankfurt, Germany<br>
+            Banco Inter address: 1219 Barbacena Ave, Belo Horizonte, MG, 30190-924, Brazil</p>
+        </div>
+      </div>
       </div>
       <button type="button" class="pay-ok-done" style="display:block;margin:14px auto 0" data-i18n="pay_ok_done" onclick="closeBank()">{{ 'Done' if lang == 'en' else 'Concluído' }}</button>
     </div>
