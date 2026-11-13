@@ -54,9 +54,20 @@
     .pa-wrap>.ml-auto{margin-left:0!important}
     .po-head{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
     .po-head>.grid{display:contents}
-    .po-head>.card-divider{grid-column:1/-1}
+    .po-head>.card-divider{grid-column:1/-1;order:6}
     .po-emissao{order:1}.po-entrega{order:2}.po-numero{order:3}.po-status{order:4}.po-criado{order:5}
     .po-forn{order:6}.po-contato{order:7}.po-email{order:8}.po-tel{order:9}.po-cnpj{order:10}
+    /* Inputs nativos de data/hora estouram a coluna no celular (iOS/Android) —
+       !important vence o min-width inline das parcelas */
+    input[type=date],input[type=time]{-webkit-appearance:none;appearance:none;min-width:0!important;max-width:100%}
+    /* Ajustes financeiros: DESCONTO + COTAÇÃO USD na mesma linha no celular */
+    .po-ajustes{flex-wrap:nowrap!important;gap:6px!important}
+    .po-ajustes .min-w-\[155px\]{min-width:0!important;flex:1!important}
+    .po-ajustes .min-w-\[130px\]{min-width:0!important;flex:1!important}
+    .po-ajustes input[name=discount_value]{width:64px!important}
+    .po-ajustes input[name=usd_rate]{width:72px!important}
+    .po-ajustes .text-2xl{font-size:14px!important}
+    .po-ajustes .lbl{font-size:9px!important}
     /* Modal de dados operacionais: espaçamento entre colunas garantido por
        padding (independe do suporte a gap no navegador do celular) */
     .op-row{column-gap:0!important;row-gap:12px!important;margin-left:-6px;margin-right:-6px}
@@ -508,7 +519,7 @@
     {# ── Linha 2: Fornecedor | Contato | Email | Telefone | CNPJ ── #}
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-3 gap-y-3 pt-3">
 
-      <div>
+      <div class="po-forn">
         <label class="lbl">Fornecedor *</label>
         {% if locked %}
         <p class="fi-ro"><span class="truncate">
@@ -531,7 +542,7 @@
         {% endif %}
       </div>
 
-      <div>
+      <div class="po-contato">
         <label class="lbl">Contato</label>
         {% if locked %}
         <p class="fi-ro"><span class="truncate">{{ po.supplier.contact if po and po.supplier and po.supplier.contact else '–' }}</span></p>
@@ -542,7 +553,7 @@
         {% endif %}
       </div>
 
-      <div>
+      <div class="po-email">
         <label class="lbl">Email</label>
         {% if locked %}
         <p class="fi-ro"><span class="truncate">{{ po.supplier.email if po and po.supplier and po.supplier.email else '–' }}</span></p>
@@ -553,7 +564,7 @@
         {% endif %}
       </div>
 
-      <div>
+      <div class="po-tel">
         <label class="lbl">Telefone</label>
         {% if locked %}
         <p class="fi-ro">{{ po.supplier.phone if po and po.supplier and po.supplier.phone else '–' }}</p>
@@ -564,7 +575,7 @@
         {% endif %}
       </div>
 
-      <div>
+      <div class="po-cnpj">
         <label class="lbl">CNPJ / CPF</label>
         <p class="fi-ro" id="supp-document">
           {{ po.supplier.document if po and po.supplier and po.supplier.document else '–' }}
@@ -732,7 +743,7 @@
   <form method="post" action="{{ url_for('purchase_orders.update_adjustments', po_id=po.id) }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="px-4 py-3 border-t-2 border-slate-100 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-700/20">
-      <div class="flex flex-wrap items-end justify-end gap-4">
+      <div class="flex flex-wrap items-end justify-end gap-4 po-ajustes">
 
         <div class="min-w-[155px]">
           <label class="lbl">Desconto</label>

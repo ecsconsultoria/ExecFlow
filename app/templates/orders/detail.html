@@ -61,9 +61,18 @@
     .so-head>.card-divider{grid-column:1/-1;order:5;margin:0}
     .f-emissao{order:1}.f-entrega{order:2}.f-pedido{order:3}.f-status{order:4}
     .f-cliente{order:6}.f-celular{order:7}.f-email{order:8}.f-cnpj{order:9}.f-fat{order:10}
-    .so-ajustes{flex-wrap:nowrap!important;gap:4px!important}
-    .so-ajustes>.min-w-\[155px\]{min-width:0!important;flex:1!important}
-    .so-ajustes>.min-w-\[130px\]{min-width:0!important;flex:1!important}
+    /* Inputs nativos de data/hora estouram a coluna no celular (iOS/Android) —
+       !important vence o min-width inline das parcelas */
+    input[type=date],input[type=time]{-webkit-appearance:none;appearance:none;min-width:0!important;max-width:100%}
+    /* Ajustes financeiros: inclusos em linha própria; DESCONTO + COTAÇÃO USD
+       na MESMA linha (com Total Final à direita) */
+    .so-ajustes{flex-wrap:wrap!important;gap:6px!important}
+    .so-ajustes-left{flex-basis:100%!important}
+    .so-ajustes-right{flex-basis:100%!important;justify-content:stretch!important;margin-left:0!important}
+    .so-ajustes .min-w-\[155px\]{min-width:0!important;flex:1!important}
+    .so-ajustes .min-w-\[130px\]{min-width:0!important;flex:1!important}
+    .so-ajustes input[name=discount_value]{width:64px!important}
+    .so-ajustes input[name=usd_rate]{width:72px!important}
     .so-ajustes .text-2xl{font-size:14px!important}
     .so-ajustes .lbl{font-size:9px!important}
     /* Modal de dados operacionais: espaçamento entre colunas garantido por
@@ -732,7 +741,7 @@
     <div class="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 so-ajustes">
 
       {# Grupo esquerdo (mesma linha do Desconto): Serviços Inclusos + Política #}
-      <div class="flex flex-wrap items-end gap-x-6 gap-y-2 min-w-0">
+      <div class="flex flex-wrap items-end gap-x-6 gap-y-2 min-w-0 so-ajustes-left">
         <div>
           <label class="lbl">Serviços Inclusos (PDF)</label>
           {% if locked %}
@@ -769,7 +778,7 @@
 
       {# Grupo direito: Desconto + Cotação USD + Total Final (ml-auto garante
          a direita mesmo quando quebra de linha em telas estreitas) #}
-      <div class="flex flex-wrap items-end justify-end gap-4 ml-auto">
+      <div class="flex flex-wrap items-end justify-end gap-4 ml-auto so-ajustes-right">
       <div class="min-w-[155px]">
         <label class="lbl">Desconto</label>
         {% if locked %}
