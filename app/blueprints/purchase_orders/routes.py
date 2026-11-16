@@ -439,11 +439,11 @@ def detail(po_id):
     from ...services.po_agenda import po_token
     agenda_url = (request.host_url.rstrip("/")
                   + url_for("public_po.agenda", po_id=po.id, token=po_token(po.id)))
-    # Link curto (base62 do id) — copiado pelo botão "Copiar agenda"
-    from ...services.short_link import encode as _short_encode
+    # Link curto (base36 minúscula do id) — copiado pelo botão "Copiar agenda"
+    from ...services.short_link import encode_lower as _short_encode
     _short_base = current_app.config.get("SHORT_BASE_URL",
                                          "https://checkin.executivecarsp.com").rstrip("/")
-    agenda_short_url = f"{_short_base}/l/{_short_encode(po.id)}"
+    agenda_short_url = f"{_short_base}/l/p/{_short_encode(po.id)}"
 
     # Etapa 11B: timeline de baixas SOMENTE LEITURA (audit_logs) para exibição
     from ...services.payment_history_service import build_baixa_history
