@@ -357,8 +357,17 @@
                             <i class="fa-solid fa-pencil text-[10px]"></i>
                           </button>
                         </div>
-                        <p class="text-slate-400 mt-0.5 leading-tight"
-                           x-text="(item.driver_type ? item.driver_type + ' – ' : '') + item.category_name"></p>
+                        <p class="text-slate-400 mt-0.5 leading-tight flex items-center gap-1 flex-wrap">
+                          <span x-show="item.driver_type" x-text="item.driver_type + ' – '"></span>
+                          <select x-model.number="item.category_id"
+                                  @change="changeItemCategory(item)"
+                                  title="Categoria do veículo (alterável)"
+                                  class="border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded px-1 py-0.5 text-[11px] text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-400">
+                            <template x-for="cat in categories()" :key="cat.id">
+                              <option :value="cat.id" x-text="cat.name"></option>
+                            </template>
+                          </select>
+                        </p>
                       </div>
                     </div>
                   </td>
@@ -703,6 +712,41 @@ function quoteBuilder() {
     },
 
     cartTotal() { return this.cart.reduce((s, i) => s + (i.unit_price * i.quantity), 0); },
+
+    categories() {
+      return this.catalog.map(c => ({ id: c.id, name: c.name }));
+    },
+
+    changeItemCategory(item) {
+      const cat = this.catalog.find(c => c.id === item.category_id);
+      if (cat) item.category_name = cat.name;
+      if (!cat) return;
+      // Preço do catálogo da NOVA categoria para o mesmo serviço + motorista
+      const svc = cat.services.find(s =>
+        s.service_id === item.service_id &&
+        (s.driver_type || '') === (item.driver_type || '') &&
+        (s.state_code || '') === ((item._svc && item._svc.state_code) || '')
+      ) || cat.services.find(s =>
+        s.service_id === item.service_id &&
+        (s.driver_type || '') === (item.driver_type || '')
+      );
+      if (svc) {
+        item._svc = {
+          price_base:      svc.price_base,
+          price_nf:        svc.price_nf,
+          price_cartao:    svc.price_cartao,
+          price_nf_cartao: svc.price_nf_cartao,
+          state_code:      svc.state_code || '',
+        };
+        item.unit_price = this.priceFor(item._svc);
+        // Recalcula hora extra se a nova categoria tiver Diária 10h
+        const d10h = cat.services.find(s =>
+          /10\s*h/i.test(s.name) && s.driver_type === (item.driver_type || '') &&
+          s.state_code === (svc.state_code || '')
+        );
+        if (d10h) item.hour_extra = Math.round(this.priceFor(d10h) * 0.10 * 100) / 100;
+      }
+    },
 
     async submit() {
       if (!this.clientId || this.cart.length === 0) return;
