@@ -364,7 +364,8 @@
                                   title="Categoria do veículo (alterável)"
                                   class="border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded px-1 py-0.5 text-[11px] text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-400">
                             <template x-for="cat in categories()" :key="cat.id">
-                              <option :value="cat.id" x-text="cat.name"></option>
+                              <option :value="cat.id" x-text="cat.name"
+                                      :selected="item.category_id == cat.id"></option>
                             </template>
                           </select>
                         </p>
