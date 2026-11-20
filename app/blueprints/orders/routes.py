@@ -392,7 +392,7 @@ def detail(oid):
     vehicles = (Vehicle.query
                 .filter_by(company_id=current_user.company_id, is_active=True, deleted_at=None)
                 .order_by(Vehicle.name).all())
-    vehicles_json = _json_drv.dumps([[v.name or "", v.plate or ""] for v in vehicles])
+    vehicles_json = _json_drv.dumps([[(v.name or v.model or v.plate or ""), v.plate or ""] for v in vehicles])
 
     # Serviços inclusos (PDF) — opções da tela com estado atual do pedido
     import json as _json

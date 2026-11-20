@@ -436,11 +436,15 @@
     this.showOpItemModal = true;
   },
   fillDriverPhone() {
-    const m = this.driverList.find(x => x[0] === this.opDriverName);
+    const q = (this.opDriverName || '').trim().toLowerCase();
+    if (!q) return;
+    const m = this.driverList.find(x => String(x[0] || '').trim().toLowerCase() === q);
     if (m && m[1]) this.opDriverPhone = m[1];
   },
   fillVehiclePlate() {
-    const m = this.vehicleList.find(x => x[0] === this.opVehicleModel);
+    const q = (this.opVehicleModel || '').trim().toLowerCase();
+    if (!q) return;
+    const m = this.vehicleList.find(x => String(x[0] || '').trim().toLowerCase() === q);
     if (m && m[1]) this.opVehiclePlate = m[1];
   },
   driverList: {{ drivers_json|e }},
@@ -1683,7 +1687,7 @@
           <div>
             <label class="lbl">Motorista</label>
             <input type="text" name="op_driver_name" class="fi text-sm" x-model="opDriverName"
-                   list="so-drivers-list" @change="fillDriverPhone()" placeholder="Nome ou selecione do cadastro">
+                   list="so-drivers-list" @change="fillDriverPhone()" @input="fillDriverPhone()" placeholder="Nome ou selecione do cadastro">
             <datalist id="so-drivers-list">
               {% for d in drivers %}
               <option value="{{ d.name|e }}">{{ d.phone or '' }}</option>
@@ -1700,10 +1704,10 @@
           <div>
             <label class="lbl">Veículo</label>
             <input type="text" name="op_vehicle_model" class="fi text-sm" x-model="opVehicleModel"
-                   list="so-vehicles-list" @change="fillVehiclePlate()" placeholder="Nome ou selecione do cadastro">
+                   list="so-vehicles-list" @change="fillVehiclePlate()" @input="fillVehiclePlate()" placeholder="Nome ou selecione do cadastro">
             <datalist id="so-vehicles-list">
               {% for v in vehicles %}
-              <option value="{{ v.name|e }}">{{ v.plate or '' }}</option>
+              <option value="{{ (v.name or v.model or v.plate)|e }}">{{ v.plate or '' }}</option>
               {% endfor %}
             </datalist>
           </div>

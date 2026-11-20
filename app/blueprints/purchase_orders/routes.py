@@ -304,7 +304,7 @@ def _build_context(cid):
     vehicles = (Vehicle.query
                 .filter_by(company_id=cid, is_active=True, deleted_at=None)
                 .order_by(Vehicle.name).all())
-    vehicles_json = json.dumps([[v.name or "", v.plate or ""] for v in vehicles])
+    vehicles_json = json.dumps([[(v.name or v.model or v.plate or ""), v.plate or ""] for v in vehicles])
     suppliers_json = json.dumps({str(s.id): {
         'contact': s.contact or '', 'email': s.email or '',
         'phone': s.phone or '', 'document': s.document or '',
