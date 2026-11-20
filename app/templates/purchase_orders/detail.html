@@ -180,6 +180,19 @@
               <i class="fa-solid fa-download text-rose-700"></i> PDF EN
             </a>
           </div>
+          {% if pdf_public_base %}
+          <hr class="my-1 border-slate-100 dark:border-slate-700">
+          <div style="display:grid;grid-template-columns:1fr 1fr">
+            <a href="#" data-copy-pdf @click.prevent="open=false; copyPoPdfLink('pt')" title="Copiar link do PDF com token (fornecedor acessa sem login)"
+               class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap">
+              <i class="fa-solid fa-link text-rose-500"></i> Link PDF PT
+            </a>
+            <a href="#" data-copy-pdf-en @click.prevent="open=false; copyPoPdfLink('en')" title="Copy tokenized PDF link (supplier access without login)"
+               class="flex items-center gap-1.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap border-l border-slate-100 dark:border-slate-700">
+              <i class="fa-solid fa-link text-rose-700"></i> Link PDF EN
+            </a>
+          </div>
+          {% endif %}
           {% if _em %}
           <hr class="my-1 border-slate-100 dark:border-slate-700">
           <div style="display:grid;grid-template-columns:1fr 1fr">
@@ -1932,6 +1945,7 @@ async function estornarPmt(pid) {
     pdfPT: "", pdfEN: "",
     {% endif %}
     agenda: {{ (agenda_short_url or agenda_url or '')|tojson }},
+    pdfLink: {{ (pdf_public_base or '')|tojson }},
   };
   window.copyPoAgenda = function(e){
     if (e) e.preventDefault();
@@ -1947,6 +1961,26 @@ async function estornarPmt(pid) {
     } else {
       const ta = document.createElement('textarea');
       ta.value = p.agenda; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (_) {}
+      document.body.removeChild(ta);
+    }
+  };
+  window.copyPoPdfLink = function(lang){
+    const sel = lang === 'en' ? '[data-copy-pdf-en]' : '[data-copy-pdf]';
+    const done = () => {
+      const b = document.querySelector(sel);
+      if (!b) return;
+      const old = b.innerHTML;
+      b.innerHTML = '<i class="fa-solid fa-check text-green-600"></i> Copiado!';
+      setTimeout(() => { b.innerHTML = old; }, 1500);
+    };
+    const url = p.pdfLink + '?lang=' + (lang === 'en' ? 'en' : 'pt');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(done).catch(() => {});
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0';
       document.body.appendChild(ta); ta.select();
       try { document.execCommand('copy'); done(); } catch (_) {}
       document.body.removeChild(ta);

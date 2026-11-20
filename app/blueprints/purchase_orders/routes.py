@@ -444,6 +444,8 @@ def detail(po_id):
     _short_base = current_app.config.get("SHORT_BASE_URL",
                                          "https://checkin.executivecarsp.com").rstrip("/")
     agenda_short_url = f"{_short_base}/l/p/{_short_encode(po.id)}"
+    # Link público do PDF (mesmo token HMAC da agenda — fornecedor sem usuário/senha)
+    pdf_public_base = f"{_short_base}/po-link/{po.id}/{po_token(po.id)}/pdf"
 
     # Etapa 11B: timeline de baixas SOMENTE LEITURA (audit_logs) para exibição
     from ...services.payment_history_service import build_baixa_history
@@ -461,7 +463,8 @@ def detail(po_id):
                            audit_logs=audit_logs,
                            baixa_history=baixa_history,
                            agenda_url=agenda_url,
-                           agenda_short_url=agenda_short_url))
+                           agenda_short_url=agenda_short_url,
+                           pdf_public_base=pdf_public_base))
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     resp.headers["Pragma"] = "no-cache"
     resp.headers["Expires"] = "0"

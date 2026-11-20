@@ -4,9 +4,10 @@ Renderiza o MESMO template da agenda do SO (public_so/agenda.html) com o
 contexto da PO: itens op_* com fallback nos campos globais da PO.
 Inclui o check-in do motorista (status da viagem + revert) via POST.
 """
+import gc
 import hmac
 
-from flask import abort, make_response, redirect, render_template, request, url_for
+from flask import abort, make_response, redirect, render_template, request, send_file, url_for
 
 from . import public_po_bp
 from ...extensions import csrf
@@ -53,6 +54,47 @@ def set_status(po_id, token):
     except ValueError:
         abort(400)
     return redirect(url_for("public_po.agenda", po_id=po_id, token=token))
+
+
+@public_po_bp.route("/<int:po_id>/<token>/pdf")
+def pdf(po_id, token):
+    """PDF público da PO — mesmo token HMAC da agenda do fornecedor.
+
+    O fornecedor acessa sem usuário/senha: <base>/po-link/<id>/<token>/pdf?lang=pt|en
+    """
+    from sqlalchemy.orm import joinedload, lazyload, selectinload
+
+    po = PurchaseOrder.query.filter_by(id=po_id, deleted_at=None).first()
+    if po is None:
+        abort(404)
+    if not hmac.compare_digest(token, po_token(po.id)):
+        abort(404)
+    lang = request.args.get("lang", "pt")
+    if lang not in ("pt", "en"):
+        lang = "pt"
+
+    from ...services.purchase_order_pdf import generate_po_pdf
+    po = (PurchaseOrder.query
+          .options(
+              lazyload('*'),
+              joinedload(PurchaseOrder.company).lazyload('*'),
+              joinedload(PurchaseOrder.supplier).lazyload('*'),
+              joinedload(PurchaseOrder.order).lazyload('*'),
+              joinedload(PurchaseOrder.service_order).lazyload('*'),
+              selectinload(PurchaseOrder.items),
+          )
+          .filter_by(id=po_id)
+          .first())
+    buf = generate_po_pdf(po, lang=lang)
+    buf.seek(0)
+    gc.collect()
+    resp = make_response(send_file(buf, mimetype="application/pdf",
+                                   download_name=f"{po.number}.pdf",
+                                   as_attachment=False, conditional=False))
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
 
 
 @public_po_bp.route("/<int:po_id>/<token>/revert", methods=["POST"])
