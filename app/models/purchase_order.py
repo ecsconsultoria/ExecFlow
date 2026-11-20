@@ -250,6 +250,9 @@ class POItem(db.Model, TimestampMixin):
     op_driver_phone     = db.Column(db.String(50))
     op_vehicle_model    = db.Column(db.String(200))
     op_vehicle_plate    = db.Column(db.String(20))
+    # Tipo do motorista (Monolíngue/Bilíngue) — vem da SO de origem ou do
+    # formulário de abertura avulsa; o NOME operacional vive em op_driver_name
+    driver_type         = db.Column(db.String(50))
 
     purchase_order = db.relationship("PurchaseOrder", back_populates="items")
     service        = db.relationship("Service",         foreign_keys=[service_id],  lazy="joined")

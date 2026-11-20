@@ -386,6 +386,7 @@
   editQty:           1,
   editUnit:          '0,00',
   editCategory:      '',
+  editDriver:        '',
   showOpItemModal:   false,
   opItemUrl:         '',
   opItemNo:          '',
@@ -638,7 +639,7 @@
           </p>
         </td>
         <td class="px-3 py-2 text-slate-500 hidden sm:table-cell">{{ item.category.name if item.category else '–' }}</td>
-        <td class="px-3 py-2 text-slate-500 hidden sm:table-cell">{{ item.op_driver_name or '–' }}</td>
+        <td class="px-3 py-2 text-slate-500 hidden sm:table-cell">{{ item.driver_type or '–' }}</td>
         <td class="px-3 py-2 text-right font-mono text-slate-600 dark:text-slate-300">{{ item.quantity }}</td>
         <td class="px-3 py-2 text-right font-mono text-slate-600 dark:text-slate-300">{{ item.unit_cost|currency }}</td>
         <td class="px-3 py-2 text-right font-mono font-semibold text-slate-700 dark:text-slate-200">{{ item.total_cost|currency }}</td>
@@ -683,6 +684,7 @@
                     data-edit-qty="{{ item.quantity }}"
                     data-edit-unit="{{ '%.2f'|format(item.unit_cost or 0)|replace('.', ',') }}"
                     data-edit-cat="{{ item.category_id or '' }}"
+                    data-edit-driver="{{ item.driver_type or '' }}"
                     data-edit-date="{{ item.service_date.isoformat() if item.service_date else '' }}"
                     data-edit-time="{{ item.service_time.strftime('%H:%M') if item.service_time else '' }}"
                     @click="showEditItemModal=true;
@@ -691,6 +693,7 @@
                             editQty=parseInt($el.dataset.editQty)||1;
                             editUnit=$el.dataset.editUnit;
                             editCategory=$el.dataset.editCat||'';
+                            editDriver=$el.dataset.editDriver||'';
                             editServiceDate=$el.dataset.editDate||'';
                             editServiceTime=$el.dataset.editTime||''"
                     class="p-1.5 rounded text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
@@ -1309,6 +1312,14 @@
               {% for cat in categories %}
               <option value="{{ cat.id }}">{{ cat.name }}</option>
               {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="lbl">Motorista</label>
+            <select name="driver_name" x-model="editDriver" class="fi">
+              <option value="">-- Selecione --</option>
+              <option value="Monolíngue">Monolíngue</option>
+              <option value="Bilíngue">Bilíngue</option>
             </select>
           </div>
         </div>

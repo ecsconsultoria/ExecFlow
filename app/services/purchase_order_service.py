@@ -91,6 +91,7 @@ def _add_items_from_so(po, order):
             unit_cost   = cost_price,
             total_cost  = round(cost_price * qty, 2),
             sort_order  = idx,
+            driver_type         = item.driver_name or "",
             op_driver_name      = item.op_driver_name or "",
             op_driver_phone     = item.op_driver_phone or "",
             op_vehicle_model    = item.op_vehicle_model or "",
@@ -657,6 +658,7 @@ def add_item(po: PurchaseOrder, data: dict) -> POItem:
         unit_cost   = unit_cost,
         total_cost  = total_cost,
         sort_order  = sort_order,
+        driver_type = driver_type or None,
         op_driver_name = None,
         service_date   = svc_date,
         service_time   = svc_time,
@@ -682,6 +684,7 @@ def duplicate_item(item: POItem) -> POItem:
         unit_cost           = item.unit_cost,
         total_cost          = item.total_cost,
         sort_order          = (item.sort_order or 0) + 1,
+        driver_type         = item.driver_type,
         op_driver_name      = item.op_driver_name,
         op_driver_phone     = item.op_driver_phone,
         op_vehicle_model    = item.op_vehicle_model,
@@ -729,9 +732,10 @@ def update_item(item: POItem, data: dict) -> POItem:
     if "category_id" in data:
         cid = data.get("category_id")
         item.category_id = int(cid) if cid and str(cid).strip() else None
-    # "driver_name" (tipo Monolíngue/Bilíngue) não existe em POItem — o nome
-    # do motorista operacional é op_driver_name, editado SOMENTE pelo modal
-    # de dados operacionais. Ignorado aqui de propósito.
+    if "driver_name" in data:
+        # "Motorista" do modal de edição = TIPO (Monolíngue/Bilíngue);
+        # o nome do motorista operacional vive em op_driver_name (modal operacional)
+        item.driver_type = (data.get("driver_name") or "").strip() or None
     if "service_date" in data:
         raw = (data.get("service_date") or "").strip()
         try:
