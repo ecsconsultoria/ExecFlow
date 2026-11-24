@@ -26,20 +26,20 @@
 {% block content %}
 
 {# ── ROW A — Executive KPI Band ───────────────────────────────────────────── #}
-<div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 mb-5">
+<div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-9 gap-2 mb-5">
 
   {# Receita SO #}
   <a href="{{ url_for('orders.index', status='faturado,concluido') }}"
-     class="group bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm hover:shadow-md hover:ring-1 hover:ring-blue-200 dark:hover:ring-blue-700 transition-all col-span-1">
-    <div class="flex items-center gap-2 mb-1">
-      <div class="w-7 h-7 bg-blue-50 dark:bg-blue-900/30 rounded-lg flex items-center justify-center shrink-0">
+     class="group bg-white dark:bg-slate-800 rounded-xl p-3 shadow-sm hover:shadow-md hover:ring-1 hover:ring-blue-200 dark:hover:ring-blue-700 transition-all col-span-1">
+    <div class="flex items-center gap-1.5 mb-1">
+      <div class="w-6 h-6 bg-blue-50 dark:bg-blue-900/30 rounded-lg flex items-center justify-center shrink-0">
         <i class="fa-solid fa-arrow-trend-up text-blue-600 dark:text-blue-400 text-xs"></i>
       </div>
       <p class="text-xs text-slate-500 dark:text-slate-400 truncate">Receita SO</p>
     </div>
-    <p class="text-base font-extrabold text-blue-700 dark:text-blue-400 leading-none font-mono">{{ so_revenue_month|currency }}</p>
+    <p class="text-sm font-extrabold text-blue-700 dark:text-blue-400 leading-none font-mono truncate">{{ so_revenue_month|currency }}</p>
     {% if delta_revenue is not none %}
-    <p class="text-xs mt-1 {% if delta_revenue >= 0 %}text-emerald-600{% else %}text-red-500{% endif %}">
+    <p class="text-[10px] mt-1 {% if delta_revenue >= 0 %}text-emerald-600{% else %}text-red-500{% endif %}">
       {% if delta_revenue >= 0 %}▲{% else %}▼{% endif %} {{ delta_revenue|abs }}% vs anterior
     </p>
     {% endif %}
@@ -47,62 +47,62 @@
 
   {# Custo PO #}
   <a href="{{ url_for('purchase_orders.index', status='aberto,enviado,aprovado,em_execucao,concluido,pago') }}"
-     class="group bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm hover:shadow-md hover:ring-1 hover:ring-rose-200 dark:hover:ring-rose-700 transition-all col-span-1">
-    <div class="flex items-center gap-2 mb-1">
-      <div class="w-7 h-7 bg-rose-50 dark:bg-rose-900/30 rounded-lg flex items-center justify-center shrink-0">
+     class="group bg-white dark:bg-slate-800 rounded-xl p-3 shadow-sm hover:shadow-md hover:ring-1 hover:ring-rose-200 dark:hover:ring-rose-700 transition-all col-span-1">
+    <div class="flex items-center gap-1.5 mb-1">
+      <div class="w-6 h-6 bg-rose-50 dark:bg-rose-900/30 rounded-lg flex items-center justify-center shrink-0">
         <i class="fa-solid fa-file-invoice text-rose-500 dark:text-rose-400 text-xs"></i>
       </div>
       <p class="text-xs text-slate-500 dark:text-slate-400 truncate">Custos Diretos</p>
     </div>
-    <p class="text-base font-extrabold text-rose-600 dark:text-rose-400 leading-none font-mono">{{ po_cost_month|currency }}</p>
+    <p class="text-sm font-extrabold text-rose-600 dark:text-rose-400 leading-none font-mono truncate">{{ po_cost_month|currency }}</p>
   </a>
 
   {# À Receber #}
   <a href="{{ url_for('financial.receivables', period='custom', date_from=p_start, date_to=p_end) }}"
-     class="group bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm hover:shadow-md hover:ring-1 hover:ring-emerald-200 dark:hover:ring-emerald-700 transition-all col-span-1">
-    <div class="flex items-center gap-2 mb-1">
-      <div class="w-7 h-7 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center shrink-0">
+     class="group bg-white dark:bg-slate-800 rounded-xl p-3 shadow-sm hover:shadow-md hover:ring-1 hover:ring-emerald-200 dark:hover:ring-emerald-700 transition-all col-span-1">
+    <div class="flex items-center gap-1.5 mb-1">
+      <div class="w-6 h-6 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center shrink-0">
         <i class="fa-solid fa-hand-holding-dollar text-emerald-600 dark:text-emerald-400 text-xs"></i>
       </div>
       <p class="text-xs text-slate-500 dark:text-slate-400 truncate">À Receber</p>
     </div>
-    <p class="text-base font-extrabold text-emerald-700 dark:text-emerald-400 leading-none font-mono">{{ ar_open_total|currency }}</p>
+    <p class="text-sm font-extrabold text-emerald-700 dark:text-emerald-400 leading-none font-mono truncate">{{ ar_open_total|currency }}</p>
   </a>
 
   {# A Pagar #}
   <a href="{{ url_for('financial.payables', period='custom', date_from=p_start, date_to=p_end) }}"
-     class="group bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm hover:shadow-md hover:ring-1 hover:ring-rose-200 dark:hover:ring-rose-700 transition-all col-span-1">
-    <div class="flex items-center gap-2 mb-1">
-      <div class="w-7 h-7 bg-rose-50 dark:bg-rose-900/30 rounded-lg flex items-center justify-center shrink-0">
+     class="group bg-white dark:bg-slate-800 rounded-xl p-3 shadow-sm hover:shadow-md hover:ring-1 hover:ring-rose-200 dark:hover:ring-rose-700 transition-all col-span-1">
+    <div class="flex items-center gap-1.5 mb-1">
+      <div class="w-6 h-6 bg-rose-50 dark:bg-rose-900/30 rounded-lg flex items-center justify-center shrink-0">
         <i class="fa-solid fa-money-bill-transfer text-rose-600 dark:text-rose-400 text-xs"></i>
       </div>
       <p class="text-xs text-slate-500 dark:text-slate-400 truncate">A Pagar</p>
     </div>
-    <p class="text-base font-extrabold text-rose-700 dark:text-rose-400 leading-none font-mono">{{ ap_open_total|currency }}</p>
+    <p class="text-sm font-extrabold text-rose-700 dark:text-rose-400 leading-none font-mono truncate">{{ ap_open_total|currency }}</p>
   </a>
 
   {# Margem R$ #}
-  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm col-span-1">
-    <div class="flex items-center gap-2 mb-1">
-      <div class="w-7 h-7 {% if margin_month >= 0 %}bg-emerald-50 dark:bg-emerald-900/30{% else %}bg-red-50 dark:bg-red-900/30{% endif %} rounded-lg flex items-center justify-center shrink-0">
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-3 shadow-sm col-span-1">
+    <div class="flex items-center gap-1.5 mb-1">
+      <div class="w-6 h-6 {% if margin_month >= 0 %}bg-emerald-50 dark:bg-emerald-900/30{% else %}bg-red-50 dark:bg-red-900/30{% endif %} rounded-lg flex items-center justify-center shrink-0">
         <i class="fa-solid fa-chart-line {% if margin_month >= 0 %}text-emerald-600{% else %}text-red-500{% endif %} text-xs"></i>
       </div>
       <p class="text-xs text-slate-500 dark:text-slate-400 truncate">Resultado</p>
     </div>
-    <p class="text-base font-extrabold {% if margin_month >= 0 %}text-emerald-700 dark:text-emerald-400{% else %}text-red-600 dark:text-red-400{% endif %} leading-none font-mono">{{ margin_month|currency }}</p>
+    <p class="text-sm font-extrabold {% if margin_month >= 0 %}text-emerald-700 dark:text-emerald-400{% else %}text-red-600 dark:text-red-400{% endif %} leading-none font-mono truncate">{{ margin_month|currency }}</p>
   </div>
 
   {# Margem % #}
-  <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm col-span-1">
-    <div class="flex items-center gap-2 mb-1">
-      <div class="w-7 h-7 {% if margin_pct >= 20 %}bg-emerald-50 dark:bg-emerald-900/30{% elif margin_pct >= 0 %}bg-amber-50 dark:bg-amber-900/30{% else %}bg-red-50 dark:bg-red-900/30{% endif %} rounded-lg flex items-center justify-center shrink-0">
+  <div class="bg-white dark:bg-slate-800 rounded-xl p-3 shadow-sm col-span-1">
+    <div class="flex items-center gap-1.5 mb-1">
+      <div class="w-6 h-6 {% if margin_pct >= 20 %}bg-emerald-50 dark:bg-emerald-900/30{% elif margin_pct >= 0 %}bg-amber-50 dark:bg-amber-900/30{% else %}bg-red-50 dark:bg-red-900/30{% endif %} rounded-lg flex items-center justify-center shrink-0">
         <i class="fa-solid fa-percent {% if margin_pct >= 20 %}text-emerald-600{% elif margin_pct >= 0 %}text-amber-600{% else %}text-red-500{% endif %} text-xs"></i>
       </div>
       <p class="text-xs text-slate-500 dark:text-slate-400 truncate">Resultado %</p>
     </div>
-    <p class="text-base font-extrabold {% if margin_pct >= 20 %}text-emerald-700 dark:text-emerald-400{% elif margin_pct >= 0 %}text-amber-700 dark:text-amber-400{% else %}text-red-600 dark:text-red-400{% endif %} leading-none">{{ margin_pct }}%</p>
+    <p class="text-sm font-extrabold {% if margin_pct >= 20 %}text-emerald-700 dark:text-emerald-400{% elif margin_pct >= 0 %}text-amber-700 dark:text-amber-400{% else %}text-red-600 dark:text-red-400{% endif %} leading-none">{{ margin_pct }}%</p>
     {% if delta_pct is not none %}
-    <p class="text-xs mt-1 {% if delta_pct >= 0 %}text-emerald-600{% else %}text-red-500{% endif %}">
+    <p class="text-[10px] mt-1 {% if delta_pct >= 0 %}text-emerald-600{% else %}text-red-500{% endif %}">
       {% if delta_pct >= 0 %}▲{% else %}▼{% endif %} {{ delta_pct|abs }}pp
     </p>
     {% endif %}
@@ -110,38 +110,38 @@
 
   {# SOs Ativas #}
   <a href="{{ url_for('orders.index', status='novo,aberto') }}"
-     class="group bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm hover:shadow-md hover:ring-1 hover:ring-teal-200 transition-all col-span-1">
-    <div class="flex items-center gap-2 mb-1">
-      <div class="w-7 h-7 bg-teal-50 dark:bg-teal-900/30 rounded-lg flex items-center justify-center shrink-0">
+     class="group bg-white dark:bg-slate-800 rounded-xl p-3 shadow-sm hover:shadow-md hover:ring-1 hover:ring-teal-200 transition-all col-span-1">
+    <div class="flex items-center gap-1.5 mb-1">
+      <div class="w-6 h-6 bg-teal-50 dark:bg-teal-900/30 rounded-lg flex items-center justify-center shrink-0">
         <i class="fa-solid fa-bag-shopping text-teal-600 dark:text-teal-400 text-xs"></i>
       </div>
       <p class="text-xs text-slate-500 dark:text-slate-400 truncate">SOs Ativas</p>
     </div>
-    <p class="text-2xl font-bold text-slate-800 dark:text-slate-100 leading-none">{{ active_so_count }}</p>
+    <p class="text-lg font-bold text-slate-800 dark:text-slate-100 leading-none">{{ active_so_count }}</p>
   </a>
 
   {# POs Abertas #}
   <a href="{{ url_for('purchase_orders.index', status='aberto,aprovado,em_execucao') }}"
-     class="group bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm hover:shadow-md hover:ring-1 hover:ring-violet-200 transition-all col-span-1">
-    <div class="flex items-center gap-2 mb-1">
-      <div class="w-7 h-7 bg-violet-50 dark:bg-violet-900/30 rounded-lg flex items-center justify-center shrink-0">
+     class="group bg-white dark:bg-slate-800 rounded-xl p-3 shadow-sm hover:shadow-md hover:ring-1 hover:ring-violet-200 transition-all col-span-1">
+    <div class="flex items-center gap-1.5 mb-1">
+      <div class="w-6 h-6 bg-violet-50 dark:bg-violet-900/30 rounded-lg flex items-center justify-center shrink-0">
         <i class="fa-solid fa-truck text-violet-600 dark:text-violet-400 text-xs"></i>
       </div>
       <p class="text-xs text-slate-500 dark:text-slate-400 truncate">POs Abertas</p>
     </div>
-    <p class="text-2xl font-bold text-slate-800 dark:text-slate-100 leading-none">{{ open_po_count }}</p>
+    <p class="text-lg font-bold text-slate-800 dark:text-slate-100 leading-none">{{ open_po_count }}</p>
   </a>
 
   {# RFQs Pendentes #}
   <a href="{{ url_for('quotes.index', status='pendente') }}"
-     class="group bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm hover:shadow-md hover:ring-1 hover:ring-amber-200 transition-all col-span-1">
-    <div class="flex items-center gap-2 mb-1">
-      <div class="w-7 h-7 bg-amber-50 dark:bg-amber-900/30 rounded-lg flex items-center justify-center shrink-0">
+     class="group bg-white dark:bg-slate-800 rounded-xl p-3 shadow-sm hover:shadow-md hover:ring-1 hover:ring-amber-200 transition-all col-span-1">
+    <div class="flex items-center gap-1.5 mb-1">
+      <div class="w-6 h-6 bg-amber-50 dark:bg-amber-900/30 rounded-lg flex items-center justify-center shrink-0">
         <i class="fa-solid fa-hourglass-half text-amber-600 dark:text-amber-400 text-xs"></i>
       </div>
       <p class="text-xs text-slate-500 dark:text-slate-400 truncate">RFQs Pend.</p>
     </div>
-    <p class="text-2xl font-bold text-slate-800 dark:text-slate-100 leading-none">{{ pending_rfq_count }}</p>
+    <p class="text-lg font-bold text-slate-800 dark:text-slate-100 leading-none">{{ pending_rfq_count }}</p>
   </a>
 
 </div>
