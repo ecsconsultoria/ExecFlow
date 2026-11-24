@@ -326,7 +326,7 @@ def index():
                    .limit(30).all())
 
     # ── AR/AP (Etapa 8B) — fonte única: ar_ap_service (vencimento no período) ─
-    from ...services.ar_ap_service import receivable_rows, receivable_rows_open, payable_rows
+    from ...services.ar_ap_service import receivable_rows, receivable_rows_open, payable_rows, payable_rows_open
     _ar_rows = receivable_rows(cid, p_start, p_end)
     pending_receivables = _ar_rows[:20]
     pending_payables = payable_rows(cid, p_start, p_end)[:20]
@@ -335,6 +335,9 @@ def index():
     # adicional de "à vista + 1 parcela", com vencimento futuro, também entra)
     ar_open_total = round(sum(r.amount for r in receivable_rows_open(cid)
                               if r.order and r.order.status in ("aberto", "faturado")), 2)
+    # Quadro "A Pagar": espelho — parcelas de PO em aberto (sem teto de
+    # vencimento) de POs não cancelados/excluídos + despesas pendentes
+    ap_open_total = round(sum(r.amount for r in payable_rows_open(cid)), 2)
 
     # ── Alerts ────────────────────────────────────────────────────────────────
     overdue_recv_count = sum(1 for p in pending_receivables if p.is_overdue)
@@ -420,6 +423,7 @@ def index():
         pending_receivables=pending_receivables,
         pending_payables=pending_payables,
         ar_open_total=ar_open_total,
+        ap_open_total=ap_open_total,
         # alerts
         alerts=alerts,
         # legacy

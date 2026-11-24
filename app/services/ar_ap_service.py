@@ -208,6 +208,46 @@ def payable_rows(cid, start, end):
     return sorted(rows, key=lambda r: (r.due_date is None, r.due_date or _date.max))
 
 
+def payable_rows_open(cid):
+    """Posição COMPLETA a pagar — parcelas de PO em aberto (sem teto de
+    vencimento) de POs não cancelados/excluídos + despesas pendentes.
+    Espelho do quadro "À Receber" (receivable_rows_open)."""
+    pmts = (POPayment.query
+            .join(PurchaseOrder, POPayment.po_id == PurchaseOrder.id)
+            .filter(PurchaseOrder.company_id == cid, PurchaseOrder.deleted_at.is_(None))
+            .filter(PurchaseOrder.status.notin_(["cancelado", "excluido"]))
+            .filter(POPayment.paid_at.is_(None))
+            .filter(POPayment.amount > 0)
+            .all())
+    rows = []
+    for p in pmts:
+        po = p.purchase_order
+        rows.append(PayableRow(
+            origem="PO",
+            description=f"{po.number} — parcela {p.installment_no}",
+            due_date=p.due_date,
+            amount=float(p.amount or 0),
+            po_number=po.number,
+            supplier_name=po.supplier.name if po.supplier else "",
+            payment=p,
+        ))
+    frs = (FinancialRecord.query
+           .filter_by(company_id=cid, type="expense")
+           .filter(FinancialRecord.deleted_at.is_(None))
+           .filter(FinancialRecord.status == "pendente")
+           .all())
+    for fr in frs:
+        rows.append(PayableRow(
+            origem="DESPESA",
+            description=fr.description or "Despesa",
+            due_date=fr.due_date,
+            amount=float(fr.amount or 0),
+            supplier_name=fr.supplier.name if fr.supplier else "",
+            expense=fr,
+        ))
+    return rows
+
+
 def payable_totals(cid, start, end):
     """dict(total, custos, despesas, vencido) das obrigações do período."""
     costs = payable_cost_rows(cid, start, end)
