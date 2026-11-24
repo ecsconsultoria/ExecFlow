@@ -489,6 +489,9 @@ def add_payment(order: Order, data: dict) -> OrderPayment:
 def delete_payment(payment: OrderPayment) -> None:
     if payment.is_paid:
         raise ValueError("Não é possível excluir parcela já paga")
+    # Anula o espelho financeiro PENDENTE antes de excluir — evita lançamento órfão
+    from .financial_service import void_payment_financial_records
+    void_payment_financial_records([payment], "order_payment")
     db.session.delete(payment)
     db.session.commit()
 

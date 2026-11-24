@@ -471,12 +471,19 @@ def update_payment_inline(payment: POPayment, data: dict) -> None:
         payment.notes = data["notes"] or ""
     if data.get("amount"):
         payment.amount = _parse_float(data["amount"])
+    db.session.flush()
+    # Sincroniza o espelho financeiro pendente (valor/vencimento alterados)
+    if not payment.is_paid:
+        _sync_po_pending_financials(payment.purchase_order)
     db.session.commit()
 
 
 def delete_payment(payment: POPayment) -> None:
     if payment.is_paid:
         raise ValueError("Não é possível excluir parcela já paga")
+    # Anula o espelho financeiro PENDENTE antes de excluir — evita lançamento órfão
+    from .financial_service import void_payment_financial_records
+    void_payment_financial_records([payment], "po_payment")
     db.session.delete(payment)
     db.session.commit()
 
